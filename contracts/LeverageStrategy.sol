@@ -14,13 +14,19 @@ pragma solidity ^0.8.0;
 contract LeverageStrategy {
     // State variables
     address public dao;
+    address public wstETH;
+    address public crvUSD;
+    address public FRAX;
+
+    // TODO write pools addresses
 
     // Events
     // Add relevant events to log important contract actions/events
 
     // Modifiers
     modifier onlyDao() {
-        require(msg.sender == owner, "Only the contract owner can call this function.");
+        require(msg.sender == owner,
+            "Only the DAO can call this function.");
         _;
     }
 
