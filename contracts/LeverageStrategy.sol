@@ -11,9 +11,8 @@ ____/ // /_/ /__  /_/ /  /   /  __/  / / / / /  __/  /_/ /_  ___ / /_/ /
 
 pragma solidity ^0.8.0;
 
-import { StrategyBase } from ".StrategyBase.sol";
 
-contract LeverageStrategy is StrategyBase {
+contract LeverageStrategy {
     // State variables
     address public DAO;
     address public wstETH;
