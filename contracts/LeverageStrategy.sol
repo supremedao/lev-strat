@@ -23,12 +23,16 @@ contract LeverageStrategy {
     address public COIL   = 0x823e1b82ce1dc147bbdb25a203f046afab1ce918;
 
     // pools addresses
+
     // https://etherscan.io/address/0x42fbd9f666aacc0026ca1b88c94259519e03dd67
     address public COILSUSDCBalancerPool = 0x42FBD9F666AaCC0026ca1B88C94259519e03dd67;
 
     // TODO: check if the booster is the right contract
     // https://etherscan.io/address/0xa57b8d98dae62b26ec3bcc4a365338157060b234
-    address public AuraBooster = 0xA57b8d98dAE62B26Ec3bcC4a365338157060B234;
+    address public auraBooster = 0xA57b8d98dAE62B26Ec3bcC4a365338157060B234;
+
+    // https://etherscan.io/address/0x4dece678ceceb27446b35c672dc7d61f30bad69e
+    address crvUSDUSDCPool = 0x4dece678ceceb27446b35c672dc7d61f30bad69e;
 
     // Events
     // Add relevant events to log important contract actions/events
@@ -42,7 +46,7 @@ contract LeverageStrategy {
     // TODO: check if we need this solution
     modifier onlyTreasury() {
         require(msg.sender == Treasury,
-            "Only the DAO can call this function.");
+            "Only the Treasury can call this function.");
         _;
     }
 
@@ -70,6 +74,7 @@ contract LeverageStrategy {
     }
 
     function _claimRewards(address, bytes calldata) internal override {
+
         // Claim rewards from Aura
 
         // exchange for WSTETH
