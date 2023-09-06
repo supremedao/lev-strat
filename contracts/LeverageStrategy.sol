@@ -53,6 +53,8 @@ contract LeverageStrategy {
     // TODO:
     // Collateral health monitor
 
+
+    // main contract functions
     function _invest(address, uint256[] calldata amounts, bytes calldata)
         internal
         override
