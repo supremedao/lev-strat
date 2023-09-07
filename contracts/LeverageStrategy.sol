@@ -11,6 +11,12 @@ ____/ // /_/ /__  /_/ /  /   /  __/  / / / / /  __/  /_/ /_  ___ / /_/ /
 
 pragma solidity ^0.8.0;
 
+import "./interfaces/IAuraBooster.sol";
+import "./interfaces/IBalancerVault.sol";
+import "./interfaces/IcrvUSD.sol";
+import "./interfaces/IcrvUSDController.sol";
+import "./interfaces/IcrvUSDUSDCPool.sol";
+import "./interfaces/IERC20.sol";
 
 contract LeverageStrategy {
     // State variables
