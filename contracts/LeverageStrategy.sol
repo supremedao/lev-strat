@@ -82,17 +82,28 @@ contract LeverageStrategy {
 
 
     // main contract functions
-    function _invest(address, uint256[] calldata amounts, bytes calldata)
-        internal
-        override
-        returns (PositionReceipt memory receipt)
+    function invest(uint256 amount)
+        external
     {
 
         // Takes WSTETH
+        wsteth.transfer(amount, address(this));
 
         // Opens a position on crvUSD
 
+        // Note this address is an owner of a crvUSD CDP
+        // now we assume that we already have a CDP
+        // But there also should be a case when we create a new one
+
+        crvUSDController.add_collateral(uint256 collateral, address(this));
+
         // borrow crvUSD
+
+        // TODO: calculate borrow amount
+        // check if there's price in Curve or we should ping Oracle
+        uint256 borrowAmount;
+
+        crvUSDController.borrow_more(amount, borrowAmount);
 
         // Exchange crvUSD to USDC on Curve
 
@@ -102,7 +113,7 @@ contract LeverageStrategy {
 
     }
 
-    function _claimRewards(address, bytes calldata) internal override {
+    function _claimRewards() external {
 
         // Claim rewards from Aura
 
@@ -112,8 +123,7 @@ contract LeverageStrategy {
     }
 
     function _withdrawInvestment(address, uint256[] calldata amounts, bytes calldata extraStrategyData)
-        internal
-        override
+        external
     {
 
         // Exit Aura position
