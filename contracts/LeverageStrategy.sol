@@ -107,10 +107,26 @@ contract LeverageStrategy {
 
         // Exchange crvUSD to USDC on Curve
 
+        // TODO: check the actual token id's and transaction generation
+        // Note: seems that we have a different interface compared to supremedao/contracts
+
+        // pool crvUSD -> USDCPool
+        // For this Pool:
+        // token_id 0 = crvUSD
+        // token_id 2 = USDCPool
+        crvUSDUSDCPool.exchange({ sold_token_id: 0, bought_token_id: 2, amount: amounts[0], min_output_amount: min_output_amount });
+
         // Provide liquidity to the COIL/USDC Pool on Balancer
+        bytes32 _poolId = 0x42fbd9f666aacc0026ca1b88c94259519e03dd67000200000000000000000507;
+
+        // TODO: compose a JoinPoolRequest struct
+
+        balancerPool.joinPool(_poolId, address(this), address(this) /*JoinPoolRequest*/);
 
         // Stake LP tokens on Aura Finance
+        uint pid = 95;
 
+        auraBooster.deposit(pid, borrowAmount, true);
     }
 
     function _claimRewards() external {
