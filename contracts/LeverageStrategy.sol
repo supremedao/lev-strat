@@ -11,6 +11,7 @@ ____/ // /_/ /__  /_/ /  /   /  __/  / / / / /  __/  /_/ /_  ___ / /_/ /
 
 pragma solidity ^0.8.0;
 
+import "./interfaces/IAuraClaimZapV3.sol";
 import "./interfaces/IAuraBooster.sol";
 import "./interfaces/IBalancerVault.sol";
 import "./interfaces/IcrvUSD.sol";
@@ -21,6 +22,7 @@ import "./interfaces/IERC20.sol";
 contract LeverageStrategy {
     // State variables
 
+    IAuraClaimZapV3   public auraClaim;
     IAuraBooster      public auraBooster;
     IBalancerVault    public balancerPool;
     IcrvUSD           public crvUSD;
@@ -41,12 +43,19 @@ contract LeverageStrategy {
 
     // pools addresses
 
+    // TODO:
+    // DAO should be able to change pool parameters and tokens
+    // NOTE: maybe we should an updateble strategy struct
+
     // https://etherscan.io/address/0x42fbd9f666aacc0026ca1b88c94259519e03dd67
     address public _COILSUSDCBalancerPool = 0x42FBD9F666AaCC0026ca1B88C94259519e03dd67;
 
     // TODO: check if the booster is the right contract
     // https://etherscan.io/address/0xa57b8d98dae62b26ec3bcc4a365338157060b234
     address public _auraBooster = 0xA57b8d98dAE62B26Ec3bcC4a365338157060B234;
+
+    // https://etherscan.io/address/0x5b2364fd757e262253423373e4d57c5c011ad7f4#code
+    address public _auraClaim = 0x5b2364fD757E262253423373E4D57C5c011Ad7F4;
 
     // https://etherscan.io/address/0x4dece678ceceb27446b35c672dc7d61f30bad69e
     address _crvUSDUSDCPool = 0x4dece678ceceb27446b35c672dc7d61f30bad69e;
@@ -57,12 +66,13 @@ contract LeverageStrategy {
     // Constructor
     constructor(address _dao) {
         dao = _dao;
-
+        auraClaim        = IAuraClaimZapV3(_auraClaim);
         auraBooster      = IAuraBooster(_auraBooster);
         balancerPool     = IBalancerVault(_auraBooster);
         crvUSD           = IcrvUSD(_crvUSD);
         crvUSDController = IcrvUSDController(_crvUSDController);
         crvUSDUSDCPool   = IcrvUSDUSDCPool(_crvUSDUSDCPool);
+
         wsteth           = IERC20(_wstETH);
         crvusd           = IERC20(_crvUSD);
         usdc             = IERC20(_USDC);
@@ -80,10 +90,9 @@ contract LeverageStrategy {
     // TODO:
     // Collateral health monitor
 
-
     // main contract functions
     function invest(uint256 amount)
-        external
+        public
     {
 
         // Takes WSTETH
@@ -133,9 +142,19 @@ contract LeverageStrategy {
 
         // Claim rewards from Aura
 
+        // TODO: figure out how to pass all the parameters
+        auraClaim.claimRewards();
+
         // exchange for WSTETH
 
+        // Note: there is no BAL/AURA -> WSTETH Pool
+        // TODO: check if there is a single transaction on Balancer
+        // otherwise do a jumping transaction BAL -> ETH -> WSTETH
+
         // call _invest
+
+        uint256 investAmount;
+        _invest(investAmount);
     }
 
     function _withdrawInvestment(address, uint256[] calldata amounts, bytes calldata extraStrategyData)
