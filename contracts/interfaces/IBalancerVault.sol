@@ -3,7 +3,6 @@
 
 pragma solidity ^0.8.0;
 
-// ChatGPT generated
 contract IBalancerVault {
 
     /* @dev copied from the IVault.sol -\0_0/-
