@@ -157,6 +157,8 @@ contract LeverageStrategy {
         _invest(investAmount);
     }
 
+// TODO: exit pool
+
     function _withdrawInvestment(address, uint256[] calldata amounts, bytes calldata extraStrategyData)
         external
     {
