@@ -11,6 +11,8 @@ ____/ // /_/ /__  /_/ /  /   /  __/  / / / / /  __/  /_/ /_  ___ / /_/ /
 
 pragma solidity ^0.8.0;
 
+
+import "@openzeppelin/contracts/access/AccessControl.sol";
 import "./interfaces/IAuraClaimZapV3.sol";
 import "./interfaces/IAuraBooster.sol";
 import "./interfaces/IBalancerVault.sol";
@@ -21,7 +23,6 @@ import "./interfaces/IERC20.sol";
 
 contract LeverageStrategy {
     // State variables
-
     IAuraClaimZapV3   public auraClaim;
     IAuraBooster      public auraBooster;
     IBalancerVault    public balancerPool;
@@ -33,6 +34,10 @@ contract LeverageStrategy {
     IERC20            public crvusd;
     IERC20            public usdc;
     IERC20            public coil;
+
+    bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
+    bytes32 public constant KEEPER_ROLE = keccak256("KEEPER_ROLE");
+    bytes32 public constant DAO_ROLE = keccak256("DAO_ROLE");
 
     // mainnet addresses
     address public treasury; // recieves a fraction of yield
@@ -65,7 +70,7 @@ contract LeverageStrategy {
 
     // Constructor
     constructor(address _dao) {
-        dao = _dao;
+        treasury = _dao;
         auraClaim        = IAuraClaimZapV3(_auraClaim);
         auraBooster      = IAuraBooster(_auraBooster);
         balancerPool     = IBalancerVault(_auraBooster);
@@ -77,15 +82,17 @@ contract LeverageStrategy {
         crvusd           = IERC20(_crvUSD);
         usdc             = IERC20(_USDC);
         coil             = IERC20(_COIL);
+    
+        _setupRole(ADMIN_ROLE, msg.sender);
+        _setupRole(DAO_ROLE, _dao);
+
+        // Admin role can grant/revoke the KEEPER_ROLE
+        _setRoleAdmin(KEEPER_ROLE, ADMIN_ROLE);
     }
 
     // Modifiers
-    // TODO: check if we need this solution
-    modifier onlyTreasury() {
-        require(msg.sender == dao,
-            "Only the DAO can call this function.");
-        _;
-    }
+    // Instead of access modifier everything will work with inline check like require(hasRole(KEEPER_ROLE, msg.sender))
+
 
     // TODO:
     // Collateral health monitor
