@@ -20,6 +20,17 @@ import "./interfaces/IcrvUSDUSDCPool.sol";
 import "./interfaces/IERC20.sol";
 
 contract LeverageStrategy {
+
+    //Struct to keep strack of the users funds and where they are allocated
+    struct UserInfo {
+        uint256 wstETHDeposited;
+        uint256 crvUSDBorrowed;
+        uint256 usdcAmount;
+        uint256 balancerLPTokens;
+        uint256 stakedInAura;
+        uint256 totalYieldEarned;
+    }
+
     // State variables
 
     IAuraClaimZapV3   public auraClaim;
@@ -40,6 +51,9 @@ contract LeverageStrategy {
     address public _crvUSD = 0xf939E0A03FB07F59A73314E73794Be0E57ac1b4E;
     address public _USDC   = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
     address public _COIL   = 0x823e1b82ce1dc147bbdb25a203f046afab1ce918;
+
+    //mappings
+    mapping(address => UserInfo) public userInfo;
 
     // pools addresses
 
