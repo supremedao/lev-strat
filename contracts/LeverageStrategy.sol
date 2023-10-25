@@ -32,14 +32,14 @@ contract LeverageStrategy {
     IERC20            public wsteth;
     IERC20            public crvusd;
     IERC20            public usdc;
-    IERC20            public coil;
+    IERC20            public d2d;
 
     // mainnet addresses
     address public treasury; // recieves a fraction of yield
     address public _wstETH = 0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0;
     address public _crvUSD = 0xf939E0A03FB07F59A73314E73794Be0E57ac1b4E;
     address public _USDC   = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
-    address public _COIL   = 0x823e1b82ce1dc147bbdb25a203f046afab1ce918;
+    address public _D2D   = 0x43d4a3cd90ddd2f8f4f693170c9c8098163502ad;
 
     // pools addresses
 
@@ -47,8 +47,8 @@ contract LeverageStrategy {
     // DAO should be able to change pool parameters and tokens
     // NOTE: maybe we should an updateble strategy struct
 
-    // https://etherscan.io/address/0x42fbd9f666aacc0026ca1b88c94259519e03dd67
-    address public _COILSUSDCBalancerPool = 0x42FBD9F666AaCC0026ca1B88C94259519e03dd67;
+    // https://etherscan.io/address/0x27c9f71cc31464b906e0006d4fcbc8900f48f15f
+    address public _D2DSUSDCBalancerPool = 0x27C9f71cC31464B906E0006d4FcBC8900F48f15f;
 
     // TODO: check if the booster is the right contract
     // https://etherscan.io/address/0xa57b8d98dae62b26ec3bcc4a365338157060b234
@@ -76,7 +76,7 @@ contract LeverageStrategy {
         wsteth           = IERC20(_wstETH);
         crvusd           = IERC20(_crvUSD);
         usdc             = IERC20(_USDC);
-        coil             = IERC20(_COIL);
+        d2d             = IERC20(_D2D);
     }
 
     // Modifiers
@@ -125,8 +125,8 @@ contract LeverageStrategy {
         // token_id 2 = USDCPool
         crvUSDUSDCPool.exchange({ sold_token_id: 0, bought_token_id: 2, amount: amounts[0], min_output_amount: min_output_amount });
 
-        // Provide liquidity to the COIL/USDC Pool on Balancer
-        bytes32 _poolId = 0x42fbd9f666aacc0026ca1b88c94259519e03dd67000200000000000000000507;
+        // Provide liquidity to the D2D/USDC Pool on Balancer
+        bytes32 _poolId = 0x27c9f71cc31464b906e0006d4fcbc8900f48f15f00020000000000000000010f;
 
         // TODO: compose a JoinPoolRequest struct
 
