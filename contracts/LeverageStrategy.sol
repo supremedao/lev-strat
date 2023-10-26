@@ -118,8 +118,8 @@ contract LeverageStrategy {
         
         // Update the user's info
         UserInfo storage user = userInfo[msg.sender];
-        user.totalInvested = user.totalInvested.add(_wstETHAmount);
-        user.totalBorrowed = user.totalBorrowed.add(_debtAmount);
+        user.wstETHDeposited = user.wstETHDeposited.add(_wstETHAmount);
+        user.crvUSDBorrowed = user.crvUSDBorrowed.add(_debtAmount);
         user.loanBand = _N;
     }
 
