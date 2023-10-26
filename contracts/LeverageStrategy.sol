@@ -20,6 +20,18 @@ import "./interfaces/IcrvUSDUSDCPool.sol";
 import "./interfaces/IERC20.sol";
 
 contract LeverageStrategy {
+
+    //Struct to keep strack of the users funds and where they are allocated
+    struct UserInfo {
+        uint256 wstETHDeposited; // Total wsteth deposited by a user
+        uint256 crvUSDBorrowed; // Total crvusd borrowed by a user
+        uint256 usdcAmount; // Total usdc of the user after swapping from crvusd
+        uint256 balancerLPTokens;  // Total balancer LP tokens the user 
+        uint256 stakedInAura;// Total balancer LP tokens staked in aura for the user
+        uint256 totalYieldEarned;// Historical yield for the user, maybe unnecessary 
+        uint256 loanBand;// The number of price bands in which the users wsteth will be deposited into
+    }
+
     // State variables
 
     IAuraClaimZapV3   public auraClaim;
@@ -40,6 +52,9 @@ contract LeverageStrategy {
     address public _crvUSD = 0xf939E0A03FB07F59A73314E73794Be0E57ac1b4E;
     address public _USDC   = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
     address public _D2D   = 0x43d4a3cd90ddd2f8f4f693170c9c8098163502ad;
+
+    //mappings
+    mapping(address => UserInfo) public userInfo;
 
     // pools addresses
 
