@@ -21,7 +21,7 @@ import "./interfaces/IERC20.sol";
 
 contract LeverageStrategy {
 
-    //Struct to keep strack of the users funds and where they are allocated
+    //Struct to keep track of the users funds and where they are allocated
     //TODO: see how many of the struct vars actually need the full uint256
     struct UserInfo {
         uint256 wstETHDeposited; // Total wsteth deposited by a user
