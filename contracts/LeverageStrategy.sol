@@ -107,7 +107,7 @@ contract LeverageStrategy {
     // Collateral health monitor
 
 
-     function depositAndCreateLoan(uint256 _wstETHAmount, uint256 _debtAmount, uint256 _N) internal {
+     function _depositAndCreateLoan(uint256 _wstETHAmount, uint256 _debtAmount, uint256 _N) internal {
         require(_wstETHAmount > 0, "Amount should be greater than 0");
         
         require(IERC20(wstETH).transferFrom(msg.sender, address(this), _wstETHAmount), "Transfer failed");         
@@ -124,12 +124,13 @@ contract LeverageStrategy {
     }
 
     // main contract functions
+    // @param N Number of price bands to deposit into (to do autoliquidation-deliquidation of wsteth) if the price of the wsteth collateral goes too low
     function invest(uint256 _wstETHAmount, uint256 _debtAmount, uint256 _N) external {
         
         // Opens a position on crvUSD if no loan already
         if (!crvUSDController.loan_exists(address(this))){
         
-        depositAndCreateLoan(_wstETHAmount, _debtAmount, _N);
+        _depositAndCreateLoan(_wstETHAmount, _debtAmount, _N);
 
         }
 
