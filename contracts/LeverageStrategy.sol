@@ -127,7 +127,7 @@ contract LeverageStrategy {
     function invest(uint256 _wstETHAmount, uint256 _debtAmount, uint256 _N) external {
         
         // Opens a position on crvUSD if no loan already
-        if (crvUSDController.loan_exists(address(this))){
+        if (!crvUSDController.loan_exists(address(this))){
         
         depositAndCreateLoan(_wstETHAmount, _debtAmount, _N);
 
