@@ -21,11 +21,13 @@ import "./interfaces/IERC20.sol";
 
 contract LeverageStrategy {
 
-    //Struct to keep strack of the users funds and where they are allocated
+    //Struct to keep track of the users funds and where they are allocated
+    //TODO: see how many of the struct vars actually need the full uint256
     struct UserInfo {
         uint256 wstETHDeposited; // Total wsteth deposited by a user
         uint256 crvUSDBorrowed; // Total crvusd borrowed by a user
         uint256 usdcAmount; // Total usdc of the user after swapping from crvusd
+
         uint256 balancerLPTokens;  // Total balancer LP tokens the user 
         uint256 stakedInAura;// Total balancer LP tokens staked in aura for the user
         uint256 totalYieldEarned;// Historical yield for the user, maybe unnecessary 
@@ -105,15 +107,33 @@ contract LeverageStrategy {
     // TODO:
     // Collateral health monitor
 
+
+     function _depositAndCreateLoan(uint256 _wstETHAmount, uint256 _debtAmount, uint256 _N) internal {
+        require(_wstETHAmount > 0, "Amount should be greater than 0");
+        
+        require(IERC20(wstETH).transferFrom(msg.sender, address(this), _wstETHAmount), "Transfer failed");         
+        require(IERC20(wstETH).approve(address(controller), _wstETHAmount), "Approval failed");
+        
+        // Call create_loan on the controller
+        controller.create_loan(_wstETHAmount, _debtAmount, _N);
+        
+        // Update the user's info
+        UserInfo storage user = userInfo[msg.sender];
+        user.wstETHDeposited = user.wstETHDeposited.add(_wstETHAmount);
+        user.crvUSDBorrowed = user.crvUSDBorrowed.add(_debtAmount);
+        user.loanBand = _N;
+    }
+
     // main contract functions
-    function invest(uint256 amount)
-        public
-    {
+    // @param N Number of price bands to deposit into (to do autoliquidation-deliquidation of wsteth) if the price of the wsteth collateral goes too low
+    function invest(uint256 _wstETHAmount, uint256 _debtAmount, uint256 _N) external {
+        
+        // Opens a position on crvUSD if no loan already
+        if (!crvUSDController.loan_exists(address(this))){
+        
+        _depositAndCreateLoan(_wstETHAmount, _debtAmount, _N);
 
-        // Takes WSTETH
-        wsteth.transfer(amount, address(this));
-
-        // Opens a position on crvUSD
+        }
 
         // Note this address is an owner of a crvUSD CDP
         // now we assume that we already have a CDP
