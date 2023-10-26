@@ -22,6 +22,7 @@ import "./interfaces/IERC20.sol";
 contract LeverageStrategy {
 
     //Struct to keep strack of the users funds and where they are allocated
+    //TODO: see how many of the struct vars actually need the full uint256
     struct UserInfo {
         uint256 wstETHDeposited;
         uint256 crvUSDBorrowed;
@@ -29,6 +30,7 @@ contract LeverageStrategy {
         uint256 balancerLPTokens;
         uint256 stakedInAura;
         uint256 totalYieldEarned;
+        uint256 loanBand;
     }
 
     // State variables
@@ -104,15 +106,32 @@ contract LeverageStrategy {
     // TODO:
     // Collateral health monitor
 
+
+     function depositAndCreateLoan(uint256 _wstETHAmount, uint256 _debtAmount, uint256 _N) internal {
+        require(_wstETHAmount > 0, "Amount should be greater than 0");
+        
+        require(IERC20(wstETH).transferFrom(msg.sender, address(this), _wstETHAmount), "Transfer failed");         
+        require(IERC20(wstETH).approve(address(controller), _wstETHAmount), "Approval failed");
+        
+        // Call create_loan on the controller
+        controller.create_loan(_wstETHAmount, _debtAmount, _N);
+        
+        // Update the user's info
+        UserInfo storage user = userInfo[msg.sender];
+        user.totalInvested = user.totalInvested.add(_wstETHAmount);
+        user.totalBorrowed = user.totalBorrowed.add(_debtAmount);
+        user.loanBand = _N;
+    }
+
     // main contract functions
-    function invest(uint256 amount)
-        public
-    {
+    function invest(uint256 _wstETHAmount, uint256 _debtAmount, uint256 _N) external {
+        
+        // Opens a position on crvUSD if no loan already
+        if (crvUSDController.loan_exists(address(this))){
+        
+        depositAndCreateLoan(_wstETHAmount, _debtAmount, _N);
 
-        // Takes WSTETH
-        wsteth.transfer(amount, address(this));
-
-        // Opens a position on crvUSD
+        }
 
         // Note this address is an owner of a crvUSD CDP
         // now we assume that we already have a CDP
