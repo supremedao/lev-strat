@@ -87,14 +87,6 @@ contract LeverageStrategy {
         _setupRole(DAO_ROLE, _dao);
     }
 
-    // Modifiers
-    // Instead of access modifier everything will work with inline check like require(hasRole(KEEPER_ROLE, msg.sender))
-
-    function setKeeper(address _keeper) public {
-        require(hasRole(DEFAULT_ADMIN_ROLE, msg.sender));
-        _setupRole(KEEPER_ROLE, _keeper);
-
-    }
 
     // TODO:
     // Collateral health monitor
