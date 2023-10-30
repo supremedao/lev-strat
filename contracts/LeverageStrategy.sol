@@ -82,7 +82,7 @@ contract LeverageStrategy {
 
     // Constructor
     constructor(address _dao) {
-        dao = _dao;
+        treasury = _dao;
         auraClaim        = IAuraClaimZapV3(_auraClaim);
         auraBooster      = IAuraBooster(_auraBooster);
         balancerPool     = IBalancerVault(_auraBooster);
@@ -93,14 +93,10 @@ contract LeverageStrategy {
         wsteth           = IERC20(_wstETH);
         crvusd           = IERC20(_crvUSD);
         usdc             = IERC20(_USDC);
-    }
-
-    // Modifiers
-    // TODO: check if we need this solution
-    modifier onlyTreasury() {
-        require(msg.sender == dao,
-            "Only the DAO can call this function.");
-        _;
+        coil             = IERC20(_COIL);
+    
+        _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        _setupRole(DAO_ROLE, _dao);
     }
 
     // TODO:
