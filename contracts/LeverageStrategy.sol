@@ -93,7 +93,6 @@ contract LeverageStrategy {
         wsteth           = IERC20(_wstETH);
         crvusd           = IERC20(_crvUSD);
         usdc             = IERC20(_USDC);
-        d2d             = IERC20(_D2D);
     }
 
     // Modifiers
@@ -139,7 +138,7 @@ contract LeverageStrategy {
         // now we assume that we already have a CDP
         // But there also should be a case when we create a new one
 
-        crvUSDController.add_collateral(uint256 collateral, address(this));
+        crvUSDController.add_collateral(_debtAmount, address(this));
 
         // borrow crvUSD
 
