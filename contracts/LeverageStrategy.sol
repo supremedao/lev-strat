@@ -119,6 +119,24 @@ contract LeverageStrategy {
         user.loanBand = _N;
     }
 
+    function _addCollateral(uint256 _wstETHAmount) internal {
+
+        crvUSDController.add_collateral(_wstETHAmount, address(this));
+
+    }
+
+    function _borrowMore(uint256 _wstETHAmount, uint256 _debtAmount) internal {
+
+        crvUSDController.borrow_more(_wstETHAmount, _debtAmount);
+
+        // Update the user's info
+        UserInfo storage user = userInfo[msg.sender];
+        user.wstETHDeposited = user.wstETHDeposited.add(_wstETHAmount);
+        user.crvUSDBorrowed = user.crvUSDBorrowed.add(_debtAmount);
+        
+    }
+
+
     // main contract functions
     // @param N Number of price bands to deposit into (to do autoliquidation-deliquidation of wsteth) if the price of the wsteth collateral goes too low
     function invest(uint256 _wstETHAmount, uint256 _debtAmount, uint256 _N) external {
@@ -134,15 +152,14 @@ contract LeverageStrategy {
         // now we assume that we already have a CDP
         // But there also should be a case when we create a new one
 
-        crvUSDController.add_collateral(_debtAmount, address(this));
+        _addCollateral(_wstETHAmount);
 
         // borrow crvUSD
 
         // TODO: calculate borrow amount
         // check if there's price in Curve or we should ping Oracle
-        uint256 borrowAmount;
-
-        crvUSDController.borrow_more(amount, borrowAmount);
+    
+        _borrowMore(_wstETHAmount, _debtAmount);
 
         // Exchange crvUSD to USDC on Curve
 
