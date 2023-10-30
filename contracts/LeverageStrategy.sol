@@ -39,7 +39,7 @@ contract LeverageStrategy {
     // State variables
     IAuraClaimZapV3   public auraClaim;
     IAuraBooster      public auraBooster;
-    IBalancerVault    public balancerPool;
+    IBalancerVault    public balancerVault;
     IcrvUSD           public crvUSD;
     IcrvUSDController public crvUSDController;
     IcrvUSDUSDCPool   public crvUSDUSDCPool;
@@ -49,8 +49,12 @@ contract LeverageStrategy {
     IERC20            public usdc;
     IERC20            public d2d;
 
+<<<<<<< Updated upstream
     bytes32 public constant KEEPER_ROLE = keccak256("KEEPER_ROLE");
     bytes32 public constant DAO_ROLE = keccak256("DAO_ROLE");
+=======
+    uint256           public totalwstETHDeposited;
+>>>>>>> Stashed changes
 
     // mainnet addresses
     address public treasury; // recieves a fraction of yield
@@ -89,7 +93,7 @@ contract LeverageStrategy {
         treasury = _dao;
         auraClaim        = IAuraClaimZapV3(_auraClaim);
         auraBooster      = IAuraBooster(_auraBooster);
-        balancerPool     = IBalancerVault(_auraBooster);
+        balancerVault     = IBalancerVault(_auraBooster);
         crvUSD           = IcrvUSD(_crvUSD);
         crvUSDController = IcrvUSDController(_crvUSDController);
         crvUSDUSDCPool   = IcrvUSDUSDCPool(_crvUSDUSDCPool);
@@ -115,6 +119,8 @@ contract LeverageStrategy {
         
         // Call create_loan on the controller
         controller.create_loan(_wstETHAmount, _debtAmount, _N);
+
+        totalwstETHDeposited = totalwstETHDeposited + _wstETHAmount;
         
         // Update the user's info
         UserInfo storage user = userInfo[msg.sender];
@@ -123,6 +129,50 @@ contract LeverageStrategy {
         user.loanBand = _N;
     }
 
+<<<<<<< Updated upstream
+=======
+    function _addCollateral(uint256 _wstETHAmount) internal {
+
+        crvUSDController.add_collateral(_wstETHAmount, address(this));
+        totalwstETHDeposited = totalwstETHDeposited + _wstETHAmount;
+
+    }
+
+    function _borrowMore(uint256 _wstETHAmount, uint256 _debtAmount) internal {
+
+        crvUSDController.borrow_more(_wstETHAmount, _debtAmount);
+
+        // Update the user's info
+        UserInfo storage user = userInfo[msg.sender];
+        user.wstETHDeposited = user.wstETHDeposited.add(_wstETHAmount);
+        user.crvUSDBorrowed = user.crvUSDBorrowed.add(_debtAmount);
+        
+    }
+
+    function _joinPool(bytes32 poolId, uint usdcAmount) internal {
+
+        (IERC20[] memory tokens, , ) = IBalancerVault.getPoolTokens(poolId);
+        uint256[] memory maxAmountsIn = new uint256[](tokens.length);
+
+        maxAmountsIn[0] = usdcAmount;
+
+        bytes memory userData = "Temp"; 
+
+        ///TODO: need to encode type of join to user data
+
+        IBalancerVault.JoinPoolRequest memory request = IBalancerVault.JoinPoolRequest({
+            assets: _convertERC20sToAssets(tokens),
+            maxAmountsIn: maxAmountsIn,
+            userData: userData,
+            fromInternalBalance: false
+        });
+
+        balancerVault.joinPool(poolId, address(this), msg.sender, request);
+
+    }
+
+
+>>>>>>> Stashed changes
     // main contract functions
     // @param N Number of price bands to deposit into (to do autoliquidation-deliquidation of wsteth) if the price of the wsteth collateral goes too low
     function invest(uint256 _wstETHAmount, uint256 _debtAmount, uint256 _N) external {
@@ -157,14 +207,11 @@ contract LeverageStrategy {
         // For this Pool:
         // token_id 0 = crvUSD
         // token_id 2 = USDCPool
-        crvUSDUSDCPool.exchange({ sold_token_id: 0, bought_token_id: 2, amount: amounts[0], min_output_amount: min_output_amount });
+        uint usdcAmount = crvUSDUSDCPool.exchange({ sold_token_id: 0, bought_token_id: 2, amount: amounts[0], min_output_amount: min_output_amount });
 
         // Provide liquidity to the D2D/USDC Pool on Balancer
         bytes32 _poolId = 0x27c9f71cc31464b906e0006d4fcbc8900f48f15f00020000000000000000010f;
-
-        // TODO: compose a JoinPoolRequest struct
-
-        balancerPool.joinPool(_poolId, address(this), address(this) /*JoinPoolRequest*/);
+        _joinPool(poolId, usdcAmount);
 
         // Stake LP tokens on Aura Finance
         uint pid = 95;
