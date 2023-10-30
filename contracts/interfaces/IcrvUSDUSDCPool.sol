@@ -3,7 +3,7 @@
 pragma solidity ^0.8.0;
 
 // ChatGPT generated
-contract IcrvUSDUSDCPool {
+interface IcrvUSDUSDCPool {
     // Corresponds to the `get_dy` function in the Vyper contract
     function get_dy(
         int128 i,

@@ -22,6 +22,20 @@ import "./interfaces/IcrvUSDUSDCPool.sol";
 import "./interfaces/IERC20.sol";
 
 contract LeverageStrategy {
+
+    //Struct to keep track of the users funds and where they are allocated
+    //TODO: see how many of the struct vars actually need the full uint256
+    struct UserInfo {
+        uint256 wstETHDeposited; // Total wsteth deposited by a user
+        uint256 crvUSDBorrowed; // Total crvusd borrowed by a user
+        uint256 usdcAmount; // Total usdc of the user after swapping from crvusd
+
+        uint256 balancerLPTokens;  // Total balancer LP tokens the user 
+        uint256 stakedInAura;// Total balancer LP tokens staked in aura for the user
+        uint256 totalYieldEarned;// Historical yield for the user, maybe unnecessary 
+        uint256 loanBand;// The number of price bands in which the users wsteth will be deposited into
+    }
+
     // State variables
     IAuraClaimZapV3   public auraClaim;
     IAuraBooster      public auraBooster;
@@ -33,7 +47,7 @@ contract LeverageStrategy {
     IERC20            public wsteth;
     IERC20            public crvusd;
     IERC20            public usdc;
-    IERC20            public coil;
+    IERC20            public d2d;
 
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     bytes32 public constant KEEPER_ROLE = keccak256("KEEPER_ROLE");
@@ -44,7 +58,10 @@ contract LeverageStrategy {
     address public _wstETH = 0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0;
     address public _crvUSD = 0xf939E0A03FB07F59A73314E73794Be0E57ac1b4E;
     address public _USDC   = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
-    address public _COIL   = 0x823e1b82ce1dc147bbdb25a203f046afab1ce918;
+    address public _D2D   = 0x43d4a3cd90ddd2f8f4f693170c9c8098163502ad;
+
+    //mappings
+    mapping(address => UserInfo) public userInfo;
 
     // pools addresses
 
@@ -52,8 +69,8 @@ contract LeverageStrategy {
     // DAO should be able to change pool parameters and tokens
     // NOTE: maybe we should an updateble strategy struct
 
-    // https://etherscan.io/address/0x42fbd9f666aacc0026ca1b88c94259519e03dd67
-    address public _COILSUSDCBalancerPool = 0x42FBD9F666AaCC0026ca1B88C94259519e03dd67;
+    // https://etherscan.io/address/0x27c9f71cc31464b906e0006d4fcbc8900f48f15f
+    address public _D2DSUSDCBalancerPool = 0x27C9f71cC31464B906E0006d4FcBC8900F48f15f;
 
     // TODO: check if the booster is the right contract
     // https://etherscan.io/address/0xa57b8d98dae62b26ec3bcc4a365338157060b234
@@ -86,26 +103,43 @@ contract LeverageStrategy {
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(DAO_ROLE, _dao);
     }
-
-
+    
     // TODO:
     // Collateral health monitor
 
+
+     function _depositAndCreateLoan(uint256 _wstETHAmount, uint256 _debtAmount, uint256 _N) internal {
+        require(_wstETHAmount > 0, "Amount should be greater than 0");
+        
+        require(IERC20(wstETH).transferFrom(msg.sender, address(this), _wstETHAmount), "Transfer failed");         
+        require(IERC20(wstETH).approve(address(controller), _wstETHAmount), "Approval failed");
+        
+        // Call create_loan on the controller
+        controller.create_loan(_wstETHAmount, _debtAmount, _N);
+        
+        // Update the user's info
+        UserInfo storage user = userInfo[msg.sender];
+        user.wstETHDeposited = user.wstETHDeposited.add(_wstETHAmount);
+        user.crvUSDBorrowed = user.crvUSDBorrowed.add(_debtAmount);
+        user.loanBand = _N;
+    }
+
     // main contract functions
-    function invest(uint256 amount)
-        public
-    {
+    // @param N Number of price bands to deposit into (to do autoliquidation-deliquidation of wsteth) if the price of the wsteth collateral goes too low
+    function invest(uint256 _wstETHAmount, uint256 _debtAmount, uint256 _N) external {
+        
+        // Opens a position on crvUSD if no loan already
+        if (!crvUSDController.loan_exists(address(this))){
+        
+        _depositAndCreateLoan(_wstETHAmount, _debtAmount, _N);
 
-        // Takes WSTETH
-        wsteth.transfer(amount, address(this));
-
-        // Opens a position on crvUSD
+        }
 
         // Note this address is an owner of a crvUSD CDP
         // now we assume that we already have a CDP
         // But there also should be a case when we create a new one
 
-        crvUSDController.add_collateral(uint256 collateral, address(this));
+        crvUSDController.add_collateral(_debtAmount, address(this));
 
         // borrow crvUSD
 
@@ -126,8 +160,8 @@ contract LeverageStrategy {
         // token_id 2 = USDCPool
         crvUSDUSDCPool.exchange({ sold_token_id: 0, bought_token_id: 2, amount: amounts[0], min_output_amount: min_output_amount });
 
-        // Provide liquidity to the COIL/USDC Pool on Balancer
-        bytes32 _poolId = 0x42fbd9f666aacc0026ca1b88c94259519e03dd67000200000000000000000507;
+        // Provide liquidity to the D2D/USDC Pool on Balancer
+        bytes32 _poolId = 0x27c9f71cc31464b906e0006d4fcbc8900f48f15f00020000000000000000010f;
 
         // TODO: compose a JoinPoolRequest struct
 

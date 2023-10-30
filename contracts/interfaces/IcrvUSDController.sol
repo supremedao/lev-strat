@@ -3,7 +3,7 @@
 pragma solidity ^0.8.0;
 
 // ChatGPT generated interface
-contract IcrvUSDController {
+interface IcrvUSDController {
 
     function debt(address user) external view returns (uint256);
     function loan_exists(address user) external view returns (bool);
