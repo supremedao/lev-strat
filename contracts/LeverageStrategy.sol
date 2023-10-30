@@ -11,6 +11,8 @@ ____/ // /_/ /__  /_/ /  /   /  __/  / / / / /  __/  /_/ /_  ___ / /_/ /
 
 pragma solidity ^0.8.0;
 
+
+import "@openzeppelin/contracts/access/AccessControl.sol";
 import "./interfaces/IAuraClaimZapV3.sol";
 import "./interfaces/IAuraBooster.sol";
 import "./interfaces/IBalancerVault.sol";
@@ -35,7 +37,6 @@ contract LeverageStrategy {
     }
 
     // State variables
-
     IAuraClaimZapV3   public auraClaim;
     IAuraBooster      public auraBooster;
     IBalancerVault    public balancerPool;
@@ -47,6 +48,9 @@ contract LeverageStrategy {
     IERC20            public crvusd;
     IERC20            public usdc;
     IERC20            public d2d;
+
+    bytes32 public constant KEEPER_ROLE = keccak256("KEEPER_ROLE");
+    bytes32 public constant DAO_ROLE = keccak256("DAO_ROLE");
 
     // mainnet addresses
     address public treasury; // recieves a fraction of yield
@@ -98,7 +102,7 @@ contract LeverageStrategy {
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(DAO_ROLE, _dao);
     }
-
+    
     // TODO:
     // Collateral health monitor
 
