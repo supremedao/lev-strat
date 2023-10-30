@@ -83,15 +83,18 @@ contract LeverageStrategy {
         usdc             = IERC20(_USDC);
         coil             = IERC20(_COIL);
     
-        _setupRole(ADMIN_ROLE, msg.sender);
+        _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(DAO_ROLE, _dao);
-
-        // Admin role can grant/revoke the KEEPER_ROLE
-        _setRoleAdmin(KEEPER_ROLE, ADMIN_ROLE);
     }
 
     // Modifiers
     // Instead of access modifier everything will work with inline check like require(hasRole(KEEPER_ROLE, msg.sender))
+
+    function setKeeper(address _keeper) public {
+        require(hasRole(DEFAULT_ADMIN_ROLE, msg.sender));
+        _setupRole(KEEPER_ROLE, _keeper);
+
+    }
 
 
     // TODO:
