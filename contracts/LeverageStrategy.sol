@@ -49,7 +49,6 @@ contract LeverageStrategy {
     IERC20            public usdc;
     IERC20            public d2d;
 
-    bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     bytes32 public constant KEEPER_ROLE = keccak256("KEEPER_ROLE");
     bytes32 public constant DAO_ROLE = keccak256("DAO_ROLE");
 
