@@ -96,7 +96,6 @@ contract LeverageStrategy {
 
     }
 
-
     // TODO:
     // Collateral health monitor
 
