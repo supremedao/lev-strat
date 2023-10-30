@@ -49,12 +49,9 @@ contract LeverageStrategy {
     IERC20            public usdc;
     IERC20            public d2d;
 
-<<<<<<< Updated upstream
     bytes32 public constant KEEPER_ROLE = keccak256("KEEPER_ROLE");
     bytes32 public constant DAO_ROLE = keccak256("DAO_ROLE");
-=======
     uint256           public totalwstETHDeposited;
->>>>>>> Stashed changes
 
     // mainnet addresses
     address public treasury; // recieves a fraction of yield
