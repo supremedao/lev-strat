@@ -48,16 +48,14 @@ contract LeverageStrategy {
     IERC20            public crvusd;
     IERC20            public usdc;
     IERC20            public d2d;
+    bytes32           public poolId;
 
     bytes32 public constant KEEPER_ROLE = keccak256("KEEPER_ROLE");
     bytes32 public constant DAO_ROLE = keccak256("DAO_ROLE");
 
     // mainnet addresses
     address public treasury; // recieves a fraction of yield
-    address public _wstETH;
-    address public _crvUSD;
-    address public _USDC;
-    address public _D2D;
+
 
     //mappings
     mapping(address => UserInfo) public userInfo;
@@ -68,12 +66,10 @@ contract LeverageStrategy {
     // DAO should be able to change pool parameters and tokens
     // NOTE: maybe we should an updateble strategy struct
 
-    // https://etherscan.io/address/0x27c9f71cc31464b906e0006d4fcbc8900f48f15f
-    address public _D2DSUSDCBalancerPool = 0x27C9f71cC31464B906E0006d4FcBC8900F48f15f;
 
 
-    // https://etherscan.io/address/0x4dece678ceceb27446b35c672dc7d61f30bad69e
-    address _crvUSDUSDCPool = 0x4dece678ceceb27446b35c672dc7d61f30bad69e;
+
+
 
     // Events
     // Add relevant events to log important contract actions/events
@@ -110,6 +106,10 @@ contract LeverageStrategy {
         usdc = IERC20(_USDC);
         d2d = IERC20(_D2D);
 
+    }
+
+    function setPoolId(bytes32 _poolId) external onlyRole(DAO_ROLE) {
+        poolId = _poolId;
     }
     
     // TODO:
