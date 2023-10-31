@@ -151,7 +151,9 @@ contract LeverageStrategy {
 
         maxAmountsIn[0] = usdcAmount;
 
-        bytes memory userData = "Temp"; 
+        ///@dev User sends an estimated but unknown (computed at run time) quantity of a single token, and receives a precise quantity of BPT.
+
+        bytes memory userData = abi.encode(IBalancerVault.JoinKind.TOKEN_IN_FOR_EXACT_BPT_OUT);
 
         ///TODO: need to encode type of join to user data
 

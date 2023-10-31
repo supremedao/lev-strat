@@ -5,6 +5,14 @@ pragma solidity ^0.8.0;
 
 contract IBalancerVault {
 
+
+    enum JoinKind {
+        INIT,
+        EXACT_TOKENS_IN_FOR_BPT_OUT,
+        TOKEN_IN_FOR_EXACT_BPT_OUT,
+        ALL_TOKENS_IN_FOR_EXACT_BPT_OUT
+    }
+
     /* @dev copied from the IVault.sol -\0_0/-
 
     /**
@@ -124,6 +132,8 @@ contract IBalancerVault {
             uint256[] memory balances,
             uint256 lastChangeBlock
         );
+
+
 
 
 
