@@ -201,6 +201,7 @@ contract LeverageStrategy {
         // For this Pool:
         // token_id 0 = crvUSD
         // token_id 2 = USDCPool
+        uint amounts = [0,_debtAmount];
         uint usdcAmount = crvUSDUSDCPool.exchange({ sold_token_id: 0, bought_token_id: 2, amount: amounts[0], min_output_amount: min_output_amount });
 
         // Provide liquidity to the D2D/USDC Pool on Balancer
