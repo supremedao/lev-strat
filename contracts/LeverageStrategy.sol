@@ -126,8 +126,6 @@ contract LeverageStrategy {
         user.loanBand = _N;
     }
 
-<<<<<<< Updated upstream
-=======
     function _addCollateral(uint256 _wstETHAmount) internal {
 
         crvUSDController.add_collateral(_wstETHAmount, address(this));
@@ -169,7 +167,6 @@ contract LeverageStrategy {
     }
 
 
->>>>>>> Stashed changes
     // main contract functions
     // @param N Number of price bands to deposit into (to do autoliquidation-deliquidation of wsteth) if the price of the wsteth collateral goes too low
     function invest(uint256 _wstETHAmount, uint256 _debtAmount, uint256 _N) external {
