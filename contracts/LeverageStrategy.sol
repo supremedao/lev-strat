@@ -103,11 +103,25 @@ contract LeverageStrategy {
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(DAO_ROLE, _dao);
     }
+
+
+    /// @dev This helper function is a fast and cheap way to convert between IERC20[] and IAsset[] types
+    function _convertERC20sToAssets(IERC20[] memory tokens) internal pure returns (IAsset[] memory assets) {
+        // solhint-disable-next-line no-inline-assembly
+        assembly {
+            assets := tokens
+        }
+    }
+
     
     // TODO:
     // Collateral health monitor
 
 
+    /// @notice Create a loan position for the strategy, only used if this is the first position created
+    /// @param _wstETHAmount the amount of wsteth deposited
+    /// @param _debtAmount the amount of crvusd borrowed
+    /// @param _N the number of price bins wsteth is deposited into, this is for crvusds soft liquidations
      function _depositAndCreateLoan(uint256 _wstETHAmount, uint256 _debtAmount, uint256 _N) internal {
         require(_wstETHAmount > 0, "Amount should be greater than 0");
         
@@ -126,6 +140,9 @@ contract LeverageStrategy {
         user.loanBand = _N;
     }
 
+
+    /// @notice Add collateral to a loan postion if the poistion is already initialised
+    /// @param _wstETHAmount the amount of wsteth deposited
     function _addCollateral(uint256 _wstETHAmount) internal {
 
         crvUSDController.add_collateral(_wstETHAmount, address(this));
@@ -133,6 +150,10 @@ contract LeverageStrategy {
 
     }
 
+
+    /// @notice Borrow more crvusd,
+    /// @param _wstETHAmount the amount of wsteth deposited
+    /// @param _debtAmount the amount of crvusd borrowed
     function _borrowMore(uint256 _wstETHAmount, uint256 _debtAmount) internal {
 
         crvUSDController.borrow_more(_wstETHAmount, _debtAmount);
@@ -144,6 +165,10 @@ contract LeverageStrategy {
         
     }
 
+    /// @notice Join balancer pool
+    /// @dev Single side join with usdc
+    /// @param poolId ID of the balancer pool
+    /// @param usdcAmount the amount of usdc to deposit
     function _joinPool(bytes32 poolId, uint usdcAmount) internal {
 
         (IERC20[] memory tokens, , ) = IBalancerVault.getPoolTokens(poolId);
