@@ -5,6 +5,14 @@ pragma solidity ^0.8.0;
 
 contract IBalancerVault {
 
+
+    enum JoinKind {
+        INIT,
+        EXACT_TOKENS_IN_FOR_BPT_OUT,
+        TOKEN_IN_FOR_EXACT_BPT_OUT,
+        ALL_TOKENS_IN_FOR_EXACT_BPT_OUT
+    }
+
     /* @dev copied from the IVault.sol -\0_0/-
 
     /**
@@ -101,5 +109,32 @@ contract IBalancerVault {
         bytes userData;
         bool toInternalBalance;
     }
+
+        /**
+     * @dev Returns a Pool's registered tokens, the total balance for each, and the latest block when *any* of
+     * the tokens' `balances` changed.
+     *
+     * The order of the `tokens` array is the same order that will be used in `joinPool`, `exitPool`, as well as in all
+     * Pool hooks (where applicable). Calls to `registerTokens` and `deregisterTokens` may change this order.
+     *
+     * If a Pool only registers tokens once, and these are sorted in ascending order, they will be stored in the same
+     * order as passed to `registerTokens`.
+     *
+     * Total balances include both tokens held by the Vault and those withdrawn by the Pool's Asset Managers. These are
+     * the amounts used by joins, exits and swaps. For a detailed breakdown of token balances, use `getPoolTokenInfo`
+     * instead.
+     */
+    function getPoolTokens(bytes32 poolId)
+        external
+        view
+        returns (
+            IERC20[] memory tokens,
+            uint256[] memory balances,
+            uint256 lastChangeBlock
+        );
+
+
+
+
 
 }

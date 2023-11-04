@@ -39,7 +39,7 @@ contract LeverageStrategy {
     // State variables
     IAuraClaimZapV3   public auraClaim;
     IAuraBooster      public auraBooster;
-    IBalancerVault    public balancerPool;
+    IBalancerVault    public balancerVault;
     IcrvUSD           public crvUSD;
     IcrvUSDController public crvUSDController;
     IcrvUSDUSDCPool   public crvUSDUSDCPool;
@@ -52,6 +52,7 @@ contract LeverageStrategy {
 
     bytes32 public constant KEEPER_ROLE = keccak256("KEEPER_ROLE");
     bytes32 public constant DAO_ROLE = keccak256("DAO_ROLE");
+    uint256           public totalwstETHDeposited;
 
     // mainnet addresses
     address public treasury; // recieves a fraction of yield
@@ -77,7 +78,6 @@ contract LeverageStrategy {
     // Constructor
     constructor(address _dao) {
         treasury = _dao;
-  
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(DAO_ROLE, _dao);
     }
@@ -111,11 +111,26 @@ contract LeverageStrategy {
     function setPoolId(bytes32 _poolId) external onlyRole(DAO_ROLE) {
         poolId = _poolId;
     }
+
+
+    /// @dev This helper function is a fast and cheap way to convert between IERC20[] and IAsset[] types
+    function _convertERC20sToAssets(IERC20[] memory tokens) internal pure returns (IAsset[] memory assets) {
+        // solhint-disable-next-line no-inline-assembly
+        assembly {
+            assets := tokens
+        }
+    }
+
+
     
     // TODO:
     // Collateral health monitor
 
 
+    /// @notice Create a loan position for the strategy, only used if this is the first position created
+    /// @param _wstETHAmount the amount of wsteth deposited
+    /// @param _debtAmount the amount of crvusd borrowed
+    /// @param _N the number of price bins wsteth is deposited into, this is for crvusds soft liquidations
      function _depositAndCreateLoan(uint256 _wstETHAmount, uint256 _debtAmount, uint256 _N) internal {
         require(_wstETHAmount > 0, "Amount should be greater than 0");
         
@@ -124,6 +139,8 @@ contract LeverageStrategy {
         
         // Call create_loan on the controller
         controller.create_loan(_wstETHAmount, _debtAmount, _N);
+
+        totalwstETHDeposited = totalwstETHDeposited + _wstETHAmount;
         
         // Update the user's info
         UserInfo storage user = userInfo[msg.sender];
@@ -131,6 +148,68 @@ contract LeverageStrategy {
         user.crvUSDBorrowed = user.crvUSDBorrowed.add(_debtAmount);
         user.loanBand = _N;
     }
+
+    function _addCollateral(uint256 _wstETHAmount) internal {
+
+        crvUSDController.add_collateral(_wstETHAmount, address(this));
+
+    }
+
+
+
+    /// @notice Add collateral to a loan postion if the poistion is already initialised
+    /// @param _wstETHAmount the amount of wsteth deposited
+    function _addCollateral(uint256 _wstETHAmount) internal {
+
+        crvUSDController.add_collateral(_wstETHAmount, address(this));
+        totalwstETHDeposited = totalwstETHDeposited + _wstETHAmount;
+
+    }
+
+
+    /// @notice Borrow more crvusd,
+    /// @param _wstETHAmount the amount of wsteth deposited
+    /// @param _debtAmount the amount of crvusd borrowed
+    function _borrowMore(uint256 _wstETHAmount, uint256 _debtAmount) internal {
+
+        crvUSDController.borrow_more(_wstETHAmount, _debtAmount);
+
+        // Update the user's info
+        UserInfo storage user = userInfo[msg.sender];
+        user.wstETHDeposited = user.wstETHDeposited.add(_wstETHAmount);
+        user.crvUSDBorrowed = user.crvUSDBorrowed.add(_debtAmount);
+        
+    }
+
+
+    /// @notice Join balancer pool
+    /// @dev Single side join with usdc
+    /// @param poolId ID of the balancer pool
+    /// @param usdcAmount the amount of usdc to deposit
+    function _joinPool(bytes32 poolId, uint usdcAmount) internal {
+
+        (IERC20[] memory tokens, , ) = IBalancerVault.getPoolTokens(poolId);
+        uint256[] memory maxAmountsIn = new uint256[](tokens.length);
+
+        maxAmountsIn[0] = usdcAmount;
+
+        ///@dev User sends an estimated but unknown (computed at run time) quantity of a single token, and receives a precise quantity of BPT.
+
+        bytes memory userData = abi.encode(IBalancerVault.JoinKind.TOKEN_IN_FOR_EXACT_BPT_OUT);
+
+        ///TODO: need to encode type of join to user data
+
+        IBalancerVault.JoinPoolRequest memory request = IBalancerVault.JoinPoolRequest({
+            assets: _convertERC20sToAssets(tokens),
+            maxAmountsIn: maxAmountsIn,
+            userData: userData,
+            fromInternalBalance: false
+        });
+
+        balancerVault.joinPool(poolId, address(this), msg.sender, request);
+
+    }
+
 
     // main contract functions
     // @param N Number of price bands to deposit into (to do autoliquidation-deliquidation of wsteth) if the price of the wsteth collateral goes too low
@@ -147,15 +226,14 @@ contract LeverageStrategy {
         // now we assume that we already have a CDP
         // But there also should be a case when we create a new one
 
-        crvUSDController.add_collateral(_debtAmount, address(this));
+        _addCollateral(_wstETHAmount);
 
         // borrow crvUSD
 
         // TODO: calculate borrow amount
         // check if there's price in Curve or we should ping Oracle
-        uint256 borrowAmount;
-
-        crvUSDController.borrow_more(amount, borrowAmount);
+    
+        _borrowMore(_wstETHAmount, _debtAmount);
 
         // Exchange crvUSD to USDC on Curve
 
@@ -166,14 +244,12 @@ contract LeverageStrategy {
         // For this Pool:
         // token_id 0 = crvUSD
         // token_id 2 = USDCPool
-        crvUSDUSDCPool.exchange({ sold_token_id: 0, bought_token_id: 2, amount: amounts[0], min_output_amount: min_output_amount });
+        uint amounts = [_debtAmount,0];
+        uint usdcAmount = crvUSDUSDCPool.exchange({ sold_token_id: 0, bought_token_id: 2, amount: amounts[0], min_output_amount: min_output_amount });
 
         // Provide liquidity to the D2D/USDC Pool on Balancer
         bytes32 _poolId = 0x27c9f71cc31464b906e0006d4fcbc8900f48f15f00020000000000000000010f;
-
-        // TODO: compose a JoinPoolRequest struct
-
-        balancerPool.joinPool(_poolId, address(this), address(this) /*JoinPoolRequest*/);
+        _joinPool(poolId, usdcAmount);
 
         // Stake LP tokens on Aura Finance
         uint pid = 95;
