@@ -48,6 +48,7 @@ contract LeverageStrategy {
     IERC20            public crvusd;
     IERC20            public usdc;
     IERC20            public d2d;
+    bytes32           public poolId;
 
     bytes32 public constant KEEPER_ROLE = keccak256("KEEPER_ROLE");
     bytes32 public constant DAO_ROLE = keccak256("DAO_ROLE");
@@ -55,10 +56,7 @@ contract LeverageStrategy {
 
     // mainnet addresses
     address public treasury; // recieves a fraction of yield
-    address public _wstETH = 0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0;
-    address public _crvUSD = 0xf939E0A03FB07F59A73314E73794Be0E57ac1b4E;
-    address public _USDC   = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
-    address public _D2D   = 0x43d4a3cd90ddd2f8f4f693170c9c8098163502ad;
+
 
     //mappings
     mapping(address => UserInfo) public userInfo;
@@ -69,18 +67,10 @@ contract LeverageStrategy {
     // DAO should be able to change pool parameters and tokens
     // NOTE: maybe we should an updateble strategy struct
 
-    // https://etherscan.io/address/0x27c9f71cc31464b906e0006d4fcbc8900f48f15f
-    address public _D2DSUSDCBalancerPool = 0x27C9f71cC31464B906E0006d4FcBC8900F48f15f;
 
-    // TODO: check if the booster is the right contract
-    // https://etherscan.io/address/0xa57b8d98dae62b26ec3bcc4a365338157060b234
-    address public _auraBooster = 0xA57b8d98dAE62B26Ec3bcC4a365338157060B234;
 
-    // https://etherscan.io/address/0x5b2364fd757e262253423373e4d57c5c011ad7f4#code
-    address public _auraClaim = 0x5b2364fD757E262253423373E4D57C5c011Ad7F4;
 
-    // https://etherscan.io/address/0x4dece678ceceb27446b35c672dc7d61f30bad69e
-    address _crvUSDUSDCPool = 0x4dece678ceceb27446b35c672dc7d61f30bad69e;
+
 
     // Events
     // Add relevant events to log important contract actions/events
@@ -88,20 +78,38 @@ contract LeverageStrategy {
     // Constructor
     constructor(address _dao) {
         treasury = _dao;
-        auraClaim        = IAuraClaimZapV3(_auraClaim);
-        auraBooster      = IAuraBooster(_auraBooster);
-        balancerVault     = IBalancerVault(_auraBooster);
-        crvUSD           = IcrvUSD(_crvUSD);
-        crvUSDController = IcrvUSDController(_crvUSDController);
-        crvUSDUSDCPool   = IcrvUSDUSDCPool(_crvUSDUSDCPool);
-
-        wsteth           = IERC20(_wstETH);
-        crvusd           = IERC20(_crvUSD);
-        usdc             = IERC20(_USDC);
-        coil             = IERC20(_COIL);
-    
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(DAO_ROLE, _dao);
+    }
+
+  // only DAO can initialize)
+    function initializeContracts(
+        address _auraClaim,
+        address _auraBooster,
+        address _balancerVault,
+        address _crvUSD,
+        address _crvUSDController,
+        address _crvUSDUSDCPool,
+        address _wstETH,
+        address _crvUSDToken,
+        address _USDC,
+        address _D2D
+    ) external onlyRole(DAO_ROLE) {
+        auraClaim = IAuraClaimZapV3(_auraClaim);
+        auraBooster = IAuraBooster(_auraBooster);
+        balancerVault = IBalancerVault(_balancerVault);
+        crvUSD = IcrvUSD(_crvUSD);
+        crvUSDController = IcrvUSDController(_crvUSDController);
+        crvUSDUSDCPool = IcrvUSDUSDCPool(_crvUSDUSDCPool);
+        wsteth = IERC20(_wstETH);
+        crvusd = IERC20(_crvUSDToken);
+        usdc = IERC20(_USDC);
+        d2d = IERC20(_D2D);
+
+    }
+
+    function setPoolId(bytes32 _poolId) external onlyRole(DAO_ROLE) {
+        poolId = _poolId;
     }
 
 
@@ -112,6 +120,7 @@ contract LeverageStrategy {
             assets := tokens
         }
     }
+
 
     
     // TODO:
