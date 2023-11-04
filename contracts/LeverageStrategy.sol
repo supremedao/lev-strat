@@ -140,6 +140,13 @@ contract LeverageStrategy {
         user.loanBand = _N;
     }
 
+    function _addCollateral(uint256 _wstETHAmount) internal {
+
+        crvUSDController.add_collateral(_wstETHAmount, address(this));
+
+    }
+
+
 
     /// @notice Add collateral to a loan postion if the poistion is already initialised
     /// @param _wstETHAmount the amount of wsteth deposited
@@ -164,6 +171,7 @@ contract LeverageStrategy {
         user.crvUSDBorrowed = user.crvUSDBorrowed.add(_debtAmount);
         
     }
+
 
     /// @notice Join balancer pool
     /// @dev Single side join with usdc
@@ -207,15 +215,14 @@ contract LeverageStrategy {
         // now we assume that we already have a CDP
         // But there also should be a case when we create a new one
 
-        crvUSDController.add_collateral(_debtAmount, address(this));
+        _addCollateral(_wstETHAmount);
 
         // borrow crvUSD
 
         // TODO: calculate borrow amount
         // check if there's price in Curve or we should ping Oracle
-        uint256 borrowAmount;
-
-        crvUSDController.borrow_more(amount, borrowAmount);
+    
+        _borrowMore(_wstETHAmount, _debtAmount);
 
         // Exchange crvUSD to USDC on Curve
 
