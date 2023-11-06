@@ -50,9 +50,10 @@ contract LeverageStrategy {
     IERC20            public d2d;
     bytes32           public poolId;
 
+    uint256           public totalwstETHDeposited;
+
     bytes32 public constant KEEPER_ROLE = keccak256("KEEPER_ROLE");
     bytes32 public constant DAO_ROLE = keccak256("DAO_ROLE");
-    uint256           public totalwstETHDeposited;
 
     // mainnet addresses
     address public treasury; // recieves a fraction of yield
@@ -103,13 +104,12 @@ contract LeverageStrategy {
         d2d = IERC20(_D2D);
 
     }
+    
+    // ========== EXTERNAL FUNCTIONS ==========
 
     function setPoolId(bytes32 _poolId) external onlyRole(DAO_ROLE) {
         poolId = _poolId;
     }
-    
-    // ========== EXTERNAL FUNCTIONS ==========
-
 
     // main contract functions
     // @param N Number of price bands to deposit into (to do autoliquidation-deliquidation of wsteth) if the price of the wsteth collateral goes too low
