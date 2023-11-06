@@ -68,10 +68,6 @@ contract LeverageStrategy {
     // NOTE: maybe we should an updateble strategy struct
 
 
-
-
-
-
     // Events
     // Add relevant events to log important contract actions/events
 
@@ -111,7 +107,60 @@ contract LeverageStrategy {
     function setPoolId(bytes32 _poolId) external onlyRole(DAO_ROLE) {
         poolId = _poolId;
     }
+    
+    // ========== EXTERNAL FUNCTIONS ==========
 
+
+    // main contract functions
+    // @param N Number of price bands to deposit into (to do autoliquidation-deliquidation of wsteth) if the price of the wsteth collateral goes too low
+    function invest(uint256 _wstETHAmount, uint256 _debtAmount, uint256 _N) external {
+        
+        // Opens a position on crvUSD if no loan already
+        if (!crvUSDController.loan_exists(address(this))){
+        
+        _depositAndCreateLoan(_wstETHAmount, _debtAmount, _N);
+
+        }
+
+        // Note this address is an owner of a crvUSD CDP
+        // now we assume that we already have a CDP
+        // But there also should be a case when we create a new one
+
+        _addCollateral(_wstETHAmount);
+
+        // borrow crvUSD
+
+        // TODO: calculate borrow amount
+        // check if there's price in Curve or we should ping Oracle
+    
+        _borrowMore(_wstETHAmount, _debtAmount);
+
+        // Exchange crvUSD to USDC on Curve
+
+        // TODO: check the actual token id's and transaction generation
+        // Note: seems that we have a different interface compared to supremedao/contracts
+
+        // pool crvUSD -> USDCPool
+        // For this Pool:
+        // token_id 0 = crvUSD
+        // token_id 2 = USDCPool
+        uint amounts = [_debtAmount,0];
+        uint usdcAmount = crvUSDUSDCPool.exchange({ sold_token_id: 0, bought_token_id: 2, amount: amounts[0], min_output_amount: min_output_amount });
+
+        // Provide liquidity to the D2D/USDC Pool on Balancer
+        bytes32 _poolId = 0x27c9f71cc31464b906e0006d4fcbc8900f48f15f00020000000000000000010f;
+        _joinPool(poolId, usdcAmount);
+
+        // Stake LP tokens on Aura Finance
+        uint pid = 95;
+
+        auraBooster.deposit(pid, borrowAmount, true);
+    }
+
+    // TODO:
+    // Collateral health monitor
+    
+    // ========== INTERNAL FUNCTIONS ==========
 
     /// @dev This helper function is a fast and cheap way to convert between IERC20[] and IAsset[] types
     function _convertERC20sToAssets(IERC20[] memory tokens) internal pure returns (IAsset[] memory assets) {
@@ -120,12 +169,6 @@ contract LeverageStrategy {
             assets := tokens
         }
     }
-
-
-    
-    // TODO:
-    // Collateral health monitor
-
 
     /// @notice Create a loan position for the strategy, only used if this is the first position created
     /// @param _wstETHAmount the amount of wsteth deposited
@@ -150,12 +193,9 @@ contract LeverageStrategy {
     }
 
     function _addCollateral(uint256 _wstETHAmount) internal {
-
         crvUSDController.add_collateral(_wstETHAmount, address(this));
 
     }
-
-
 
     /// @notice Add collateral to a loan postion if the poistion is already initialised
     /// @param _wstETHAmount the amount of wsteth deposited
@@ -210,54 +250,7 @@ contract LeverageStrategy {
 
     }
 
-
-    // main contract functions
-    // @param N Number of price bands to deposit into (to do autoliquidation-deliquidation of wsteth) if the price of the wsteth collateral goes too low
-    function invest(uint256 _wstETHAmount, uint256 _debtAmount, uint256 _N) external {
-        
-        // Opens a position on crvUSD if no loan already
-        if (!crvUSDController.loan_exists(address(this))){
-        
-        _depositAndCreateLoan(_wstETHAmount, _debtAmount, _N);
-
-        }
-
-        // Note this address is an owner of a crvUSD CDP
-        // now we assume that we already have a CDP
-        // But there also should be a case when we create a new one
-
-        _addCollateral(_wstETHAmount);
-
-        // borrow crvUSD
-
-        // TODO: calculate borrow amount
-        // check if there's price in Curve or we should ping Oracle
-    
-        _borrowMore(_wstETHAmount, _debtAmount);
-
-        // Exchange crvUSD to USDC on Curve
-
-        // TODO: check the actual token id's and transaction generation
-        // Note: seems that we have a different interface compared to supremedao/contracts
-
-        // pool crvUSD -> USDCPool
-        // For this Pool:
-        // token_id 0 = crvUSD
-        // token_id 2 = USDCPool
-        uint amounts = [_debtAmount,0];
-        uint usdcAmount = crvUSDUSDCPool.exchange({ sold_token_id: 0, bought_token_id: 2, amount: amounts[0], min_output_amount: min_output_amount });
-
-        // Provide liquidity to the D2D/USDC Pool on Balancer
-        bytes32 _poolId = 0x27c9f71cc31464b906e0006d4fcbc8900f48f15f00020000000000000000010f;
-        _joinPool(poolId, usdcAmount);
-
-        // Stake LP tokens on Aura Finance
-        uint pid = 95;
-
-        auraBooster.deposit(pid, borrowAmount, true);
-    }
-
-    function _claimRewards() external {
+    function _claimRewards() internal {
 
         // Claim rewards from Aura
 
@@ -276,10 +269,10 @@ contract LeverageStrategy {
         _invest(investAmount);
     }
 
-// TODO: exit pool
+    // TODO: exit pool
 
     function _withdrawInvestment(address, uint256[] calldata amounts, bytes calldata extraStrategyData)
-        external
+        internal
     {
 
         // Exit Aura position
