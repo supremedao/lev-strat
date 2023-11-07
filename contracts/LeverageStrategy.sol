@@ -80,7 +80,12 @@ contract LeverageStrategy is AccessControl {
          _grantRole(DAO_ROLE, _dao);
     }
 
-  // only DAO can initialize)
+
+//================================================EXTERNAL FUNCTIONS===============================================//
+
+  // only DAO can initialize
+
+
     function initializeContracts(
         address _auraBooster,
         address _balancerVault,
