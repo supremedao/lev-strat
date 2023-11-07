@@ -51,6 +51,7 @@ contract LeverageStrategy is AccessControl {
 
     bytes32 public constant KEEPER_ROLE = keccak256("KEEPER_ROLE");
     bytes32 public constant DAO_ROLE = keccak256("DAO_ROLE");
+
     uint256           public totalwstETHDeposited;
 
     // mainnet addresses
@@ -96,7 +97,7 @@ contract LeverageStrategy is AccessControl {
         address _wstETH,
         address _USDC,
         address _D2D
-    ) external  {
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         auraBooster = IAuraBooster(_auraBooster);
         balancerVault = IBalancerVault(_balancerVault);
         crvUSD = IcrvUSD(_crvUSD);
@@ -108,11 +109,11 @@ contract LeverageStrategy is AccessControl {
 
     }
 
-    function setPoolId(bytes32 _poolId) external onlyRole(DAO_ROLE) {
+    function setPoolId(bytes32 _poolId) external onlyRole(DEFAULT_ADMIN_ROLE) {
         poolId = _poolId;
     }
 
-    function setPid(uint _pid) external onlyRole(DAO_ROLE) {
+    function setPid(uint _pid) external onlyRole(DEFAULT_ADMIN_ROLE) {
         pid = _pid;
     }
 
