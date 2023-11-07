@@ -47,6 +47,7 @@ contract LeverageStrategy is AccessControl {
     IERC20            public usdc;
     IERC20            public d2d;
     bytes32           public poolId;
+    uint              public pid;
 
     bytes32 public constant KEEPER_ROLE = keccak256("KEEPER_ROLE");
     bytes32 public constant DAO_ROLE = keccak256("DAO_ROLE");
@@ -111,6 +112,10 @@ contract LeverageStrategy is AccessControl {
         poolId = _poolId;
     }
 
+    function setPid(uint _pid) external onlyRole(DAO_ROLE) {
+        pid = _pid;
+    }
+
 
 
 
@@ -153,11 +158,9 @@ contract LeverageStrategy is AccessControl {
 
 
         // Provide liquidity to the D2D/USDC Pool on Balancer
-        bytes32 _poolId = 0x27c9f71cc31464b906e0006d4fcbc8900f48f15f00020000000000000000010f;
        // _joinPool(usdcAmount);
 
         // Stake LP tokens on Aura Finance
-        uint pid = 95;
 
         //auraBooster.deposit(pid, borrowAmount, true);
     }
