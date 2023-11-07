@@ -3,7 +3,10 @@
 
 pragma solidity ^0.8.0;
 
-contract IBalancerVault {
+import "./IAsset.sol";
+import "./IERC20.sol";
+
+interface IBalancerVault {
 
 
     enum JoinKind {

@@ -6,7 +6,7 @@ pragma solidity ^0.8.0;
 //* @dev copied from 50COIL-50USDC BPT Token -\0_0/-
 //* @dev I assume it could be used for WSTETH token as well
 
-contract IERC20 {
+interface IERC20 {
     /**
      * @dev Returns the amount of tokens in existence.
      */
