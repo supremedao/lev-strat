@@ -125,6 +125,9 @@ contract LeverageStrategy is AccessControl {
     function invest(uint256 _wstETHAmount, uint256 _debtAmount, uint256 _N) external {
         
         // Opens a position on crvUSD if no loan already
+        // Note this address is an owner of a crvUSD CDP
+        // now we assume that we already have a CDP
+        // But there also should be a case when we create a new one
         if (!crvUSDController.loan_exists(address(this))){
         
         _depositAndCreateLoan(_wstETHAmount, _debtAmount, _N);
@@ -135,14 +138,6 @@ contract LeverageStrategy is AccessControl {
         _borrowMore(_wstETHAmount, _debtAmount);
 
         }
-
-        // Note this address is an owner of a crvUSD CDP
-        // now we assume that we already have a CDP
-        // But there also should be a case when we create a new one
-
-        
-
-        // borrow crvUSD
 
         // TODO: calculate borrow amount
         // check if there's price in Curve or we should ping Oracle
