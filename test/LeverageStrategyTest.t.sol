@@ -22,7 +22,6 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
 
         
 
-        //wstETH.approve(address(levStrat), 25 * 1e18);
         levStrat.initializeContracts(address(0x13425136), address(0x13425136), address(crvUSD), address(crvUSDController), address(0x13425136), address(wstETH), address(usdc), address(0x13425136));
 
         //levStrat.initializeContracts(_auraBooster, _balancerVault, _crvUSD, _crvUSDController, _crvUSDUSDCPool, _wstETH, _USDC, _D2D);
@@ -34,6 +33,10 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
 
         uint aft = crvUSD.balanceOf(address(levStrat));
         console.log("bal aft",aft);
+
+        int256 health = levStrat.strategyHealth();
+        console.log("health",uint256(health));
+
 
     }
 
