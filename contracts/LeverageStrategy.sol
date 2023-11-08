@@ -156,6 +156,7 @@ contract LeverageStrategy is AccessControl {
         //uint[] memory amounts = [_debtAmount,0];
         //uint usdcAmount = crvUSDUSDCPool.exchange({ sold_token_id: 0, bought_token_id: 2, amount: amounts[0], min_output_amount: 100000 });
         uint usdcAmount = 100000;
+        _exchangeCRVUSDtoUSDC(_debtAmount);
 
 
         // Provide liquidity to the D2D/USDC Pool on Balancer
@@ -293,6 +294,22 @@ contract LeverageStrategy is AccessControl {
         // withdraw colleteral
 
     }
+
+    function _exchangeCRVUSDtoUSDC(uint256 _dx ) internal {
+
+
+        //uint256 expected = crvUSDUSDCPool.get_dy(1, 0, _dx)  * 0.99;
+
+        require(crvUSD.approve(address(crvUSDUSDCPool), _dx), "Approval failed");
+
+        uint256 expected = crvUSDUSDCPool.get_dy(1, 0, _dx) * 99 / 100;
+        
+        crvUSDUSDCPool.exchange(1, 0, _dx, expected,address(this));
+
+    }
+
+
+
 
 
 
