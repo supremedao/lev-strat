@@ -4,8 +4,9 @@ import "forge-std/Test.sol";
 import {LeverageStrategy} from "../../contracts/LeverageStrategy.sol";
 import {IERC20} from "../../contracts/interfaces/IERC20.sol";
 import {IcrvUSDController} from "../../contracts/interfaces/IcrvUSDController.sol";
+import {BaseTest} from "./BaseTest.sol";
 
-contract BaseLeverageStrategyTest is Test {
+contract BaseLeverageStrategyTest is BaseTest {
 
     LeverageStrategy internal levStrat;
     uint256 testNumber;
