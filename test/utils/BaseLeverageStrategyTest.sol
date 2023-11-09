@@ -22,6 +22,8 @@ contract BaseLeverageStrategyTest is BaseTest {
     address internal alice = vm.addr(alicePk);
     address internal bob = vm.addr(bobPk);
     address internal dao = vm.addr(daoPk);
+    uint256 maxApprove = 2**256 - 1;
+    uint256 wstEthToAcc = 20 * 1e18;
 
 
     IERC20 public usdc;
