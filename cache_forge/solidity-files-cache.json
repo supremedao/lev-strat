@@ -13,8 +13,8 @@
   },
   "files": {
     "contracts/LeverageStrategy.sol": {
-      "lastModificationDate": 1699337312081,
-      "contentHash": "4c89f3e13f52a02c46d7437e0058c38e",
+      "lastModificationDate": 1699444256224,
+      "contentHash": "06817bd9295fdb876480b51232248746",
       "sourceName": "contracts/LeverageStrategy.sol",
       "solcConfig": {
         "settings": {
@@ -393,7 +393,6 @@
       "versionRequirement": ">=0.5.0",
       "artifacts": {
         "DSTest": {
-          "0.8.15+commit.e14f2714.Darwin.appleclang": "test.sol/DSTest.json",
           "0.8.21+commit.d9974bed.Darwin.appleclang": "test.sol/DSTest.0.8.21.json"
         }
       }
@@ -438,15 +437,12 @@
       "versionRequirement": ">=0.6.2, <0.9.0",
       "artifacts": {
         "CommonBase": {
-          "0.8.15+commit.e14f2714.Darwin.appleclang": "Base.sol/CommonBase.json",
           "0.8.21+commit.d9974bed.Darwin.appleclang": "Base.sol/CommonBase.0.8.21.json"
         },
         "ScriptBase": {
-          "0.8.15+commit.e14f2714.Darwin.appleclang": "Base.sol/ScriptBase.json",
           "0.8.21+commit.d9974bed.Darwin.appleclang": "Base.sol/ScriptBase.0.8.21.json"
         },
         "TestBase": {
-          "0.8.15+commit.e14f2714.Darwin.appleclang": "Base.sol/TestBase.json",
           "0.8.21+commit.d9974bed.Darwin.appleclang": "Base.sol/TestBase.0.8.21.json"
         }
       }
@@ -491,7 +487,6 @@
       "versionRequirement": ">=0.6.2, <0.9.0",
       "artifacts": {
         "StdAssertions": {
-          "0.8.15+commit.e14f2714.Darwin.appleclang": "StdAssertions.sol/StdAssertions.json",
           "0.8.21+commit.d9974bed.Darwin.appleclang": "StdAssertions.sol/StdAssertions.0.8.21.json"
         }
       }
@@ -535,7 +530,6 @@
       "versionRequirement": ">=0.6.2, <0.9.0",
       "artifacts": {
         "StdChains": {
-          "0.8.15+commit.e14f2714.Darwin.appleclang": "StdChains.sol/StdChains.json",
           "0.8.21+commit.d9974bed.Darwin.appleclang": "StdChains.sol/StdChains.0.8.21.json"
         }
       }
@@ -581,11 +575,9 @@
       "versionRequirement": ">=0.6.2, <0.9.0",
       "artifacts": {
         "StdCheats": {
-          "0.8.15+commit.e14f2714.Darwin.appleclang": "StdCheats.sol/StdCheats.json",
           "0.8.21+commit.d9974bed.Darwin.appleclang": "StdCheats.sol/StdCheats.0.8.21.json"
         },
         "StdCheatsSafe": {
-          "0.8.15+commit.e14f2714.Darwin.appleclang": "StdCheats.sol/StdCheatsSafe.json",
           "0.8.21+commit.d9974bed.Darwin.appleclang": "StdCheats.sol/StdCheatsSafe.0.8.21.json"
         }
       }
@@ -627,7 +619,6 @@
       "versionRequirement": ">=0.6.2, <0.9.0",
       "artifacts": {
         "stdError": {
-          "0.8.15+commit.e14f2714.Darwin.appleclang": "StdError.sol/stdError.json",
           "0.8.21+commit.d9974bed.Darwin.appleclang": "StdError.sol/stdError.0.8.21.json"
         }
       }
@@ -669,7 +660,6 @@
       "versionRequirement": ">=0.6.2, <0.9.0",
       "artifacts": {
         "StdInvariant": {
-          "0.8.15+commit.e14f2714.Darwin.appleclang": "StdInvariant.sol/StdInvariant.json",
           "0.8.21+commit.d9974bed.Darwin.appleclang": "StdInvariant.sol/StdInvariant.0.8.21.json"
         }
       }
@@ -713,7 +703,6 @@
       "versionRequirement": ">=0.6.0, <0.9.0",
       "artifacts": {
         "stdJson": {
-          "0.8.15+commit.e14f2714.Darwin.appleclang": "StdJson.sol/stdJson.json",
           "0.8.21+commit.d9974bed.Darwin.appleclang": "StdJson.sol/stdJson.0.8.21.json"
         }
       }
@@ -755,7 +744,6 @@
       "versionRequirement": ">=0.6.2, <0.9.0",
       "artifacts": {
         "stdMath": {
-          "0.8.15+commit.e14f2714.Darwin.appleclang": "StdMath.sol/stdMath.json",
           "0.8.21+commit.d9974bed.Darwin.appleclang": "StdMath.sol/stdMath.0.8.21.json"
         }
       }
@@ -799,11 +787,9 @@
       "versionRequirement": ">=0.6.2, <0.9.0",
       "artifacts": {
         "stdStorage": {
-          "0.8.15+commit.e14f2714.Darwin.appleclang": "StdStorage.sol/stdStorage.json",
           "0.8.21+commit.d9974bed.Darwin.appleclang": "StdStorage.sol/stdStorage.0.8.21.json"
         },
         "stdStorageSafe": {
-          "0.8.15+commit.e14f2714.Darwin.appleclang": "StdStorage.sol/stdStorageSafe.json",
           "0.8.21+commit.d9974bed.Darwin.appleclang": "StdStorage.sol/stdStorageSafe.0.8.21.json"
         }
       }
@@ -847,7 +833,6 @@
       "versionRequirement": ">=0.4.22, <0.9.0",
       "artifacts": {
         "StdStyle": {
-          "0.8.15+commit.e14f2714.Darwin.appleclang": "StdStyle.sol/StdStyle.json",
           "0.8.21+commit.d9974bed.Darwin.appleclang": "StdStyle.sol/StdStyle.0.8.21.json"
         }
       }
@@ -892,7 +877,6 @@
       "versionRequirement": ">=0.6.2, <0.9.0",
       "artifacts": {
         "StdUtils": {
-          "0.8.15+commit.e14f2714.Darwin.appleclang": "StdUtils.sol/StdUtils.json",
           "0.8.21+commit.d9974bed.Darwin.appleclang": "StdUtils.sol/StdUtils.0.8.21.json"
         }
       }
@@ -952,7 +936,6 @@
       "versionRequirement": ">=0.6.2, <0.9.0",
       "artifacts": {
         "Test": {
-          "0.8.15+commit.e14f2714.Darwin.appleclang": "Test.sol/Test.json",
           "0.8.21+commit.d9974bed.Darwin.appleclang": "Test.sol/Test.0.8.21.json"
         }
       }
@@ -994,11 +977,9 @@
       "versionRequirement": ">=0.6.2, <0.9.0",
       "artifacts": {
         "Vm": {
-          "0.8.15+commit.e14f2714.Darwin.appleclang": "Vm.sol/Vm.json",
           "0.8.21+commit.d9974bed.Darwin.appleclang": "Vm.sol/Vm.0.8.21.json"
         },
         "VmSafe": {
-          "0.8.15+commit.e14f2714.Darwin.appleclang": "Vm.sol/VmSafe.json",
           "0.8.21+commit.d9974bed.Darwin.appleclang": "Vm.sol/VmSafe.0.8.21.json"
         }
       }
@@ -1040,7 +1021,6 @@
       "versionRequirement": ">=0.4.22, <0.9.0",
       "artifacts": {
         "console": {
-          "0.8.15+commit.e14f2714.Darwin.appleclang": "console.sol/console.json",
           "0.8.21+commit.d9974bed.Darwin.appleclang": "console.sol/console.0.8.21.json"
         }
       }
@@ -1082,7 +1062,6 @@
       "versionRequirement": ">=0.4.22, <0.9.0",
       "artifacts": {
         "console2": {
-          "0.8.15+commit.e14f2714.Darwin.appleclang": "console2.sol/console2.json",
           "0.8.21+commit.d9974bed.Darwin.appleclang": "console2.sol/console2.0.8.21.json"
         }
       }
@@ -1124,7 +1103,6 @@
       "versionRequirement": ">=0.6.2, <0.9.0",
       "artifacts": {
         "IMulticall3": {
-          "0.8.15+commit.e14f2714.Darwin.appleclang": "IMulticall3.sol/IMulticall3.json",
           "0.8.21+commit.d9974bed.Darwin.appleclang": "IMulticall3.sol/IMulticall3.0.8.21.json"
         }
       }
@@ -1166,7 +1144,6 @@
       "versionRequirement": ">=0.6.2, <0.9.0",
       "artifacts": {
         "safeconsole": {
-          "0.8.15+commit.e14f2714.Darwin.appleclang": "safeconsole.sol/safeconsole.json",
           "0.8.21+commit.d9974bed.Darwin.appleclang": "safeconsole.sol/safeconsole.0.8.21.json"
         }
       }
@@ -1384,8 +1361,8 @@
       }
     },
     "test/LeverageStrategyTest.t.sol": {
-      "lastModificationDate": 1699336914121,
-      "contentHash": "9b469f5d406300264ce616ed8ac4cab3",
+      "lastModificationDate": 1699515260912,
+      "contentHash": "fd6e3680d83a113c57bdca9ba4f0510c",
       "sourceName": "test/LeverageStrategyTest.t.sol",
       "solcConfig": {
         "settings": {
@@ -1448,7 +1425,8 @@
         "lib/openzeppelin-contracts/contracts/utils/Context.sol",
         "lib/openzeppelin-contracts/contracts/utils/introspection/ERC165.sol",
         "lib/openzeppelin-contracts/contracts/utils/introspection/IERC165.sol",
-        "test/utils/BaseLeverageStrategyTest.sol"
+        "test/utils/BaseLeverageStrategyTest.sol",
+        "test/utils/BaseTest.sol"
       ],
       "versionRequirement": "^0.8.0",
       "artifacts": {
@@ -1458,8 +1436,8 @@
       }
     },
     "test/utils/BaseLeverageStrategyTest.sol": {
-      "lastModificationDate": 1699336914121,
-      "contentHash": "8de439c13669f4726497514f63f0c75c",
+      "lastModificationDate": 1699514326216,
+      "contentHash": "2485999e0a948967808b0cae4a29dfbf",
       "sourceName": "test/utils/BaseLeverageStrategyTest.sol",
       "solcConfig": {
         "settings": {
@@ -1521,7 +1499,8 @@
         "lib/openzeppelin-contracts/contracts/access/IAccessControl.sol",
         "lib/openzeppelin-contracts/contracts/utils/Context.sol",
         "lib/openzeppelin-contracts/contracts/utils/introspection/ERC165.sol",
-        "lib/openzeppelin-contracts/contracts/utils/introspection/IERC165.sol"
+        "lib/openzeppelin-contracts/contracts/utils/introspection/IERC165.sol",
+        "test/utils/BaseTest.sol"
       ],
       "versionRequirement": "^0.8.0",
       "artifacts": {
@@ -1531,8 +1510,8 @@
       }
     },
     "test/utils/BaseTest.sol": {
-      "lastModificationDate": 1699250250743,
-      "contentHash": "bd1a19217334370da01e183b4a51ae9b",
+      "lastModificationDate": 1699423078917,
+      "contentHash": "73aad91fa013a895d479ec38c0ac80f9",
       "sourceName": "test/utils/BaseTest.sol",
       "solcConfig": {
         "settings": {
@@ -1583,10 +1562,10 @@
         "lib/forge-std/src/interfaces/IMulticall3.sol",
         "lib/forge-std/src/safeconsole.sol"
       ],
-      "versionRequirement": "=0.8.15",
+      "versionRequirement": "^0.8.10",
       "artifacts": {
         "BaseTest": {
-          "0.8.15+commit.e14f2714.Darwin.appleclang": "BaseTest.sol/BaseTest.json"
+          "0.8.21+commit.d9974bed.Darwin.appleclang": "BaseTest.sol/BaseTest.json"
         }
       }
     }
