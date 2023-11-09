@@ -11,27 +11,18 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
 
     function testInvest() public {
         
-        uint before = crvUSD.balanceOf(alice);
 
         deal(address(wstETH),alice, 7 * 1e18);
-        deal(address(wstETH),address(this), 7 * 1e18);
-
-        
-
-        wstETH.approve(address(levStrat), 2**256 - 1);
-
-        
 
         levStrat.initializeContracts(address(0x13425136), address(0x13425136), address(crvUSD), address(crvUSDController), address(crvUSDUSDCPool), address(wstETH), address(usdc), address(0x13425136));
-
         //levStrat.initializeContracts(_auraBooster, _balancerVault, _crvUSD, _crvUSDController, _crvUSDUSDCPool, _wstETH, _USDC, _D2D);
 
-        vm.prank(alice);
+        vm.startPrank(alice);
         wstETH.approve(address(levStrat), 2**256 - 1);
-        levStrat.invest(3 * 1e18 , 5000000, 10);
+        levStrat.invest(3 * 1e18 , 100 * 1e18, 10);
         vm.stopPrank();
 
-        uint aft = crvUSD.balanceOf(address(levStrat));
+        uint aft = usdc.balanceOf(address(levStrat));
         console.log("bal aft",aft);
 
     }

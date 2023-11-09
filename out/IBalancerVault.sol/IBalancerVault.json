@@ -351,23 +351,23 @@
   },
   "ast": {
     "absolutePath": "contracts/interfaces/IBalancerVault.sol",
-    "id": 678,
+    "id": 674,
     "exportedSymbols": {
       "IAsset": [
-        553
+        549
       ],
       "IBalancerVault": [
-        677
+        673
       ],
       "IERC20": [
-        754
+        750
       ]
     },
     "nodeType": "SourceUnit",
     "src": "190:6788:3",
     "nodes": [
       {
-        "id": 605,
+        "id": 601,
         "nodeType": "PragmaDirective",
         "src": "190:23:3",
         "nodes": [],
@@ -379,66 +379,66 @@
         ]
       },
       {
-        "id": 606,
+        "id": 602,
         "nodeType": "ImportDirective",
         "src": "215:22:3",
         "nodes": [],
         "absolutePath": "contracts/interfaces/IAsset.sol",
         "file": "./IAsset.sol",
         "nameLocation": "-1:-1:-1",
-        "scope": 678,
-        "sourceUnit": 554,
+        "scope": 674,
+        "sourceUnit": 550,
         "symbolAliases": [],
         "unitAlias": ""
       },
       {
-        "id": 607,
+        "id": 603,
         "nodeType": "ImportDirective",
         "src": "238:22:3",
         "nodes": [],
         "absolutePath": "contracts/interfaces/IERC20.sol",
         "file": "./IERC20.sol",
         "nameLocation": "-1:-1:-1",
-        "scope": 678,
-        "sourceUnit": 755,
+        "scope": 674,
+        "sourceUnit": 751,
         "symbolAliases": [],
         "unitAlias": ""
       },
       {
-        "id": 677,
+        "id": 673,
         "nodeType": "ContractDefinition",
         "src": "262:6715:3",
         "nodes": [
           {
-            "id": 612,
+            "id": 608,
             "nodeType": "EnumDefinition",
             "src": "295:148:3",
             "nodes": [],
             "canonicalName": "IBalancerVault.JoinKind",
             "members": [
               {
-                "id": 608,
+                "id": 604,
                 "name": "INIT",
                 "nameLocation": "319:4:3",
                 "nodeType": "EnumValue",
                 "src": "319:4:3"
               },
               {
-                "id": 609,
+                "id": 605,
                 "name": "EXACT_TOKENS_IN_FOR_BPT_OUT",
                 "nameLocation": "333:27:3",
                 "nodeType": "EnumValue",
                 "src": "333:27:3"
               },
               {
-                "id": 610,
+                "id": 606,
                 "name": "TOKEN_IN_FOR_EXACT_BPT_OUT",
                 "nameLocation": "370:26:3",
                 "nodeType": "EnumValue",
                 "src": "370:26:3"
               },
               {
-                "id": 611,
+                "id": 607,
                 "name": "ALL_TOKENS_IN_FOR_EXACT_BPT_OUT",
                 "nameLocation": "406:31:3",
                 "nodeType": "EnumValue",
@@ -449,7 +449,7 @@
             "nameLocation": "300:8:3"
           },
           {
-            "id": 624,
+            "id": 620,
             "nodeType": "FunctionDefinition",
             "src": "2806:156:3",
             "nodes": [],
@@ -460,17 +460,17 @@
             "name": "joinPool",
             "nameLocation": "2815:8:3",
             "parameters": {
-              "id": 622,
+              "id": 618,
               "nodeType": "ParameterList",
               "parameters": [
                 {
                   "constant": false,
-                  "id": 614,
+                  "id": 610,
                   "mutability": "mutable",
                   "name": "poolId",
                   "nameLocation": "2841:6:3",
                   "nodeType": "VariableDeclaration",
-                  "scope": 624,
+                  "scope": 620,
                   "src": "2833:14:3",
                   "stateVariable": false,
                   "storageLocation": "default",
@@ -479,7 +479,7 @@
                     "typeString": "bytes32"
                   },
                   "typeName": {
-                    "id": 613,
+                    "id": 609,
                     "name": "bytes32",
                     "nodeType": "ElementaryTypeName",
                     "src": "2833:7:3",
@@ -492,12 +492,12 @@
                 },
                 {
                   "constant": false,
-                  "id": 616,
+                  "id": 612,
                   "mutability": "mutable",
                   "name": "sender",
                   "nameLocation": "2865:6:3",
                   "nodeType": "VariableDeclaration",
-                  "scope": 624,
+                  "scope": 620,
                   "src": "2857:14:3",
                   "stateVariable": false,
                   "storageLocation": "default",
@@ -506,7 +506,7 @@
                     "typeString": "address"
                   },
                   "typeName": {
-                    "id": 615,
+                    "id": 611,
                     "name": "address",
                     "nodeType": "ElementaryTypeName",
                     "src": "2857:7:3",
@@ -520,12 +520,12 @@
                 },
                 {
                   "constant": false,
-                  "id": 618,
+                  "id": 614,
                   "mutability": "mutable",
                   "name": "recipient",
                   "nameLocation": "2889:9:3",
                   "nodeType": "VariableDeclaration",
-                  "scope": 624,
+                  "scope": 620,
                   "src": "2881:17:3",
                   "stateVariable": false,
                   "storageLocation": "default",
@@ -534,7 +534,7 @@
                     "typeString": "address"
                   },
                   "typeName": {
-                    "id": 617,
+                    "id": 613,
                     "name": "address",
                     "nodeType": "ElementaryTypeName",
                     "src": "2881:7:3",
@@ -548,36 +548,36 @@
                 },
                 {
                   "constant": false,
-                  "id": 621,
+                  "id": 617,
                   "mutability": "mutable",
                   "name": "request",
                   "nameLocation": "2931:7:3",
                   "nodeType": "VariableDeclaration",
-                  "scope": 624,
+                  "scope": 620,
                   "src": "2908:30:3",
                   "stateVariable": false,
                   "storageLocation": "memory",
                   "typeDescriptions": {
-                    "typeIdentifier": "t_struct$_JoinPoolRequest_$636_memory_ptr",
+                    "typeIdentifier": "t_struct$_JoinPoolRequest_$632_memory_ptr",
                     "typeString": "struct IBalancerVault.JoinPoolRequest"
                   },
                   "typeName": {
-                    "id": 620,
+                    "id": 616,
                     "nodeType": "UserDefinedTypeName",
                     "pathNode": {
-                      "id": 619,
+                      "id": 615,
                       "name": "JoinPoolRequest",
                       "nameLocations": [
                         "2908:15:3"
                       ],
                       "nodeType": "IdentifierPath",
-                      "referencedDeclaration": 636,
+                      "referencedDeclaration": 632,
                       "src": "2908:15:3"
                     },
-                    "referencedDeclaration": 636,
+                    "referencedDeclaration": 632,
                     "src": "2908:15:3",
                     "typeDescriptions": {
-                      "typeIdentifier": "t_struct$_JoinPoolRequest_$636_storage_ptr",
+                      "typeIdentifier": "t_struct$_JoinPoolRequest_$632_storage_ptr",
                       "typeString": "struct IBalancerVault.JoinPoolRequest"
                     }
                   },
@@ -587,18 +587,18 @@
               "src": "2823:121:3"
             },
             "returnParameters": {
-              "id": 623,
+              "id": 619,
               "nodeType": "ParameterList",
               "parameters": [],
               "src": "2961:0:3"
             },
-            "scope": 677,
+            "scope": 673,
             "stateMutability": "payable",
             "virtual": false,
             "visibility": "external"
           },
           {
-            "id": 636,
+            "id": 632,
             "nodeType": "StructDefinition",
             "src": "2968:145:3",
             "nodes": [],
@@ -606,45 +606,45 @@
             "members": [
               {
                 "constant": false,
-                "id": 628,
+                "id": 624,
                 "mutability": "mutable",
                 "name": "assets",
                 "nameLocation": "3010:6:3",
                 "nodeType": "VariableDeclaration",
-                "scope": 636,
+                "scope": 632,
                 "src": "3001:15:3",
                 "stateVariable": false,
                 "storageLocation": "default",
                 "typeDescriptions": {
-                  "typeIdentifier": "t_array$_t_contract$_IAsset_$553_$dyn_storage_ptr",
+                  "typeIdentifier": "t_array$_t_contract$_IAsset_$549_$dyn_storage_ptr",
                   "typeString": "contract IAsset[]"
                 },
                 "typeName": {
                   "baseType": {
-                    "id": 626,
+                    "id": 622,
                     "nodeType": "UserDefinedTypeName",
                     "pathNode": {
-                      "id": 625,
+                      "id": 621,
                       "name": "IAsset",
                       "nameLocations": [
                         "3001:6:3"
                       ],
                       "nodeType": "IdentifierPath",
-                      "referencedDeclaration": 553,
+                      "referencedDeclaration": 549,
                       "src": "3001:6:3"
                     },
-                    "referencedDeclaration": 553,
+                    "referencedDeclaration": 549,
                     "src": "3001:6:3",
                     "typeDescriptions": {
-                      "typeIdentifier": "t_contract$_IAsset_$553",
+                      "typeIdentifier": "t_contract$_IAsset_$549",
                       "typeString": "contract IAsset"
                     }
                   },
-                  "id": 627,
+                  "id": 623,
                   "nodeType": "ArrayTypeName",
                   "src": "3001:8:3",
                   "typeDescriptions": {
-                    "typeIdentifier": "t_array$_t_contract$_IAsset_$553_$dyn_storage_ptr",
+                    "typeIdentifier": "t_array$_t_contract$_IAsset_$549_$dyn_storage_ptr",
                     "typeString": "contract IAsset[]"
                   }
                 },
@@ -652,12 +652,12 @@
               },
               {
                 "constant": false,
-                "id": 631,
+                "id": 627,
                 "mutability": "mutable",
                 "name": "maxAmountsIn",
                 "nameLocation": "3036:12:3",
                 "nodeType": "VariableDeclaration",
-                "scope": 636,
+                "scope": 632,
                 "src": "3026:22:3",
                 "stateVariable": false,
                 "storageLocation": "default",
@@ -667,7 +667,7 @@
                 },
                 "typeName": {
                   "baseType": {
-                    "id": 629,
+                    "id": 625,
                     "name": "uint256",
                     "nodeType": "ElementaryTypeName",
                     "src": "3026:7:3",
@@ -676,7 +676,7 @@
                       "typeString": "uint256"
                     }
                   },
-                  "id": 630,
+                  "id": 626,
                   "nodeType": "ArrayTypeName",
                   "src": "3026:9:3",
                   "typeDescriptions": {
@@ -688,12 +688,12 @@
               },
               {
                 "constant": false,
-                "id": 633,
+                "id": 629,
                 "mutability": "mutable",
                 "name": "userData",
                 "nameLocation": "3064:8:3",
                 "nodeType": "VariableDeclaration",
-                "scope": 636,
+                "scope": 632,
                 "src": "3058:14:3",
                 "stateVariable": false,
                 "storageLocation": "default",
@@ -702,7 +702,7 @@
                   "typeString": "bytes"
                 },
                 "typeName": {
-                  "id": 632,
+                  "id": 628,
                   "name": "bytes",
                   "nodeType": "ElementaryTypeName",
                   "src": "3058:5:3",
@@ -715,12 +715,12 @@
               },
               {
                 "constant": false,
-                "id": 635,
+                "id": 631,
                 "mutability": "mutable",
                 "name": "fromInternalBalance",
                 "nameLocation": "3087:19:3",
                 "nodeType": "VariableDeclaration",
-                "scope": 636,
+                "scope": 632,
                 "src": "3082:24:3",
                 "stateVariable": false,
                 "storageLocation": "default",
@@ -729,7 +729,7 @@
                   "typeString": "bool"
                 },
                 "typeName": {
-                  "id": 634,
+                  "id": 630,
                   "name": "bool",
                   "nodeType": "ElementaryTypeName",
                   "src": "3082:4:3",
@@ -743,16 +743,16 @@
             ],
             "name": "JoinPoolRequest",
             "nameLocation": "2975:15:3",
-            "scope": 677,
+            "scope": 673,
             "visibility": "public"
           },
           {
-            "id": 649,
+            "id": 645,
             "nodeType": "FunctionDefinition",
             "src": "5613:156:3",
             "nodes": [],
             "documentation": {
-              "id": 637,
+              "id": 633,
               "nodeType": "StructuredDocumentation",
               "src": "3119:2489:3",
               "text": " @dev Called by users to exit a Pool, which transfers tokens from the Pool's balance to `recipient`. This will\n trigger custom Pool behavior, which will typically ask for something in return from `sender` - often tokenized\n Pool shares. The amount of tokens that can be withdrawn is limited by the Pool's `cash` balance (see\n `getPoolTokenInfo`).\n If the caller is not `sender`, it must be an authorized relayer for them.\n The `tokens` and `minAmountsOut` arrays must have the same length, and each entry in these indicates the minimum\n token amount to receive for each token contract. The amounts to send are decided by the Pool and not the Vault:\n it just enforces these minimums.\n If exiting a Pool that holds WETH, it is possible to receive ETH directly: the Vault will do the unwrapping. To\n enable this mechanism, the IAsset sentinel value (the zero address) must be passed in the `assets` array instead\n of the WETH address. Note that it is not possible to combine ETH and WETH in the same exit.\n `assets` must have the same length and order as the array returned by `getPoolTokens`. This prevents issues when\n interacting with Pools that register and deregister tokens frequently. If receiving ETH however, the array must\n be sorted *before* replacing the WETH address with the ETH sentinel value (the zero address), which means the\n final `assets` array might not be sorted. Pools with no registered tokens cannot be exited.\n If `toInternalBalance` is true, the tokens will be deposited to `recipient`'s Internal Balance. Otherwise,\n an ERC20 transfer will be performed. Note that ETH cannot be deposited to Internal Balance: attempting to\n do so will trigger a revert.\n `minAmountsOut` is the minimum amount of tokens the user expects to get out of the Pool, for each token in the\n `tokens` array. This array must match the Pool's registered tokens.\n This causes the Vault to call the `IBasePool.onExitPool` hook on the Pool's contract, where Pools implement\n their own custom logic. This typically requires additional information from the user (such as the expected number\n of Pool shares to return). This can be encoded in the `userData` argument, which is ignored by the Vault and\n passed directly to the Pool's contract.\n Emits a `PoolBalanceChanged` event."
@@ -764,17 +764,17 @@
             "name": "exitPool",
             "nameLocation": "5622:8:3",
             "parameters": {
-              "id": 647,
+              "id": 643,
               "nodeType": "ParameterList",
               "parameters": [
                 {
                   "constant": false,
-                  "id": 639,
+                  "id": 635,
                   "mutability": "mutable",
                   "name": "poolId",
                   "nameLocation": "5648:6:3",
                   "nodeType": "VariableDeclaration",
-                  "scope": 649,
+                  "scope": 645,
                   "src": "5640:14:3",
                   "stateVariable": false,
                   "storageLocation": "default",
@@ -783,7 +783,7 @@
                     "typeString": "bytes32"
                   },
                   "typeName": {
-                    "id": 638,
+                    "id": 634,
                     "name": "bytes32",
                     "nodeType": "ElementaryTypeName",
                     "src": "5640:7:3",
@@ -796,12 +796,12 @@
                 },
                 {
                   "constant": false,
-                  "id": 641,
+                  "id": 637,
                   "mutability": "mutable",
                   "name": "sender",
                   "nameLocation": "5672:6:3",
                   "nodeType": "VariableDeclaration",
-                  "scope": 649,
+                  "scope": 645,
                   "src": "5664:14:3",
                   "stateVariable": false,
                   "storageLocation": "default",
@@ -810,7 +810,7 @@
                     "typeString": "address"
                   },
                   "typeName": {
-                    "id": 640,
+                    "id": 636,
                     "name": "address",
                     "nodeType": "ElementaryTypeName",
                     "src": "5664:7:3",
@@ -824,12 +824,12 @@
                 },
                 {
                   "constant": false,
-                  "id": 643,
+                  "id": 639,
                   "mutability": "mutable",
                   "name": "recipient",
                   "nameLocation": "5704:9:3",
                   "nodeType": "VariableDeclaration",
-                  "scope": 649,
+                  "scope": 645,
                   "src": "5688:25:3",
                   "stateVariable": false,
                   "storageLocation": "default",
@@ -838,7 +838,7 @@
                     "typeString": "address payable"
                   },
                   "typeName": {
-                    "id": 642,
+                    "id": 638,
                     "name": "address",
                     "nodeType": "ElementaryTypeName",
                     "src": "5688:15:3",
@@ -852,36 +852,36 @@
                 },
                 {
                   "constant": false,
-                  "id": 646,
+                  "id": 642,
                   "mutability": "mutable",
                   "name": "request",
                   "nameLocation": "5746:7:3",
                   "nodeType": "VariableDeclaration",
-                  "scope": 649,
+                  "scope": 645,
                   "src": "5723:30:3",
                   "stateVariable": false,
                   "storageLocation": "memory",
                   "typeDescriptions": {
-                    "typeIdentifier": "t_struct$_ExitPoolRequest_$661_memory_ptr",
+                    "typeIdentifier": "t_struct$_ExitPoolRequest_$657_memory_ptr",
                     "typeString": "struct IBalancerVault.ExitPoolRequest"
                   },
                   "typeName": {
-                    "id": 645,
+                    "id": 641,
                     "nodeType": "UserDefinedTypeName",
                     "pathNode": {
-                      "id": 644,
+                      "id": 640,
                       "name": "ExitPoolRequest",
                       "nameLocations": [
                         "5723:15:3"
                       ],
                       "nodeType": "IdentifierPath",
-                      "referencedDeclaration": 661,
+                      "referencedDeclaration": 657,
                       "src": "5723:15:3"
                     },
-                    "referencedDeclaration": 661,
+                    "referencedDeclaration": 657,
                     "src": "5723:15:3",
                     "typeDescriptions": {
-                      "typeIdentifier": "t_struct$_ExitPoolRequest_$661_storage_ptr",
+                      "typeIdentifier": "t_struct$_ExitPoolRequest_$657_storage_ptr",
                       "typeString": "struct IBalancerVault.ExitPoolRequest"
                     }
                   },
@@ -891,18 +891,18 @@
               "src": "5630:129:3"
             },
             "returnParameters": {
-              "id": 648,
+              "id": 644,
               "nodeType": "ParameterList",
               "parameters": [],
               "src": "5768:0:3"
             },
-            "scope": 677,
+            "scope": 673,
             "stateMutability": "nonpayable",
             "virtual": false,
             "visibility": "external"
           },
           {
-            "id": 661,
+            "id": 657,
             "nodeType": "StructDefinition",
             "src": "5775:144:3",
             "nodes": [],
@@ -910,45 +910,45 @@
             "members": [
               {
                 "constant": false,
-                "id": 653,
+                "id": 649,
                 "mutability": "mutable",
                 "name": "assets",
                 "nameLocation": "5817:6:3",
                 "nodeType": "VariableDeclaration",
-                "scope": 661,
+                "scope": 657,
                 "src": "5808:15:3",
                 "stateVariable": false,
                 "storageLocation": "default",
                 "typeDescriptions": {
-                  "typeIdentifier": "t_array$_t_contract$_IAsset_$553_$dyn_storage_ptr",
+                  "typeIdentifier": "t_array$_t_contract$_IAsset_$549_$dyn_storage_ptr",
                   "typeString": "contract IAsset[]"
                 },
                 "typeName": {
                   "baseType": {
-                    "id": 651,
+                    "id": 647,
                     "nodeType": "UserDefinedTypeName",
                     "pathNode": {
-                      "id": 650,
+                      "id": 646,
                       "name": "IAsset",
                       "nameLocations": [
                         "5808:6:3"
                       ],
                       "nodeType": "IdentifierPath",
-                      "referencedDeclaration": 553,
+                      "referencedDeclaration": 549,
                       "src": "5808:6:3"
                     },
-                    "referencedDeclaration": 553,
+                    "referencedDeclaration": 549,
                     "src": "5808:6:3",
                     "typeDescriptions": {
-                      "typeIdentifier": "t_contract$_IAsset_$553",
+                      "typeIdentifier": "t_contract$_IAsset_$549",
                       "typeString": "contract IAsset"
                     }
                   },
-                  "id": 652,
+                  "id": 648,
                   "nodeType": "ArrayTypeName",
                   "src": "5808:8:3",
                   "typeDescriptions": {
-                    "typeIdentifier": "t_array$_t_contract$_IAsset_$553_$dyn_storage_ptr",
+                    "typeIdentifier": "t_array$_t_contract$_IAsset_$549_$dyn_storage_ptr",
                     "typeString": "contract IAsset[]"
                   }
                 },
@@ -956,12 +956,12 @@
               },
               {
                 "constant": false,
-                "id": 656,
+                "id": 652,
                 "mutability": "mutable",
                 "name": "minAmountsOut",
                 "nameLocation": "5843:13:3",
                 "nodeType": "VariableDeclaration",
-                "scope": 661,
+                "scope": 657,
                 "src": "5833:23:3",
                 "stateVariable": false,
                 "storageLocation": "default",
@@ -971,7 +971,7 @@
                 },
                 "typeName": {
                   "baseType": {
-                    "id": 654,
+                    "id": 650,
                     "name": "uint256",
                     "nodeType": "ElementaryTypeName",
                     "src": "5833:7:3",
@@ -980,7 +980,7 @@
                       "typeString": "uint256"
                     }
                   },
-                  "id": 655,
+                  "id": 651,
                   "nodeType": "ArrayTypeName",
                   "src": "5833:9:3",
                   "typeDescriptions": {
@@ -992,12 +992,12 @@
               },
               {
                 "constant": false,
-                "id": 658,
+                "id": 654,
                 "mutability": "mutable",
                 "name": "userData",
                 "nameLocation": "5872:8:3",
                 "nodeType": "VariableDeclaration",
-                "scope": 661,
+                "scope": 657,
                 "src": "5866:14:3",
                 "stateVariable": false,
                 "storageLocation": "default",
@@ -1006,7 +1006,7 @@
                   "typeString": "bytes"
                 },
                 "typeName": {
-                  "id": 657,
+                  "id": 653,
                   "name": "bytes",
                   "nodeType": "ElementaryTypeName",
                   "src": "5866:5:3",
@@ -1019,12 +1019,12 @@
               },
               {
                 "constant": false,
-                "id": 660,
+                "id": 656,
                 "mutability": "mutable",
                 "name": "toInternalBalance",
                 "nameLocation": "5895:17:3",
                 "nodeType": "VariableDeclaration",
-                "scope": 661,
+                "scope": 657,
                 "src": "5890:22:3",
                 "stateVariable": false,
                 "storageLocation": "default",
@@ -1033,7 +1033,7 @@
                   "typeString": "bool"
                 },
                 "typeName": {
-                  "id": 659,
+                  "id": 655,
                   "name": "bool",
                   "nodeType": "ElementaryTypeName",
                   "src": "5890:4:3",
@@ -1047,16 +1047,16 @@
             ],
             "name": "ExitPoolRequest",
             "nameLocation": "5782:15:3",
-            "scope": 677,
+            "scope": 673,
             "visibility": "public"
           },
           {
-            "id": 676,
+            "id": 672,
             "nodeType": "FunctionDefinition",
             "src": "6762:208:3",
             "nodes": [],
             "documentation": {
-              "id": 662,
+              "id": 658,
               "nodeType": "StructuredDocumentation",
               "src": "5929:828:3",
               "text": " @dev Returns a Pool's registered tokens, the total balance for each, and the latest block when *any* of\n the tokens' `balances` changed.\n The order of the `tokens` array is the same order that will be used in `joinPool`, `exitPool`, as well as in all\n Pool hooks (where applicable). Calls to `registerTokens` and `deregisterTokens` may change this order.\n If a Pool only registers tokens once, and these are sorted in ascending order, they will be stored in the same\n order as passed to `registerTokens`.\n Total balances include both tokens held by the Vault and those withdrawn by the Pool's Asset Managers. These are\n the amounts used by joins, exits and swaps. For a detailed breakdown of token balances, use `getPoolTokenInfo`\n instead."
@@ -1068,17 +1068,17 @@
             "name": "getPoolTokens",
             "nameLocation": "6771:13:3",
             "parameters": {
-              "id": 665,
+              "id": 661,
               "nodeType": "ParameterList",
               "parameters": [
                 {
                   "constant": false,
-                  "id": 664,
+                  "id": 660,
                   "mutability": "mutable",
                   "name": "poolId",
                   "nameLocation": "6793:6:3",
                   "nodeType": "VariableDeclaration",
-                  "scope": 676,
+                  "scope": 672,
                   "src": "6785:14:3",
                   "stateVariable": false,
                   "storageLocation": "default",
@@ -1087,7 +1087,7 @@
                     "typeString": "bytes32"
                   },
                   "typeName": {
-                    "id": 663,
+                    "id": 659,
                     "name": "bytes32",
                     "nodeType": "ElementaryTypeName",
                     "src": "6785:7:3",
@@ -1102,50 +1102,50 @@
               "src": "6784:16:3"
             },
             "returnParameters": {
-              "id": 675,
+              "id": 671,
               "nodeType": "ParameterList",
               "parameters": [
                 {
                   "constant": false,
-                  "id": 669,
+                  "id": 665,
                   "mutability": "mutable",
                   "name": "tokens",
                   "nameLocation": "6877:6:3",
                   "nodeType": "VariableDeclaration",
-                  "scope": 676,
+                  "scope": 672,
                   "src": "6861:22:3",
                   "stateVariable": false,
                   "storageLocation": "memory",
                   "typeDescriptions": {
-                    "typeIdentifier": "t_array$_t_contract$_IERC20_$754_$dyn_memory_ptr",
+                    "typeIdentifier": "t_array$_t_contract$_IERC20_$750_$dyn_memory_ptr",
                     "typeString": "contract IERC20[]"
                   },
                   "typeName": {
                     "baseType": {
-                      "id": 667,
+                      "id": 663,
                       "nodeType": "UserDefinedTypeName",
                       "pathNode": {
-                        "id": 666,
+                        "id": 662,
                         "name": "IERC20",
                         "nameLocations": [
                           "6861:6:3"
                         ],
                         "nodeType": "IdentifierPath",
-                        "referencedDeclaration": 754,
+                        "referencedDeclaration": 750,
                         "src": "6861:6:3"
                       },
-                      "referencedDeclaration": 754,
+                      "referencedDeclaration": 750,
                       "src": "6861:6:3",
                       "typeDescriptions": {
-                        "typeIdentifier": "t_contract$_IERC20_$754",
+                        "typeIdentifier": "t_contract$_IERC20_$750",
                         "typeString": "contract IERC20"
                       }
                     },
-                    "id": 668,
+                    "id": 664,
                     "nodeType": "ArrayTypeName",
                     "src": "6861:8:3",
                     "typeDescriptions": {
-                      "typeIdentifier": "t_array$_t_contract$_IERC20_$754_$dyn_storage_ptr",
+                      "typeIdentifier": "t_array$_t_contract$_IERC20_$750_$dyn_storage_ptr",
                       "typeString": "contract IERC20[]"
                     }
                   },
@@ -1153,12 +1153,12 @@
                 },
                 {
                   "constant": false,
-                  "id": 672,
+                  "id": 668,
                   "mutability": "mutable",
                   "name": "balances",
                   "nameLocation": "6914:8:3",
                   "nodeType": "VariableDeclaration",
-                  "scope": 676,
+                  "scope": 672,
                   "src": "6897:25:3",
                   "stateVariable": false,
                   "storageLocation": "memory",
@@ -1168,7 +1168,7 @@
                   },
                   "typeName": {
                     "baseType": {
-                      "id": 670,
+                      "id": 666,
                       "name": "uint256",
                       "nodeType": "ElementaryTypeName",
                       "src": "6897:7:3",
@@ -1177,7 +1177,7 @@
                         "typeString": "uint256"
                       }
                     },
-                    "id": 671,
+                    "id": 667,
                     "nodeType": "ArrayTypeName",
                     "src": "6897:9:3",
                     "typeDescriptions": {
@@ -1189,12 +1189,12 @@
                 },
                 {
                   "constant": false,
-                  "id": 674,
+                  "id": 670,
                   "mutability": "mutable",
                   "name": "lastChangeBlock",
                   "nameLocation": "6944:15:3",
                   "nodeType": "VariableDeclaration",
-                  "scope": 676,
+                  "scope": 672,
                   "src": "6936:23:3",
                   "stateVariable": false,
                   "storageLocation": "default",
@@ -1203,7 +1203,7 @@
                     "typeString": "uint256"
                   },
                   "typeName": {
-                    "id": 673,
+                    "id": 669,
                     "name": "uint256",
                     "nodeType": "ElementaryTypeName",
                     "src": "6936:7:3",
@@ -1217,7 +1217,7 @@
               ],
               "src": "6847:122:3"
             },
-            "scope": 677,
+            "scope": 673,
             "stateMutability": "view",
             "virtual": false,
             "visibility": "external"
@@ -1230,11 +1230,11 @@
         "contractKind": "interface",
         "fullyImplemented": false,
         "linearizedBaseContracts": [
-          677
+          673
         ],
         "name": "IBalancerVault",
         "nameLocation": "272:14:3",
-        "scope": 678,
+        "scope": 674,
         "usedErrors": [],
         "usedEvents": []
       }

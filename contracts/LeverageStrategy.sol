@@ -151,8 +151,8 @@ contract LeverageStrategy is AccessControl {
 
         // pool crvUSD -> USDCPool
         // For this Pool:
-        // token_id 0 = crvUSD
-        // token_id 2 = USDCPool
+        // token_id 1 = crvUSD
+        // token_id 0 = USDCPool
         //uint[] memory amounts = [_debtAmount,0];
         //uint usdcAmount = crvUSDUSDCPool.exchange({ sold_token_id: 0, bought_token_id: 2, amount: amounts[0], min_output_amount: 100000 });
         uint usdcAmount = 100000;
@@ -302,7 +302,7 @@ contract LeverageStrategy is AccessControl {
 
         require(crvUSD.approve(address(crvUSDUSDCPool), _dx), "Approval failed");
 
-        uint256 expected = crvUSDUSDCPool.get_dy(1, 0, _dx) * 99 / 100;
+        uint256 expected = crvUSDUSDCPool.get_dy(1, 0, _dx) ;
         
         crvUSDUSDCPool.exchange(1, 0, _dx, expected,address(this));
 
