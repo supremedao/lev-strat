@@ -11,25 +11,29 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
 
     function testInvest() public {
         
+        uint aliceAmount = 7 * 1e18;
+        uint wstApproveAmount = 2**256 - 1;
+        uint wstInvestAmount = 3 * 1e18;
+        uint debtAmount = 5000000;
+        uint insvestN = 10;
+
+        address testContract = address(0x13425136);
+
         uint before = crvUSD.balanceOf(alice);
 
-        deal(address(wstETH),alice, 7 * 1e18);
-        deal(address(wstETH),address(this), 7 * 1e18);
+        deal(address(wstETH),alice, aliceAmount);
+        deal(address(wstETH),address(this), aliceAmount);
 
         
 
-        wstETH.approve(address(levStrat), 2**256 - 1);
+        wstETH.approve(address(levStrat), wstApproveAmount);
 
-        
-
-        //wstETH.approve(address(levStrat), 25 * 1e18);
-        levStrat.initializeContracts(address(0x13425136), address(0x13425136), address(crvUSD), address(crvUSDController), address(0x13425136), address(wstETH), address(usdc), address(0x13425136));
-
-        //levStrat.initializeContracts(_auraBooster, _balancerVault, _crvUSD, _crvUSDController, _crvUSDUSDCPool, _wstETH, _USDC, _D2D);
+        // @dev levStrat.initializeContracts(_auraBooster, _balancerVault, _crvUSD, _crvUSDController, _crvUSDUSDCPool, _wstETH, _USDC, _D2D)
+        levStrat.initializeContracts(testContract, testContract, address(crvUSD), address(crvUSDController), testContract, address(wstETH), address(usdc), testContract);
 
         vm.prank(alice);
-        wstETH.approve(address(levStrat), 2**256 - 1);
-        levStrat.invest(3 * 1e18 , 5000000, 10);
+        wstETH.approve(address(levStrat), wstApproveAmount);
+        levStrat.invest(wstInvestAmount, debtAmount, insvestN);
         vm.stopPrank();
 
         uint aft = crvUSD.balanceOf(address(levStrat));
