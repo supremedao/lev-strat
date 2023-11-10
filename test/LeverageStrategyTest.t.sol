@@ -9,7 +9,7 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
     }
 
 
-    function testInvest() public {
+    function testInvest() public subtest() {
         
         uint aliceAmount = 7 * 1e18;
         uint wstApproveAmount = 2**256 - 1;
@@ -20,24 +20,45 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         address testContract = address(0x13425136);
 
         uint before = crvUSD.balanceOf(alice);
-
-        deal(address(wstETH),alice, aliceAmount);
-        deal(address(wstETH),address(this), aliceAmount);
-
+        // Give wsteth tokens to alice's account
+        deal(address(wstETH),alice, wstEthToAcc);
         
+        levStrat.initializeContracts(address(AuraBooster), address(balancerVault), address(crvUSD), address(crvUSDController), address(crvUSDUSDCPool), address(wstETH), address(usdc), address(d2d));
 
-        wstETH.approve(address(levStrat), wstApproveAmount);
-
-        // @dev levStrat.initializeContracts(_auraBooster, _balancerVault, _crvUSD, _crvUSDController, _crvUSDUSDCPool, _wstETH, _USDC, _D2D)
-        levStrat.initializeContracts(testContract, testContract, address(crvUSD), address(crvUSDController), testContract, address(wstETH), address(usdc), testContract);
-
-        vm.prank(alice);
-        wstETH.approve(address(levStrat), wstApproveAmount);
-        levStrat.invest(wstInvestAmount, debtAmount, insvestN);
+        // Make alice msg.sender
+        vm.startPrank(alice);
+        wstETH.approve(address(levStrat), maxApprove);
+        levStrat.invest(2 * 1e18 , 1000000, 10);
         vm.stopPrank();
-
         uint aft = crvUSD.balanceOf(address(levStrat));
         console.log("bal aft",aft);
+
+    }
+
+    function testInvestIfCDPAlreadyExists() public subtest(){
+        
+        uint before = crvUSD.balanceOf(address(levStrat));
+        console.log("bal b4",before);
+
+        // Give wsteth tokens to alice's account
+        deal(address(wstETH),alice, wstEthToAcc);
+  
+
+        wstETH.approve(address(levStrat), maxApprove);
+     
+        levStrat.initializeContracts(address(AuraBooster), address(balancerVault), address(crvUSD), address(crvUSDController), address(crvUSDUSDCPool), address(wstETH), address(usdc), address(d2d));        //levStrat.initializeContracts(_auraBooster, _balancerVault, _crvUSD, _crvUSDController, _crvUSDUSDCPool, _wstETH, _USDC, _D2D);
+
+        // Make alice msg.sender
+        vm.startPrank(alice);
+        wstETH.approve(address(levStrat), maxApprove);
+        levStrat.invest(1 * 1e18 , 1000000, 10);
+        levStrat.invest(1 * 1e18 , 1000000, 10);
+        vm.stopPrank();
+
+                
+        uint aft = crvUSD.balanceOf(address(levStrat));
+        console.log("bal aft",aft);
+
 
     }
 

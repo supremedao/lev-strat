@@ -4,8 +4,12 @@ import "forge-std/Test.sol";
 import {LeverageStrategy} from "../../contracts/LeverageStrategy.sol";
 import {IERC20} from "../../contracts/interfaces/IERC20.sol";
 import {IcrvUSDController} from "../../contracts/interfaces/IcrvUSDController.sol";
+import {IBalancerVault} from "../../contracts/interfaces/IBalancerVault.sol";
+import {IcrvUSDUSDCPool} from "../../contracts/interfaces/IcrvUSDUSDCPool.sol";
+import {IAuraBooster} from "../../contracts/interfaces/IAuraBooster.sol";
+import {BaseTest} from "./BaseTest.sol";
 
-contract BaseLeverageStrategyTest is Test {
+contract BaseLeverageStrategyTest is BaseTest {
 
     LeverageStrategy internal levStrat;
     uint256 testNumber;
@@ -18,12 +22,18 @@ contract BaseLeverageStrategyTest is Test {
     address internal alice = vm.addr(alicePk);
     address internal bob = vm.addr(bobPk);
     address internal dao = vm.addr(daoPk);
+    uint256 maxApprove = 2**256 - 1;
+    uint256 wstEthToAcc = 20 * 1e18;
 
 
     IERC20 public usdc;
     IERC20 public wstETH;
     IERC20 public crvUSD;
+    IERC20 public d2d;
     IcrvUSDController public crvUSDController;
+    IBalancerVault public balancerVault;
+    IcrvUSDUSDCPool public crvUSDUSDCPool;
+    IAuraBooster public AuraBooster;
 
     function _deployContracts() internal {
 

@@ -51,6 +51,7 @@ contract LeverageStrategy is AccessControl {
 
     bytes32 public constant KEEPER_ROLE = keccak256("KEEPER_ROLE");
     bytes32 public constant DAO_ROLE = keccak256("DAO_ROLE");
+
     uint256           public totalwstETHDeposited;
 
     // mainnet addresses
@@ -96,7 +97,7 @@ contract LeverageStrategy is AccessControl {
         address _wstETH,
         address _USDC,
         address _D2D
-    ) external  {
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         auraBooster = IAuraBooster(_auraBooster);
         balancerVault = IBalancerVault(_balancerVault);
         crvUSD = IcrvUSD(_crvUSD);
@@ -108,11 +109,11 @@ contract LeverageStrategy is AccessControl {
 
     }
 
-    function setPoolId(bytes32 _poolId) external onlyRole(DAO_ROLE) {
+    function setPoolId(bytes32 _poolId) external onlyRole(DEFAULT_ADMIN_ROLE) {
         poolId = _poolId;
     }
 
-    function setPid(uint _pid) external onlyRole(DAO_ROLE) {
+    function setPid(uint _pid) external onlyRole(DEFAULT_ADMIN_ROLE) {
         pid = _pid;
     }
 
@@ -124,24 +125,24 @@ contract LeverageStrategy is AccessControl {
     function invest(uint256 _wstETHAmount, uint256 _debtAmount, uint256 _N) external {
         
         // Opens a position on crvUSD if no loan already
-        //if (!crvUSDController.loan_exists(address(this))){
-        
-        _depositAndCreateLoan(_wstETHAmount, _debtAmount, _N);
-
-        //}
-
         // Note this address is an owner of a crvUSD CDP
         // now we assume that we already have a CDP
         // But there also should be a case when we create a new one
+        if (!crvUSDController.loan_exists(address(this))){
+        
+        _depositAndCreateLoan(_wstETHAmount, _debtAmount, _N);
+
+        } else {
 
         //_addCollateral(_wstETHAmount);
+        _borrowMore(_wstETHAmount, _debtAmount);
 
-        // borrow crvUSD
+        }
 
         // TODO: calculate borrow amount
         // check if there's price in Curve or we should ping Oracle
     
-//_borrowMore(_wstETHAmount, _debtAmount);
+        
 
         // Exchange crvUSD to USDC on Curve
 
@@ -210,6 +211,8 @@ contract LeverageStrategy is AccessControl {
         
         require(IERC20(wsteth).transferFrom(msg.sender, address(this), _wstETHAmount), "Transfer failed"); 
 
+        require(IERC20(wsteth).approve(address(crvUSDController), _wstETHAmount), "Approval failed");
+
         crvUSDController.add_collateral(_wstETHAmount, address(this));
         totalwstETHDeposited = totalwstETHDeposited + _wstETHAmount;
 
@@ -220,6 +223,11 @@ contract LeverageStrategy is AccessControl {
     /// @param _wstETHAmount the amount of wsteth deposited
     /// @param _debtAmount the amount of crvusd borrowed
     function _borrowMore(uint256 _wstETHAmount, uint256 _debtAmount) internal {
+
+
+        require(IERC20(wsteth).transferFrom(msg.sender, address(this), _wstETHAmount), "Transfer failed"); 
+
+        require(IERC20(wsteth).approve(address(crvUSDController), _wstETHAmount), "Approval failed");
 
         crvUSDController.borrow_more(_wstETHAmount, _debtAmount);
 
