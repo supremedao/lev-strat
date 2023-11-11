@@ -48,6 +48,7 @@ contract LeverageStrategy is AccessControl {
     IERC20            public d2d;
     bytes32           public poolId;
     uint              public pid;
+    uint              internal TokenIndex;
 
     bytes32 public constant KEEPER_ROLE = keccak256("KEEPER_ROLE");
     bytes32 public constant DAO_ROLE = keccak256("DAO_ROLE");
@@ -117,12 +118,16 @@ contract LeverageStrategy is AccessControl {
         pid = _pid;
     }
 
+    function setTokenIndex(uint _TokenIndex) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        TokenIndex = _TokenIndex;
+    }
+
 
 
 
     // main contract functions
     // @param N Number of price bands to deposit into (to do autoliquidation-deliquidation of wsteth) if the price of the wsteth collateral goes too low
-    function invest(uint256 _wstETHAmount, uint256 _debtAmount, uint256 _N) external {
+    function invest(uint256 _wstETHAmount, uint256 _debtAmount, uint256 _N,uint256 _bptAmountOut) external {
         
         // Opens a position on crvUSD if no loan already
         // Note this address is an owner of a crvUSD CDP
@@ -151,15 +156,16 @@ contract LeverageStrategy is AccessControl {
 
         // pool crvUSD -> USDCPool
         // For this Pool:
-        // token_id 0 = crvUSD
-        // token_id 2 = USDCPool
+        // token_id 1 = crvUSD
+        // token_id 0 = USDC
         //uint[] memory amounts = [_debtAmount,0];
         //uint usdcAmount = crvUSDUSDCPool.exchange({ sold_token_id: 0, bought_token_id: 2, amount: amounts[0], min_output_amount: 100000 });
         uint usdcAmount = 100000;
+        _exchangeCRVUSDtoUSDC(_debtAmount);
 
 
         // Provide liquidity to the D2D/USDC Pool on Balancer
-       // _joinPool(usdcAmount);
+        _joinPool(usdcAmount,_bptAmountOut,TokenIndex);
 
         // Stake LP tokens on Aura Finance
 
@@ -242,7 +248,7 @@ contract LeverageStrategy is AccessControl {
     /// @notice Join balancer pool
     /// @dev Single side join with usdc
     /// @param usdcAmount the amount of usdc to deposit
-    function _joinPool(uint usdcAmount) internal {
+    function _joinPool(uint usdcAmount, uint256 bptAmountOut, uint256 enterTokenIndex) internal {
 
         (IERC20[] memory tokens, , ) = balancerVault.getPoolTokens(poolId);
         uint256[] memory maxAmountsIn = new uint256[](tokens.length);
@@ -250,8 +256,8 @@ contract LeverageStrategy is AccessControl {
         maxAmountsIn[0] = usdcAmount;
 
         ///@dev User sends an estimated but unknown (computed at run time) quantity of a single token, and receives a precise quantity of BPT.
-
-        bytes memory userData = abi.encode(IBalancerVault.JoinKind.TOKEN_IN_FOR_EXACT_BPT_OUT);
+        uint256 joinKind = uint256(IBalancerVault.JoinKind.TOKEN_IN_FOR_EXACT_BPT_OUT);
+        bytes memory userData = abi.encode(joinKind, bptAmountOut, enterTokenIndex);
 
         ///TODO: need to encode type of join to user data
 
