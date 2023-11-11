@@ -27,7 +27,7 @@ contract BaseLeverageStrategyTest is BaseTest {
 
     uint256 internal aliceAmount = 7 * 1e18;
     uint256 internal wstApproveAmount = 2**256 - 1;
-    uint256 internal wstInvestAmount = 3 * 1e18;
+    uint256 internal wstInvestAmount = 2 * 1e18;
     uint256 internal debtAmount =  100 * 1e18;
     uint256 internal insvestN = 10;
 
