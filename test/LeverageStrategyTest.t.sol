@@ -11,11 +11,6 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
 
     function testInvest() public subtest() {
         
-        uint aliceAmount = 7 * 1e18;
-        uint wstApproveAmount = 2**256 - 1;
-        uint wstInvestAmount = 3 * 1e18;
-        uint debtAmount = 5000000;
-        uint insvestN = 10;
 
         address testContract = address(0x13425136);
 
@@ -28,10 +23,11 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         // Make alice msg.sender
         vm.startPrank(alice);
         wstETH.approve(address(levStrat), maxApprove);
-        levStrat.invest(2 * 1e18 , 1000000, 10);
+        levStrat.invest(wstInvestAmount , debtAmount, insvestN);
         vm.stopPrank();
-        uint aft = crvUSD.balanceOf(address(levStrat));
+        uint aft = usdc.balanceOf(address(levStrat));
         console.log("bal aft",aft);
+        require(aft > 0);
 
     }
 
@@ -51,13 +47,14 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         // Make alice msg.sender
         vm.startPrank(alice);
         wstETH.approve(address(levStrat), maxApprove);
-        levStrat.invest(1 * 1e18 , 1000000, 10);
-        levStrat.invest(1 * 1e18 , 1000000, 10);
+        levStrat.invest(wstInvestAmount , debtAmount, insvestN);
+        levStrat.invest(wstInvestAmount , debtAmount, insvestN);
         vm.stopPrank();
 
                 
-        uint aft = crvUSD.balanceOf(address(levStrat));
+        uint aft = usdc.balanceOf(address(levStrat));
         console.log("bal aft",aft);
+        require(aft > 0);
 
 
     }

@@ -25,11 +25,19 @@ contract BaseLeverageStrategyTest is BaseTest {
     uint256 maxApprove = 2**256 - 1;
     uint256 wstEthToAcc = 20 * 1e18;
 
+    uint256 internal aliceAmount = 7 * 1e18;
+    uint256 internal wstApproveAmount = 2**256 - 1;
+    uint256 internal wstInvestAmount = 3 * 1e18;
+    uint256 internal debtAmount =  100 * 1e18;
+    uint256 internal insvestN = 10;
+
+
 
     IERC20 public usdc;
     IERC20 public wstETH;
     IERC20 public crvUSD;
     IERC20 public d2d;
+    IERC20 public circle_deployer;
     IcrvUSDController public crvUSDController;
     IBalancerVault public balancerVault;
     IcrvUSDUSDCPool public crvUSDUSDCPool;
@@ -44,6 +52,7 @@ contract BaseLeverageStrategyTest is BaseTest {
         crvUSD = IERC20(0xf939E0A03FB07F59A73314E73794Be0E57ac1b4E);
         crvUSDController = IcrvUSDController(0x100dAa78fC509Db39Ef7D04DE0c1ABD299f4C6CE);
         crvUSDUSDCPool = IcrvUSDUSDCPool(0x4DEcE678ceceb27446b35C672dC7d61F30bAD69E);
+        circle_deployer = IERC20(0xa2327a938Febf5FEC13baCFb16Ae10EcBc4cbDCF);
 
 
         vm.label(address(levStrat), "LevStrategy");
