@@ -252,8 +252,9 @@ contract LeverageStrategy is AccessControl {
 
         (IERC20[] memory tokens, , ) = balancerVault.getPoolTokens(poolId);
         uint256[] memory maxAmountsIn = new uint256[](tokens.length);
+        require(IERC20(usdc).approve(address(balancerVault), usdcAmount), "Approval failed");
 
-        maxAmountsIn[0] = usdcAmount;
+        maxAmountsIn[1] = IERC20(usdc).balanceOf(address(this));
 
         ///@dev User sends an estimated but unknown (computed at run time) quantity of a single token, and receives a precise quantity of BPT.
         uint256 joinKind = uint256(IBalancerVault.JoinKind.TOKEN_IN_FOR_EXACT_BPT_OUT);
@@ -268,7 +269,7 @@ contract LeverageStrategy is AccessControl {
             fromInternalBalance: false
         });
 
-        balancerVault.joinPool(poolId, address(this), msg.sender, request);
+        balancerVault.joinPool(poolId, address(this), address(this), request);
 
     }
      function _claimRewards() external {

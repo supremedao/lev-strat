@@ -23,9 +23,9 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         // Make alice msg.sender
         vm.startPrank(alice);
         wstETH.approve(address(levStrat), maxApprove);
-        levStrat.invest(wstInvestAmount , debtAmount, insvestN);
+        levStrat.invest(wstInvestAmount , debtAmount, insvestN, bptExpected);
         vm.stopPrank();
-        uint aft = usdc.balanceOf(address(levStrat));
+        uint aft = d2dusdcBPT.balanceOf(address(levStrat));
         console.log("bal aft",aft);
         //require(aft > 0);
 
@@ -33,7 +33,7 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
 
     function testInvestIfCDPAlreadyExists() public subtest(){
         
-        uint before = crvUSD.balanceOf(address(levStrat));
+        uint before = d2dusdcBPT.balanceOf(address(levStrat));
         console.log("bal b4",before);
 
         // Give wsteth tokens to alice's account
@@ -47,12 +47,12 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         // Make alice msg.sender
         vm.startPrank(alice);
         wstETH.approve(address(levStrat), maxApprove);
-        levStrat.invest(wstInvestAmount , debtAmount, insvestN);
-        levStrat.invest(wstInvestAmount , debtAmount, insvestN);
+        levStrat.invest(wstInvestAmount , debtAmount, insvestN, bptExpected);
+        levStrat.invest(wstInvestAmount , debtAmount, insvestN, bptExpected);
         vm.stopPrank();
 
                 
-        uint aft = usdc.balanceOf(address(levStrat));
+        uint aft = d2dusdcBPT.balanceOf(address(levStrat));
         console.log("bal aft",aft);
         //require(aft > 0);
 
