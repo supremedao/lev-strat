@@ -1,12 +1,24 @@
 # Lavereged WstETH Strategy for SupremeDAO on PowerPool
 
-Download Founrdy : curl -L https://foundry.paradigm.xyz | bash
 
-Install : foundryup
+Download and install Foundry:
+```
+curl -L https://foundry.paradigm.xyz | bash
+foundryup
+```
 
-Install OZ: forge install OpenZeppelin/openzeppelin-contracts
+Install OZ:
+```
+forge install OpenZeppelin/openzeppelin-contracts
+```
 
-Remap dependencies for hardhat: forge remappings > remappings.txt
+Remap dependencies for hardhat: 
+```
+forge remappings > remappings.txt
+```
 
-Test: forge test --fork-url [FORK_URL] -vvvvv
+Test:
+```
+forge test --fork-url https://eth-mainnet.g.alchemy.com/v2/M4H2wIh8657p_bF11PxNM2ZyaPPU6n6R -vvvvv
+```
 
