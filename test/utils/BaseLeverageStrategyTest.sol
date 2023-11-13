@@ -40,6 +40,7 @@ contract BaseLeverageStrategyTest is BaseTest {
     IERC20 public d2d;
     IERC20 public circle_deployer;
     IERC20 public d2dusdcBPT;
+    IERC20 public AuraLPtoken;
     IcrvUSDController public crvUSDController;
     IBalancerVault public balancerVault;
     IcrvUSDUSDCPool public crvUSDUSDCPool;
@@ -59,7 +60,9 @@ contract BaseLeverageStrategyTest is BaseTest {
         crvUSDUSDCPool = IcrvUSDUSDCPool(0x4DEcE678ceceb27446b35C672dC7d61F30bAD69E);
         circle_deployer = IERC20(0xa2327a938Febf5FEC13baCFb16Ae10EcBc4cbDCF);
         balancerVault = IBalancerVault(0xBA12222222228d8Ba445958a75a0704d566BF2C8);
-        d2dusdcBPT = IERC20(0x27C9f71cC31464B906E0006d4FcBC8900F48f15f);
+        d2dusdcBPT = IERC20(0x27C9f71cC31464B906E0006d4FcBC8900F48f15f); 
+        AuraBooster = IAuraBooster(0xA57b8d98dAE62B26Ec3bcC4a365338157060B234);
+        AuraLPtoken = IERC20(0x2d63DBBb2ab267D4Dac3abf9C55b12f099D35093);
 
 
         vm.label(address(levStrat), "LevStrategy");

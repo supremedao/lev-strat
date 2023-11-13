@@ -318,6 +318,31 @@ contract LeverageStrategy is AccessControl {
 
     }
 
+    function _depositAllAura() internal {
+
+        auraBooster.depositAll(pid,true);
+
+    }
+
+    function _depositAura(uint ammount) internal {
+
+        auraBooster.deposit(pid, ammount, true);
+        
+    }
+
+    function _withdrawAllAura() internal {
+
+        auraBooster.withdrawAll(pid);
+
+    }
+
+    function _withdrawAura(uint ammount) internal {
+
+        auraBooster.withdraw(pid, ammount);
+        
+    }
+
+
 
 
 }
