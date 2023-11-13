@@ -23,7 +23,11 @@ contract BaseLeverageStrategyTest is BaseTest {
     address internal bob = vm.addr(bobPk);
     address internal dao = vm.addr(daoPk);
     uint256 maxApprove = 2**256 - 1;
-    uint256 wstEthToAcc = 20 * 1e18;
+    uint256 wstEthToAcc = 20 * 1e18;   
+    uint256 wstInvestAmount = 2 * 1e18;
+    uint256 wstInvestAmount2 = 1 * 1e18;
+    uint256 debtAmount = 1000000;
+    uint256 investN = 10;
 
 
     IERC20 public usdc;
@@ -39,6 +43,7 @@ contract BaseLeverageStrategyTest is BaseTest {
 
         levStrat = new LeverageStrategy(address(dao));
 
+        address testContract = address(0x13425136);
         wstETH = IERC20(0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0);
         usdc = IERC20(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
         crvUSD = IERC20(0xf939E0A03FB07F59A73314E73794Be0E57ac1b4E);
