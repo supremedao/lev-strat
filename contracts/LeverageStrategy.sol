@@ -117,7 +117,11 @@ contract LeverageStrategy is AccessControl {
         pid = _pid;
     }
 
+    function strategyHealth() external view returns (int256) {
 
+       return  crvUSDController.health(address(this), false);
+
+    }
 
 
     // main contract functions
