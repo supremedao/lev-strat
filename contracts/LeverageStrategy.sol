@@ -301,6 +301,16 @@ contract LeverageStrategy is AccessControl {
 
     }
 
+    function _exchangeCRVUSDtoUSDC(uint256 _dx ) internal {
+
+        require(crvUSD.approve(address(crvUSDUSDCPool), _dx), "Approval failed");
+
+        uint256 expected = crvUSDUSDCPool.get_dy(1, 0, _dx) * 99 / 100;
+
+        crvUSDUSDCPool.exchange(1, 0, _dx, expected,address(this));
+
+    }
+
 
 
 }

@@ -43,6 +43,7 @@ contract BaseLeverageStrategyTest is BaseTest {
         usdc = IERC20(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
         crvUSD = IERC20(0xf939E0A03FB07F59A73314E73794Be0E57ac1b4E);
         crvUSDController = IcrvUSDController(0x100dAa78fC509Db39Ef7D04DE0c1ABD299f4C6CE);
+        crvUSDUSDCPool = IcrvUSDUSDCPool(0x4DEcE678ceceb27446b35C672dC7d61F30bAD69E);
 
 
         vm.label(address(levStrat), "LevStrategy");
