@@ -46,6 +46,7 @@ contract LeverageStrategy is AccessControl {
     IERC20            public crvusd;
     IERC20            public usdc;
     IERC20            public d2d;
+    IERC20            public d2dusdcBPT;
     bytes32           public poolId;
     uint              public pid;
     uint              internal TokenIndex;
@@ -122,6 +123,10 @@ contract LeverageStrategy is AccessControl {
         TokenIndex = _TokenIndex;
     }
 
+    function setBPTAddress(address _bptAddress) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        d2dusdcBPT = IERC20(_bptAddress);
+    }
+
 
 
 
@@ -168,7 +173,7 @@ contract LeverageStrategy is AccessControl {
         _joinPool(usdcAmount,_bptAmountOut,TokenIndex);
 
         // Stake LP tokens on Aura Finance
-
+         _depositAllAura();
         //auraBooster.deposit(pid, borrowAmount, true);
     }
 
@@ -320,13 +325,15 @@ contract LeverageStrategy is AccessControl {
 
     function _depositAllAura() internal {
 
-        auraBooster.depositAll(pid,true);
+        require(d2dusdcBPT.approve(address(auraBooster), d2dusdcBPT.balanceOf(address(this))), "Approval failed");
+        require(auraBooster.depositAll(pid,true));
 
     }
 
     function _depositAura(uint ammount) internal {
 
-        auraBooster.deposit(pid, ammount, true);
+        require(d2dusdcBPT.approve(address(auraBooster), ammount), "Approval failed");
+        require(auraBooster.deposit(pid, ammount, true));
         
     }
 

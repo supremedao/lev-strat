@@ -52,6 +52,7 @@ contract BaseLeverageStrategyTest is BaseTest {
 
         levStrat.setTokenIndex(1);
         levStrat.setPoolId(0x27c9f71cc31464b906e0006d4fcbc8900f48f15f00020000000000000000010f);
+        levStrat.setPid(107);
 
         wstETH = IERC20(0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0);
         usdc = IERC20(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
@@ -63,6 +64,8 @@ contract BaseLeverageStrategyTest is BaseTest {
         d2dusdcBPT = IERC20(0x27C9f71cC31464B906E0006d4FcBC8900F48f15f); 
         AuraBooster = IAuraBooster(0xA57b8d98dAE62B26Ec3bcC4a365338157060B234);
         AuraLPtoken = IERC20(0x2d63DBBb2ab267D4Dac3abf9C55b12f099D35093);
+
+        levStrat.setBPTAddress(address(d2dusdcBPT));
 
 
         vm.label(address(levStrat), "LevStrategy");
