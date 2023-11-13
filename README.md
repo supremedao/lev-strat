@@ -7,6 +7,14 @@ foundryup
 ```
 
 ```
+forge install
+```
+
+```
+forge update
+```
+
+```
 forge build
 ```
 
