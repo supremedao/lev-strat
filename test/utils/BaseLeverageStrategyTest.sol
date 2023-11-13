@@ -23,7 +23,11 @@ contract BaseLeverageStrategyTest is BaseTest {
     address internal bob = vm.addr(bobPk);
     address internal dao = vm.addr(daoPk);
     uint256 maxApprove = 2**256 - 1;
-    uint256 wstEthToAcc = 20 * 1e18;
+    uint256 wstEthToAcc = 20 * 1e18;   
+    uint256 wstInvestAmount = 2 * 1e18;
+    uint256 wstInvestAmount2 = 1 * 1e18;
+    uint256 debtAmount = 1000000;
+    uint256 investN = 10;
 
     uint256 internal aliceAmount = 7 * 1e18;
     uint256 internal wstApproveAmount = 2**256 - 1;
@@ -54,7 +58,6 @@ contract BaseLeverageStrategyTest is BaseTest {
         crvUSDUSDCPool = IcrvUSDUSDCPool(0x4DEcE678ceceb27446b35C672dC7d61F30bAD69E);
         // Deployer of USDC 
         circle_deployer = IERC20(0xa2327a938Febf5FEC13baCFb16Ae10EcBc4cbDCF);
-
 
         vm.label(address(levStrat), "LevStrategy");
         vm.label(alice, "Alice");
