@@ -27,7 +27,7 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         vm.stopPrank();
         uint aft = d2dusdcBPT.balanceOf(address(levStrat));
         console.log("bal aft",aft);
-        //require(aft > 0);
+        assertGt(aft, 0);
 
     }
 
@@ -54,7 +54,9 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
                 
         uint aft = d2dusdcBPT.balanceOf(address(levStrat));
         console.log("bal aft",aft);
-        //require(aft > 0);
+        assertGt(aft, 0);
+
+        
 
 
     }
