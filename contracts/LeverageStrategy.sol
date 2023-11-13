@@ -156,6 +156,7 @@ contract LeverageStrategy is AccessControl {
         //uint[] memory amounts = [_debtAmount,0];
         //uint usdcAmount = crvUSDUSDCPool.exchange({ sold_token_id: 0, bought_token_id: 2, amount: amounts[0], min_output_amount: 100000 });
         uint usdcAmount = 100000;
+        _exchangeCRVUSDtoUSDC(_debtAmount);
 
 
         // Provide liquidity to the D2D/USDC Pool on Balancer

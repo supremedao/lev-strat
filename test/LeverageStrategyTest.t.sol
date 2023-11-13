@@ -25,9 +25,9 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         wstETH.approve(address(levStrat), maxApprove);
         levStrat.invest(wstInvestAmount , debtAmount, insvestN);
         vm.stopPrank();
-        uint aft = usdc.balanceOf(address(levStrat));
+        uint aft = circle_deployer.balanceOf(address(levStrat));
         console.log("bal aft",aft);
-        require(aft > 0);
+        assertGt(aft,0);
 
     }
 
@@ -52,9 +52,9 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         vm.stopPrank();
 
                 
-        uint aft = usdc.balanceOf(address(levStrat));
+        uint aft = circle_deployer.balanceOf(address(levStrat));
         console.log("bal aft",aft);
-        require(aft > 0);
+        assertGt(aft,0);
 
 
     }
