@@ -11,7 +11,6 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
 
     function testInvest() public subtest() {
 
-        uint before = crvUSD.balanceOf(alice);
         // Give wsteth tokens to alice's account
         deal(address(wstETH),alice, wstEthToAcc);
         
