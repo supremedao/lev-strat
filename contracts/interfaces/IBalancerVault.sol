@@ -7,8 +7,6 @@ import "./IAsset.sol";
 import "./IERC20.sol";
 
 interface IBalancerVault {
-
-
     enum JoinKind {
         INIT,
         EXACT_TOKENS_IN_FOR_BPT_OUT,
@@ -113,7 +111,7 @@ interface IBalancerVault {
         bool toInternalBalance;
     }
 
-        /**
+    /**
      * @dev Returns a Pool's registered tokens, the total balance for each, and the latest block when *any* of
      * the tokens' `balances` changed.
      *
@@ -127,7 +125,9 @@ interface IBalancerVault {
      * the amounts used by joins, exits and swaps. For a detailed breakdown of token balances, use `getPoolTokenInfo`
      * instead.
      */
-    function getPoolTokens(bytes32 poolId)
+    function getPoolTokens(
+        bytes32 poolId
+    )
         external
         view
         returns (
@@ -135,9 +135,4 @@ interface IBalancerVault {
             uint256[] memory balances,
             uint256 lastChangeBlock
         );
-
-
-
-
-
 }
