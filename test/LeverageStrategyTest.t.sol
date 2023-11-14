@@ -23,7 +23,7 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
 
         levStrat.invest(wstInvestAmount , debtAmount, insvestN, bptExpected);
         vm.stopPrank();
-        uint aft = AuraLPtoken.balanceOf(address(levStrat));
+        uint aft = AuraLPVault.balanceOf(address(levStrat));
         console.log("bal aft",aft);
         assertGt(aft,0);
 
@@ -32,7 +32,7 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
 
     function testInvestIfCDPAlreadyExists() public subtest(){
         
-        uint before = AuraLPtoken.balanceOf(address(levStrat));
+        uint before = AuraLPVault.balanceOf(address(levStrat));
         console.log("bal b4",before);
 
         // Give wsteth tokens to alice's account
@@ -50,7 +50,7 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         levStrat.invest(wstInvestAmount , debtAmount, insvestN, bptExpected);
         vm.stopPrank();
                 
-        uint aft = AuraLPtoken.balanceOf(address(levStrat));
+        uint aft = AuraLPVault.balanceOf(address(levStrat));
         console.log("bal aft",aft);
         assertGt(aft,0);
 
