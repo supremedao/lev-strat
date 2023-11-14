@@ -122,7 +122,11 @@ contract LeverageStrategy is AccessControl {
         TokenIndex = _TokenIndex;
     }
 
+    function strategyHealth() external view returns (int256) {
 
+       return  crvUSDController.health(address(this), false);
+
+    }
 
 
     // main contract functions
@@ -160,9 +164,7 @@ contract LeverageStrategy is AccessControl {
         // token_id 0 = USDC
         //uint[] memory amounts = [_debtAmount,0];
         //uint usdcAmount = crvUSDUSDCPool.exchange({ sold_token_id: 0, bought_token_id: 2, amount: amounts[0], min_output_amount: 100000 });
-        uint usdcAmount = 100000;
         _exchangeCRVUSDtoUSDC(_debtAmount);
-
 
         // Provide liquidity to the D2D/USDC Pool on Balancer
         _joinPool(usdcAmount,_bptAmountOut,TokenIndex);
@@ -287,7 +289,6 @@ contract LeverageStrategy is AccessControl {
 
         // call _invest
 
-        uint256 investAmount;
     }
 
 // TODO: exit pool

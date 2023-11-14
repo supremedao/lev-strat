@@ -10,11 +10,8 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
 
 
     function testInvest() public subtest() {
-        
-
         address testContract = address(0x13425136);
 
-        uint before = crvUSD.balanceOf(alice);
         // Give wsteth tokens to alice's account
         deal(address(wstETH),alice, wstEthToAcc);
         
@@ -23,6 +20,7 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         // Make alice msg.sender
         vm.startPrank(alice);
         wstETH.approve(address(levStrat), maxApprove);
+
         levStrat.invest(wstInvestAmount , debtAmount, insvestN, bptExpected);
         vm.stopPrank();
         uint aft = d2dusdcBPT.balanceOf(address(levStrat));
@@ -50,13 +48,12 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         levStrat.invest(wstInvestAmount , debtAmount, insvestN, bptExpected);
         levStrat.invest(wstInvestAmount , debtAmount, insvestN, bptExpected);
         vm.stopPrank();
-
                 
         uint aft = d2dusdcBPT.balanceOf(address(levStrat));
         console.log("bal aft",aft);
         assertGt(aft, 0);
 
-        
+
 
 
     }
