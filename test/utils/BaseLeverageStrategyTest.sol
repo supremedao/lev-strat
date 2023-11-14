@@ -24,9 +24,7 @@ contract BaseLeverageStrategyTest is BaseTest {
     address internal dao = vm.addr(daoPk);
     uint256 maxApprove = 2**256 - 1;
     uint256 wstEthToAcc = 20 * 1e18;   
-    uint256 wstInvestAmount = 2 * 1e18;
     uint256 wstInvestAmount2 = 1 * 1e18;
-    uint256 debtAmount = 1000000;
     uint256 investN = 10;
 
     uint256 internal aliceAmount = 7 * 1e18;
@@ -34,6 +32,7 @@ contract BaseLeverageStrategyTest is BaseTest {
     uint256 internal wstInvestAmount = 2 * 1e18;
     uint256 internal debtAmount =  100 * 1e18;
     uint256 internal insvestN = 10;
+    uint256 internal bptExpected = 2 * 1e18;
 
 
 
@@ -42,6 +41,9 @@ contract BaseLeverageStrategyTest is BaseTest {
     IERC20 public crvUSD;
     IERC20 public d2d;
     IERC20 public circle_deployer;
+    IERC20 public d2dusdcBPT;
+    IERC20 public AuraLPtoken;
+    IERC20 public AuraLPVault;
     IcrvUSDController public crvUSDController;
     IBalancerVault public balancerVault;
     IcrvUSDUSDCPool public crvUSDUSDCPool;
@@ -51,6 +53,10 @@ contract BaseLeverageStrategyTest is BaseTest {
 
         levStrat = new LeverageStrategy(address(dao));
 
+        levStrat.setTokenIndex(1);
+        levStrat.setPoolId(0x27c9f71cc31464b906e0006d4fcbc8900f48f15f00020000000000000000010f);
+        levStrat.setPid(107);
+
         wstETH = IERC20(0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0);
         usdc = IERC20(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
         crvUSD = IERC20(0xf939E0A03FB07F59A73314E73794Be0E57ac1b4E);
@@ -58,6 +64,13 @@ contract BaseLeverageStrategyTest is BaseTest {
         crvUSDUSDCPool = IcrvUSDUSDCPool(0x4DEcE678ceceb27446b35C672dC7d61F30bAD69E);
         // Deployer of USDC 
         circle_deployer = IERC20(0xa2327a938Febf5FEC13baCFb16Ae10EcBc4cbDCF);
+        balancerVault = IBalancerVault(0xBA12222222228d8Ba445958a75a0704d566BF2C8);
+        d2dusdcBPT = IERC20(0x27C9f71cC31464B906E0006d4FcBC8900F48f15f); 
+        AuraBooster = IAuraBooster(0xA57b8d98dAE62B26Ec3bcC4a365338157060B234);
+        AuraLPtoken = IERC20(0x2d63DBBb2ab267D4Dac3abf9C55b12f099D35093);
+        AuraLPVault = IERC20(0xe39570EF26fB9A562bf26F8c708b7433F65050af);
+
+        levStrat.setBPTAddress(address(d2dusdcBPT));
 
         vm.label(address(levStrat), "LevStrategy");
         vm.label(alice, "Alice");

@@ -20,18 +20,19 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         // Make alice msg.sender
         vm.startPrank(alice);
         wstETH.approve(address(levStrat), maxApprove);
-        levStrat.invest(wstInvestAmount , debtAmount, investN);
+
+        levStrat.invest(wstInvestAmount , debtAmount, insvestN, bptExpected);
         vm.stopPrank();
-        
-        uint aft = usdc.balanceOf(address(levStrat));
+        uint aft = AuraLPVault.balanceOf(address(levStrat));
         console.log("bal aft",aft);
         assertGt(aft,0);
+
 
     }
 
     function testInvestIfCDPAlreadyExists() public subtest(){
         
-        uint before = crvUSD.balanceOf(address(levStrat));
+        uint before = AuraLPVault.balanceOf(address(levStrat));
         console.log("bal b4",before);
 
         // Give wsteth tokens to alice's account
@@ -45,13 +46,14 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         // Make alice msg.sender
         vm.startPrank(alice);
         wstETH.approve(address(levStrat), maxApprove);
-        levStrat.invest(wstInvestAmount , debtAmount, insvestN);
-        levStrat.invest(wstInvestAmount , debtAmount, insvestN);
+        levStrat.invest(wstInvestAmount , debtAmount, insvestN, bptExpected);
+        levStrat.invest(wstInvestAmount , debtAmount, insvestN, bptExpected);
         vm.stopPrank();
-
-        uint aft = usdc.balanceOf(address(levStrat));
+                
+        uint aft = AuraLPVault.balanceOf(address(levStrat));
         console.log("bal aft",aft);
         assertGt(aft,0);
+
 
 
     }
