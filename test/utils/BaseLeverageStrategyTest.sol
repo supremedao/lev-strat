@@ -49,6 +49,8 @@ contract BaseLeverageStrategyTest is BaseTest {
     IcrvUSDUSDCPool public crvUSDUSDCPool;
     IAuraBooster public AuraBooster;
 
+    uint256[] public amounts;
+
     function _deployContracts() internal {
 
         levStrat = new LeverageStrategy(address(dao));
@@ -71,9 +73,11 @@ contract BaseLeverageStrategyTest is BaseTest {
         AuraLPVault = IERC20(0xe39570EF26fB9A562bf26F8c708b7433F65050af);
 
         levStrat.setBPTAddress(address(d2dusdcBPT));
+        levStrat.setVaultAddress(address(AuraLPVault));
 
         vm.label(address(levStrat), "LevStrategy");
         vm.label(alice, "Alice");
+        amounts.push(2000000000000000000);
 
     }
 

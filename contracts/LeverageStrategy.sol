@@ -19,6 +19,7 @@ import "./interfaces/IcrvUSD.sol";
 import "./interfaces/IcrvUSDController.sol";
 import "./interfaces/IcrvUSDUSDCPool.sol";
 import "./interfaces/IERC20.sol";
+import "./interfaces/IBasicRewards.sol";
 
 contract LeverageStrategy is AccessControl {
 
@@ -41,6 +42,7 @@ contract LeverageStrategy is AccessControl {
     IcrvUSD           public crvUSD;
     IcrvUSDController public crvUSDController;
     IcrvUSDUSDCPool   public crvUSDUSDCPool;
+    IBasicRewards     public Vaults4626;
 
     IERC20            public wsteth;
     IERC20            public crvusd;
@@ -128,6 +130,11 @@ contract LeverageStrategy is AccessControl {
         d2dusdcBPT = IERC20(_bptAddress);
     }
 
+    function setVaultAddress(address _vaultAddress) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        Vaults4626 = IBasicRewards(_vaultAddress);
+    }
+
+
     function strategyHealth() external view returns (int256) {
 
        return  crvUSDController.health(address(this), false);
@@ -179,6 +186,22 @@ contract LeverageStrategy is AccessControl {
         // Stake LP tokens on Aura Finance
          _depositAllAura();
         //auraBooster.deposit(pid, borrowAmount, true);
+    }
+
+    function withdrawInvestmentFromUser(uint wstethAmmoumt) external {
+
+        UserInfo storage user = userInfo[msg.sender];
+        require(user.wstETHDeposited <= wstethAmmoumt);
+        if(wsteth.balanceOf(address(this)) > wstethAmmoumt){
+            wsteth.transfer(msg.sender, wstethAmmoumt);
+        } 
+        // Should we unwind the postion in this withdraw function or should we leave that to the keeper
+    
+    }
+
+    function unwindPosition(uint256[] calldata amounts) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        _unstakeAndWithdrawAura(amounts[0]);
+    
     }
 
 
@@ -301,7 +324,7 @@ contract LeverageStrategy is AccessControl {
 // TODO: exit pool
 
     function _withdrawInvestment(address, uint256[] calldata amounts, bytes calldata extraStrategyData)
-        external
+        internal
     {
 
         // Exit Aura position
@@ -350,6 +373,11 @@ contract LeverageStrategy is AccessControl {
 
         auraBooster.withdraw(pid, ammount);
         
+    }
+
+    function _unstakeAndWithdrawAura(uint amount) internal {
+
+        Vaults4626.withdrawAndUnwrap(amount, true);
     }
 
 

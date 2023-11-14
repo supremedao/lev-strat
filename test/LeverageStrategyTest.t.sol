@@ -10,8 +10,7 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
 
 
     function testInvest() public subtest() {
-        address testContract = address(0x13425136);
-
+        
         // Give wsteth tokens to alice's account
         deal(address(wstETH),alice, wstEthToAcc);
         
@@ -54,6 +53,28 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         console.log("bal aft",aft);
         assertGt(aft,0);
 
+    }
+
+    function testUnwind() public subtest() {
+        
+        // Give wsteth tokens to alice's account
+        deal(address(wstETH),alice, wstEthToAcc);
+        
+        levStrat.initializeContracts(address(AuraBooster), address(balancerVault), address(crvUSD), address(crvUSDController), address(crvUSDUSDCPool), address(wstETH), address(usdc), address(d2d));
+
+        // Make alice msg.sender
+        vm.startPrank(alice);
+        wstETH.approve(address(levStrat), maxApprove);
+
+        levStrat.invest(wstInvestAmount , debtAmount, insvestN, bptExpected);
+        vm.stopPrank();
+        uint aft = AuraLPVault.balanceOf(address(levStrat));
+        console.log("bal aft",aft);
+        assertGt(aft,0);
+
+        levStrat.unwindPosition(amounts);
+        uint aftBPT = d2dusdcBPT.balanceOf(address(levStrat));
+        assertGt(aftBPT,0);
 
 
     }
