@@ -174,7 +174,7 @@ contract LeverageStrategy is AccessControl {
         _exchangeCRVUSDtoUSDC(_debtAmount);
 
         // Provide liquidity to the D2D/USDC Pool on Balancer
-        _joinPool(usdcAmount,_bptAmountOut,TokenIndex);
+        _joinPool(_debtAmount,_bptAmountOut,TokenIndex);
 
         // Stake LP tokens on Aura Finance
          _depositAllAura();

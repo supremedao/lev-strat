@@ -24,9 +24,7 @@ contract BaseLeverageStrategyTest is BaseTest {
     address internal dao = vm.addr(daoPk);
     uint256 maxApprove = 2**256 - 1;
     uint256 wstEthToAcc = 20 * 1e18;   
-    uint256 wstInvestAmount = 2 * 1e18;
     uint256 wstInvestAmount2 = 1 * 1e18;
-    uint256 debtAmount = 1000000;
     uint256 investN = 10;
 
     uint256 internal aliceAmount = 7 * 1e18;
