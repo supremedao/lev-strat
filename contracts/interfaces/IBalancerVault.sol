@@ -7,8 +7,6 @@ import "./IAsset.sol";
 import "./IERC20.sol";
 
 interface IBalancerVault {
-
-
     enum JoinKind {
         INIT,
         EXACT_TOKENS_IN_FOR_BPT_OUT,
@@ -50,12 +48,9 @@ interface IBalancerVault {
      *
      * Emits a `PoolBalanceChanged` event.
      */
-    function joinPool(
-        bytes32 poolId,
-        address sender,
-        address recipient,
-        JoinPoolRequest memory request
-    ) external payable;
+    function joinPool(bytes32 poolId, address sender, address recipient, JoinPoolRequest memory request)
+        external
+        payable;
 
     struct JoinPoolRequest {
         IAsset[] assets;
@@ -99,12 +94,8 @@ interface IBalancerVault {
      *
      * Emits a `PoolBalanceChanged` event.
      */
-    function exitPool(
-        bytes32 poolId,
-        address sender,
-        address payable recipient,
-        ExitPoolRequest memory request
-    ) external;
+    function exitPool(bytes32 poolId, address sender, address payable recipient, ExitPoolRequest memory request)
+        external;
 
     struct ExitPoolRequest {
         IAsset[] assets;
@@ -113,7 +104,7 @@ interface IBalancerVault {
         bool toInternalBalance;
     }
 
-        /**
+    /**
      * @dev Returns a Pool's registered tokens, the total balance for each, and the latest block when *any* of
      * the tokens' `balances` changed.
      *
@@ -130,14 +121,5 @@ interface IBalancerVault {
     function getPoolTokens(bytes32 poolId)
         external
         view
-        returns (
-            IERC20[] memory tokens,
-            uint256[] memory balances,
-            uint256 lastChangeBlock
-        );
-
-
-
-
-
+        returns (IERC20[] memory tokens, uint256[] memory balances, uint256 lastChangeBlock);
 }
