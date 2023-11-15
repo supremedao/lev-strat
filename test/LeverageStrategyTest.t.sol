@@ -88,11 +88,20 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         levStrat.invest(wstInvestAmount, debtAmount, insvestN, bptExpected);
         vm.stopPrank();
         uint256 aft = AuraLPVault.balanceOf(address(levStrat));
-        console.log("bal aft", aft);
         assertGt(aft, 0);
 
+        uint256 debt_before = crvUSDController.debt(address(levStrat));
+
+        _pushDebtToRepay(debt_before / 2);
+
         levStrat.unwindPosition(amounts);
-        uint256 aftBPT = crvUSD.balanceOf(address(levStrat));
-        assertGt(aftBPT, 0);
+
+        uint256 aftCRVUSD = crvUSD.balanceOf(address(levStrat));
+
+        uint256 debt_after = crvUSDController.debt(address(levStrat));
+
+        console.log("debt aft", debt_after);
+
+        assertGt(debt_before, debt_after);
     }
 }

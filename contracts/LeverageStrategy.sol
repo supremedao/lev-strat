@@ -179,6 +179,8 @@ contract LeverageStrategy is AccessControl {
         _exitPool(amounts[1], 0, amounts[2]);
 
         _exchangeUSDCTocrvUSD(amounts[2]);
+
+        _repayCRVUSDLoan(amounts[3]);
     }
 
     //================================================INTERNAL FUNCTIONS===============================================//
@@ -240,6 +242,12 @@ contract LeverageStrategy is AccessControl {
         UserInfo storage user = userInfo[msg.sender];
         user.wstETHDeposited = user.wstETHDeposited + _wstETHAmount;
         user.crvUSDBorrowed = user.crvUSDBorrowed + _debtAmount;
+    }
+
+    function _repayCRVUSDLoan(uint256 deptToRepay) internal {
+        require(crvUSD.approve(address(crvUSDController), deptToRepay), "Approval failed");
+
+        crvUSDController.repay(260);
     }
 
     /// @notice Join balancer pool
