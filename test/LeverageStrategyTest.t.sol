@@ -92,7 +92,7 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         assertGt(aft, 0);
 
         levStrat.unwindPosition(amounts);
-        uint256 aftBPT = usdc.balanceOf(address(levStrat));
+        uint256 aftBPT = crvUSD.balanceOf(address(levStrat));
         assertGt(aftBPT, 0);
     }
 }
