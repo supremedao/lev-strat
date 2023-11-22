@@ -174,10 +174,11 @@ contract LeverageStrategy is AccessControl {
     }
 
     function unwindPosition(uint256[] calldata amounts) external onlyRole(DEFAULT_ADMIN_ROLE) {
-
         _unstakeAndWithdrawAura(amounts[0]);
 
         _exitPool(amounts[1], 0, amounts[2]);
+
+        _exchangeUSDCTocrvUSD(amounts[2]);
     }
 
     //================================================INTERNAL FUNCTIONS===============================================//
@@ -268,7 +269,6 @@ contract LeverageStrategy is AccessControl {
     }
 
     function _exitPool(uint256 bptAmountIn, uint256 exitTokenIndex, uint256 minAmountOut) internal {
-
         (IERC20[] memory tokens,,) = balancerVault.getPoolTokens(poolId);
         uint256[] memory minAmountsOut = new uint256[](tokens.length);
         minAmountsOut[exitTokenIndex] = minAmountOut;
@@ -321,6 +321,12 @@ contract LeverageStrategy is AccessControl {
         uint256 expected = crvUSDUSDCPool.get_dy(1, 0, _dx) * 99 / 100;
 
         crvUSDUSDCPool.exchange(1, 0, _dx, expected, address(this));
+    }
+
+    function _exchangeUSDCTocrvUSD(uint256 _dx) internal {
+        require(usdc.approve(address(crvUSDUSDCPool), _dx), "Approval failed");
+        uint256 expected = crvUSDUSDCPool.get_dy(0, 1, _dx) * 99 / 100;
+        crvUSDUSDCPool.exchange(0, 1, _dx, expected, address(this));
     }
 
     function _depositAllAura() internal {

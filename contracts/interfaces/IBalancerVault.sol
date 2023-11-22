@@ -65,7 +65,6 @@ interface IBalancerVault {
         bytes userData;
         bool fromInternalBalance;
     }
-    
 
     /**
      * @dev Called by users to exit a Pool, which transfers tokens from the Pool's balance to `recipient`. This will
