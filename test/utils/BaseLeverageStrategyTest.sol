@@ -48,6 +48,10 @@ contract BaseLeverageStrategyTest is BaseTest {
 
     uint256[] public amounts;
 
+    uint AuraLPtokenExpected = 2000000000000000000;
+    uint BPTout = 2000000000000000000;
+    uint minUsdExpected =100000;
+
     function _deployContracts() internal {
         levStrat = new LeverageStrategy(address(dao));
 
@@ -73,6 +77,10 @@ contract BaseLeverageStrategyTest is BaseTest {
 
         vm.label(address(levStrat), "LevStrategy");
         vm.label(alice, "Alice");
-        amounts.push(2000000000000000000);
+
+        // Amounts = [AuraLPtoken, BPTout, minUSDCExpected]
+        amounts.push(AuraLPtokenExpected);
+        amounts.push(BPTout);
+        amounts.push(minUsdExpected);
     }
 }

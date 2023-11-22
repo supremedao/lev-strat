@@ -14,6 +14,13 @@ interface IBalancerVault {
         ALL_TOKENS_IN_FOR_EXACT_BPT_OUT
     }
 
+    enum ExitKind {
+        EXACT_BPT_IN_FOR_ONE_TOKEN_OUT,
+        EXACT_BPT_IN_FOR_TOKENS_OUT,
+        BPT_IN_FOR_EXACT_TOKENS_OUT,
+        MANAGEMENT_FEE_TOKENS_OUT // for InvestmentPool
+    }
+
     /* @dev copied from the IVault.sol -\0_0/-
 
     /**
@@ -58,6 +65,7 @@ interface IBalancerVault {
         bytes userData;
         bool fromInternalBalance;
     }
+    
 
     /**
      * @dev Called by users to exit a Pool, which transfers tokens from the Pool's balance to `recipient`. This will

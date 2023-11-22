@@ -130,7 +130,7 @@ contract LeverageStrategy is AccessControl {
     function invest(uint256 _wstETHAmount, uint256 _debtAmount, uint256 _N, uint256 _bptAmountOut) external {
         // Opens a position on crvUSD if no loan already
         // Note this address is an owner of a crvUSD CDP
-        // now we assume that we already have a CDP
+        // in the usual case we already have a CDP
         // But there also should be a case when we create a new one
         if (!crvUSDController.loan_exists(address(this))) {
             _depositAndCreateLoan(_wstETHAmount, _debtAmount, _N);
@@ -174,7 +174,10 @@ contract LeverageStrategy is AccessControl {
     }
 
     function unwindPosition(uint256[] calldata amounts) external onlyRole(DEFAULT_ADMIN_ROLE) {
+
         _unstakeAndWithdrawAura(amounts[0]);
+
+        _exitPool(amounts[1], 0, amounts[2]);
     }
 
     //================================================INTERNAL FUNCTIONS===============================================//
@@ -262,6 +265,26 @@ contract LeverageStrategy is AccessControl {
         });
 
         balancerVault.joinPool(poolId, address(this), address(this), request);
+    }
+
+    function _exitPool(uint256 bptAmountIn, uint256 exitTokenIndex, uint256 minAmountOut) internal {
+
+        (IERC20[] memory tokens,,) = balancerVault.getPoolTokens(poolId);
+        uint256[] memory minAmountsOut = new uint256[](tokens.length);
+        minAmountsOut[exitTokenIndex] = minAmountOut;
+
+        // Define the exit kind
+        uint256 exitKind = uint256(IBalancerVault.ExitKind.EXACT_BPT_IN_FOR_ONE_TOKEN_OUT);
+        bytes memory userData = abi.encode(exitKind, bptAmountIn, exitTokenIndex);
+
+        IBalancerVault.ExitPoolRequest memory request = IBalancerVault.ExitPoolRequest({
+            assets: _convertERC20sToAssets(tokens),
+            minAmountsOut: minAmountsOut,
+            userData: userData,
+            toInternalBalance: false
+        });
+
+        balancerVault.exitPool(poolId, address(this), payable(address(this)), request);
     }
 
     function _claimRewards() external {
