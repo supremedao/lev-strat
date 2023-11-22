@@ -130,7 +130,7 @@ contract LeverageStrategy is AccessControl {
     function invest(uint256 _wstETHAmount, uint256 _debtAmount, uint256 _N, uint256 _bptAmountOut) external {
         // Opens a position on crvUSD if no loan already
         // Note this address is an owner of a crvUSD CDP
-        // not we already have a CDP
+        // in the usual case we already have a CDP
         // But there also should be a case when we create a new one
         if (!crvUSDController.loan_exists(address(this))) {
             _depositAndCreateLoan(_wstETHAmount, _debtAmount, _N);
