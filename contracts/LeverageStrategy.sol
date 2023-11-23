@@ -145,20 +145,10 @@ contract LeverageStrategy is AccessControl {
             _borrowMore(_wstETHAmount, _debtAmount);
         }
 
-        // TODO: calculate borrow amount
-        // check if there's price in Curve or we should ping Oracle
-
-        // Exchange crvUSD to USDC on Curve
-
-        // TODO: check the actual token id's and transaction generation
-        // Note: seems that we have a different interface compared to supremedao/contracts
-
         // pool crvUSD -> USDCPool
         // For this Pool:
         // token_id 1 = crvUSD
         // token_id 0 = USDC
-        //uint[] memory amounts = [_debtAmount,0];
-        //uint usdcAmount = crvUSDUSDCPool.exchange({ sold_token_id: 0, bought_token_id: 2, amount: amounts[0], min_output_amount: 100000 });
 
         _exchangeCRVUSDtoUSDC(_debtAmount);
 
