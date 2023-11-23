@@ -78,9 +78,18 @@ contract BaseLeverageStrategyTest is BaseTest {
         vm.label(address(levStrat), "LevStrategy");
         vm.label(alice, "Alice");
 
+        // Amounts = [AuraLPtoken, BPTout, minUSDCExpected, debtToRepay]
+       // amounts.push(AuraLPtokenExpected);
+        //amounts.push(BPTout);
+        //xamounts.push(minUsdExpected);
+    }
+
+    function _pushDebtToRepay(uint256 _num) internal {
         // Amounts = [AuraLPtoken, BPTout, minUSDCExpected]
         amounts.push(AuraLPtokenExpected);
         amounts.push(BPTout);
         amounts.push(minUsdExpected);
+        amounts.push(_num);
+
     }
 }

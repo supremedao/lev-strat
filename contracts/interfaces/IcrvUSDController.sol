@@ -21,7 +21,7 @@ interface IcrvUSDController {
     function add_collateral(uint256 collateral, address _for) external payable;
     function remove_collateral(uint256 collateral, bool use_eth) external;
     function borrow_more(uint256 collateral, uint256 debt) external payable;
-    function repay(uint256 _d_debt, address _for, int256 max_active_band, bool use_eth) external payable;
+    function repay(uint256 _d_debt) external payable;
     function health(address user, bool full) external view returns (int256);
     function amm_price() external view returns (uint256);
     function user_prices(address user) external view returns (uint256[2] memory);
