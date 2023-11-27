@@ -42,7 +42,7 @@ contract LeverageStrategy is AccessControl {
     IBasicRewards public Vaults4626;
 
     IERC20 public wsteth;
-    IERC20 public crvusd;
+    //IERC20 public crvusd;
     IERC20 public usdc;
     IERC20 public d2d;
     IERC20 public d2dusdcBPT;
@@ -55,7 +55,11 @@ contract LeverageStrategy is AccessControl {
     bytes32 public constant DAO_ROLE = keccak256("DAO_ROLE");
     bytes32 public constant CONTROLLER_ROLE = keccak256("DAO_ROLE");
 
-    uint256 public totalwstETHDeposited;
+    uint256 public totalwstETHDeposited; // Total wsteth deposited 
+    uint256 public crvUSDBorrowed;// Total crvusd borrowed 
+    uint256 public totalusdcAmount; // Total usdc  after swapping from crvusd
+    uint256 public totalbalancerLPTokens; // Total balancer LP tokens the 
+    uint256 public totalstakedInAura; // Total balancer LP tokens staked in aura for the user
 
     // mainnet addresses
     address public treasury; // recieves a fraction of yield
@@ -73,11 +77,13 @@ contract LeverageStrategy is AccessControl {
     // Add relevant events to log important contract actions/events
 
     // Constructor
-    constructor(address _dao,address _controller) {
+    constructor(address _dao,address _controller, address _keeper) {
         treasury = _dao;
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _grantRole(DAO_ROLE, _dao);
         _grantRole(CONTROLLER_ROLE, _controller);
+        _grantRole(KEEPER_ROLE, _keeper);
+
     }
 
     //================================================EXTERNAL FUNCTIONS===============================================//
@@ -180,14 +186,6 @@ contract LeverageStrategy is AccessControl {
         //auraBooster.deposit(pid, borrowAmount, true);
     }
 
-    function withdrawInvestmentFromUser(uint256 wstethAmmoumt) external {
-        UserInfo storage user = userInfo[msg.sender];
-        require(user.wstETHDeposited <= wstethAmmoumt);
-        if (wsteth.balanceOf(address(this)) > wstethAmmoumt) {
-            wsteth.transfer(msg.sender, wstethAmmoumt);
-        }
-        // Should we unwind the postion in this withdraw function or should we leave that to the keeper
-    }
 
     function unwindPosition(uint256[] calldata amounts) external onlyRole(CONTROLLER_ROLE) {
         _unstakeAndWithdrawAura(amounts[0]);
@@ -197,6 +195,19 @@ contract LeverageStrategy is AccessControl {
         _exchangeUSDCTocrvUSD(amounts[2]);
 
         _repayCRVUSDLoan(amounts[3]);
+    }
+
+    function unwindPositionFromKeeper() external onlyRole(KEEPER_ROLE) {
+
+        Vaults4626.withdrawAllAndUnwrap(true);
+
+        uint bptAmount = d2dusdcBPT.balanceOf(address(this));
+
+        _exitPool(bptAmount, 0, totalusdcAmount/2);
+ 
+        _exchangeUSDCTocrvUSD(totalusdcAmount/2);
+
+        _repayCRVUSDLoan(crvUSD.balanceOf(address(this)));
     }
 
     //================================================INTERNAL FUNCTIONS===============================================//
@@ -223,10 +234,6 @@ contract LeverageStrategy is AccessControl {
 
         totalwstETHDeposited = totalwstETHDeposited + _wstETHAmount;
 
-        // Update the user's info
-        UserInfo storage user = userInfo[msg.sender];
-        user.wstETHDeposited = user.wstETHDeposited + _wstETHAmount;
-        user.crvUSDBorrowed = user.crvUSDBorrowed + _debtAmount;
     }
 
     /// @notice Add collateral to a loan postion if the poistion is already initialised
@@ -252,16 +259,15 @@ contract LeverageStrategy is AccessControl {
 
         crvUSDController.borrow_more(_wstETHAmount, _debtAmount);
 
-        // Update the user's info
-        UserInfo storage user = userInfo[msg.sender];
-        user.wstETHDeposited = user.wstETHDeposited + _wstETHAmount;
-        user.crvUSDBorrowed = user.crvUSDBorrowed + _debtAmount;
+        totalwstETHDeposited = totalwstETHDeposited + _wstETHAmount;
+
+
     }
 
     function _repayCRVUSDLoan(uint256 deptToRepay) internal {
         require(crvUSD.approve(address(crvUSDController), deptToRepay), "Approval failed");
 
-        crvUSDController.repay(260);
+        crvUSDController.repay(deptToRepay);
     }
 
     /// @notice Join balancer pool
@@ -323,32 +329,20 @@ contract LeverageStrategy is AccessControl {
         // call _invest
     }
 
-    // TODO: exit pool
-
-    function _withdrawInvestment(address, uint256[] calldata amounts, bytes calldata extraStrategyData) internal {
-        // Exit Aura position
-
-        // Exit Balancer position
-
-        // Exchange everything to crvUSD
-
-        // repay debt
-
-        // withdraw colleteral
-    }
-
     function _exchangeCRVUSDtoUSDC(uint256 _dx) internal {
         require(crvUSD.approve(address(crvUSDUSDCPool), _dx), "Approval failed");
 
         uint256 expected = crvUSDUSDCPool.get_dy(1, 0, _dx) * 99 / 100;
 
         crvUSDUSDCPool.exchange(1, 0, _dx, expected, address(this));
+        totalusdcAmount = totalusdcAmount + expected;
     }
 
     function _exchangeUSDCTocrvUSD(uint256 _dx) internal {
         require(usdc.approve(address(crvUSDUSDCPool), _dx), "Approval failed");
         uint256 expected = crvUSDUSDCPool.get_dy(0, 1, _dx) * 99 / 100;
         crvUSDUSDCPool.exchange(0, 1, _dx, expected, address(this));
+        totalusdcAmount = totalusdcAmount - _dx;
     }
 
     function _depositAllAura() internal {

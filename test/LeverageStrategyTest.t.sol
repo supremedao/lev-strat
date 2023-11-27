@@ -99,11 +99,49 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         levStrat.invest(wstInvestAmount, debtAmount, bptExpected);
 
         uint256 debt_before = crvUSDController.debt(address(levStrat));
+        console.log("debt b4", debt_before);
 
-        _pushDebtToRepay(debt_before);
+        _pushDebtToRepay(crvUSD.balanceOf(address(levStrat)));
 
         vm.prank(controller);
         levStrat.unwindPosition(amounts);
+
+        uint256 debt_after = crvUSDController.debt(address(levStrat));
+
+        console.log("debt aft", debt_after);
+
+        assertGt(debt_before, debt_after);
+    }
+
+    function testUnwindFromPowerPool() public subtest {
+        // Give wsteth tokens to alice's account
+        deal(address(wstETH), vault4626, wstEthToAcc);
+
+        levStrat.initializeContracts(
+            address(AuraBooster),
+            address(balancerVault),
+            address(crvUSD),
+            address(crvUSDController),
+            address(crvUSDUSDCPool),
+            address(wstETH),
+            address(usdc),
+            address(d2d),
+            investN
+        );
+
+        // Make vault msg.sender
+        vm.prank(vault4626);
+        wstETH.transfer(address(levStrat), wstInvestAmount);
+
+        vm.prank(controller);
+        levStrat.invest(wstInvestAmount, debtAmount, bptExpected);
+
+        uint256 debt_before = crvUSDController.debt(address(levStrat));
+
+        console.log("debt b4", debt_before);
+
+        vm.prank(powerPool);
+        levStrat.unwindPositionFromKeeper();
 
         uint256 debt_after = crvUSDController.debt(address(levStrat));
 

@@ -60,7 +60,7 @@ contract BaseLeverageStrategyTest is BaseTest {
     uint256 minUsdExpected = 100000;
 
     function _deployContracts() internal {
-        levStrat = new LeverageStrategy(dao,controller);
+        levStrat = new LeverageStrategy(dao,controller,powerPool);
 
         levStrat.setTokenIndex(1);
         levStrat.setPoolId(0x27c9f71cc31464b906e0006d4fcbc8900f48f15f00020000000000000000010f);
