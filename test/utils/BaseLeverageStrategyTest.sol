@@ -17,10 +17,19 @@ contract BaseLeverageStrategyTest is BaseTest {
     uint256 internal alicePk = 0xa11ce;
     uint256 internal bobPk = 0xb0b;
     uint256 internal daoPk = 0xDa0;
+    uint256 internal vault4626Pk = 0x5432;
+    uint256 internal powerPoolPk = 0x4565;
+
+
+
     address internal owner = vm.addr(ownerPk);
     address internal alice = vm.addr(alicePk);
     address internal bob = vm.addr(bobPk);
     address internal dao = vm.addr(daoPk);
+    address internal vault4626 = vm.addr(vault4626Pk);
+    address internal powerPool = vm.addr(powerPoolPk);
+
+
     uint256 maxApprove = 2 ** 256 - 1;
     uint256 wstEthToAcc = 20 * 1e18;
     uint256 wstInvestAmount2 = 1 * 1e18;

@@ -20,14 +20,15 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
             address(crvUSDUSDCPool),
             address(wstETH),
             address(usdc),
-            address(d2d)
+            address(d2d),
+            insvestN
         );
 
         // Make alice msg.sender
         vm.startPrank(alice);
         wstETH.approve(address(levStrat), maxApprove);
 
-        levStrat.invest(wstInvestAmount, debtAmount, insvestN, bptExpected);
+        levStrat.invest(wstInvestAmount, debtAmount, bptExpected);
         vm.stopPrank();
         uint256 aft = AuraLPVault.balanceOf(address(levStrat));
         console.log("bal aft", aft);
@@ -51,14 +52,15 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
             address(crvUSDUSDCPool),
             address(wstETH),
             address(usdc),
-            address(d2d)
-        ); //levStrat.initializeContracts(_auraBooster, _balancerVault, _crvUSD, _crvUSDController, _crvUSDUSDCPool, _wstETH, _USDC, _D2D);
+            address(d2d),
+            insvestN
+        ); //levStrat.initializeContracts(_auraBooster, _balancerVault, _crvUSD, _crvUSDController, _crvUSDUSDCPool, _wstETH, _USDC, _D2D, Number_of_deposit_bands);
 
         // Make alice msg.sender
         vm.startPrank(alice);
         wstETH.approve(address(levStrat), maxApprove);
-        levStrat.invest(wstInvestAmount, debtAmount, insvestN, bptExpected);
-        levStrat.invest(wstInvestAmount, debtAmount, insvestN, bptExpected);
+        levStrat.invest(wstInvestAmount, debtAmount, bptExpected);
+        levStrat.invest(wstInvestAmount, debtAmount, bptExpected);
         vm.stopPrank();
 
         uint256 aft = AuraLPVault.balanceOf(address(levStrat));
@@ -78,14 +80,15 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
             address(crvUSDUSDCPool),
             address(wstETH),
             address(usdc),
-            address(d2d)
+            address(d2d),
+            insvestN
         );
 
         // Make alice msg.sender
         vm.startPrank(alice);
         wstETH.approve(address(levStrat), maxApprove);
 
-        levStrat.invest(wstInvestAmount, debtAmount, insvestN, bptExpected);
+        levStrat.invest(wstInvestAmount, debtAmount, bptExpected);
         vm.stopPrank();
         //uint256 aft = AuraLPVault.balanceOf(address(levStrat));
 

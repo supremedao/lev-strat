@@ -49,6 +49,7 @@ contract LeverageStrategy is AccessControl {
     bytes32 public poolId;
     uint256 public pid;
     uint256 internal TokenIndex;
+    uint256 internal N; // Number of bands for the crvusd/wseth soft liquidation range
 
     bytes32 public constant KEEPER_ROLE = keccak256("KEEPER_ROLE");
     bytes32 public constant DAO_ROLE = keccak256("DAO_ROLE");
@@ -89,7 +90,8 @@ contract LeverageStrategy is AccessControl {
         address _crvUSDUSDCPool,
         address _wstETH,
         address _USDC,
-        address _D2D
+        address _D2D,
+        uint256 _N
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         auraBooster = IAuraBooster(_auraBooster);
         balancerVault = IBalancerVault(_balancerVault);
@@ -99,6 +101,7 @@ contract LeverageStrategy is AccessControl {
         wsteth = IERC20(_wstETH);
         usdc = IERC20(_USDC);
         d2d = IERC20(_D2D);
+        N = _N;
     }
 
     function setPoolId(bytes32 _poolId) external onlyRole(DEFAULT_ADMIN_ROLE) {
@@ -127,13 +130,13 @@ contract LeverageStrategy is AccessControl {
 
     // main contract functions
     // @param N Number of price bands to deposit into (to do autoliquidation-deliquidation of wsteth) if the price of the wsteth collateral goes too low
-    function invest(uint256 _wstETHAmount, uint256 _debtAmount, uint256 _N, uint256 _bptAmountOut) external {
+    function invest(uint256 _wstETHAmount, uint256 _debtAmount, uint256 _bptAmountOut) external {
         // Opens a position on crvUSD if no loan already
         // Note this address is an owner of a crvUSD CDP
         // in the usual case we already have a CDP
         // But there also should be a case when we create a new one
         if (!crvUSDController.loan_exists(address(this))) {
-            _depositAndCreateLoan(_wstETHAmount, _debtAmount, _N);
+            _depositAndCreateLoan(_wstETHAmount, _debtAmount);
         } else {
             //_addCollateral(_wstETHAmount);
             _borrowMore(_wstETHAmount, _debtAmount);
@@ -195,8 +198,7 @@ contract LeverageStrategy is AccessControl {
     /// @notice Create a loan position for the strategy, only used if this is the first position created
     /// @param _wstETHAmount the amount of wsteth deposited
     /// @param _debtAmount the amount of crvusd borrowed
-    /// @param _N the number of price bins wsteth is deposited into, this is for crvusds soft liquidations
-    function _depositAndCreateLoan(uint256 _wstETHAmount, uint256 _debtAmount, uint256 _N) internal {
+    function _depositAndCreateLoan(uint256 _wstETHAmount, uint256 _debtAmount) internal {
         require(_wstETHAmount > 0, "Amount should be greater than 0");
 
         require(IERC20(wsteth).transferFrom(msg.sender, address(this), _wstETHAmount), "Transfer failed");
@@ -204,7 +206,7 @@ contract LeverageStrategy is AccessControl {
         require(IERC20(wsteth).approve(address(crvUSDController), _wstETHAmount), "Approval failed");
 
         // Call create_loan on the controller
-        crvUSDController.create_loan(_wstETHAmount, _debtAmount, _N);
+        crvUSDController.create_loan(_wstETHAmount, _debtAmount, N);
 
         totalwstETHDeposited = totalwstETHDeposited + _wstETHAmount;
 
@@ -212,7 +214,6 @@ contract LeverageStrategy is AccessControl {
         UserInfo storage user = userInfo[msg.sender];
         user.wstETHDeposited = user.wstETHDeposited + _wstETHAmount;
         user.crvUSDBorrowed = user.crvUSDBorrowed + _debtAmount;
-        user.loanBand = _N;
     }
 
     /// @notice Add collateral to a loan postion if the poistion is already initialised
