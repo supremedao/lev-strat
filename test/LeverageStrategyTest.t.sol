@@ -9,8 +9,8 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
     }
 
     function testInvest() public subtest {
-        // Give wsteth tokens to alice's account
-        deal(address(wstETH), alice, wstEthToAcc);
+        // Wsteth gets deposited into vault
+        deal(address(wstETH), vault4626, wstEthToAcc);
 
         levStrat.initializeContracts(
             address(AuraBooster),
@@ -21,15 +21,16 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
             address(wstETH),
             address(usdc),
             address(d2d),
-            insvestN
+            investN
         );
 
-        // Make alice msg.sender
-        vm.startPrank(alice);
-        wstETH.approve(address(levStrat), maxApprove);
+        // Make vault msg.sender
+        vm.prank(vault4626);
+        wstETH.transfer(address(levStrat), wstInvestAmount);
 
+        vm.prank(controller);
         levStrat.invest(wstInvestAmount, debtAmount, bptExpected);
-        vm.stopPrank();
+
         uint256 aft = AuraLPVault.balanceOf(address(levStrat));
         console.log("bal aft", aft);
         assertGt(aft, 0);
@@ -40,7 +41,7 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         console.log("bal b4", before);
 
         // Give wsteth tokens to alice's account
-        deal(address(wstETH), alice, wstEthToAcc);
+        deal(address(wstETH), vault4626, wstEthToAcc);
 
         wstETH.approve(address(levStrat), maxApprove);
 
@@ -53,15 +54,21 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
             address(wstETH),
             address(usdc),
             address(d2d),
-            insvestN
+            investN
         ); //levStrat.initializeContracts(_auraBooster, _balancerVault, _crvUSD, _crvUSDController, _crvUSDUSDCPool, _wstETH, _USDC, _D2D, Number_of_deposit_bands);
 
-        // Make alice msg.sender
-        vm.startPrank(alice);
-        wstETH.approve(address(levStrat), maxApprove);
+        // Make vault msg.sender
+        vm.prank(vault4626);
+        wstETH.transfer(address(levStrat), wstInvestAmount);
+
+        vm.prank(controller);
         levStrat.invest(wstInvestAmount, debtAmount, bptExpected);
+
+        vm.prank(vault4626);
+        wstETH.transfer(address(levStrat), wstInvestAmount);
+
+        vm.prank(controller);
         levStrat.invest(wstInvestAmount, debtAmount, bptExpected);
-        vm.stopPrank();
 
         uint256 aft = AuraLPVault.balanceOf(address(levStrat));
         console.log("bal aft", aft);
@@ -70,7 +77,7 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
 
     function testUnwind() public subtest {
         // Give wsteth tokens to alice's account
-        deal(address(wstETH), alice, wstEthToAcc);
+        deal(address(wstETH), vault4626, wstEthToAcc);
 
         levStrat.initializeContracts(
             address(AuraBooster),
@@ -81,22 +88,21 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
             address(wstETH),
             address(usdc),
             address(d2d),
-            insvestN
+            investN
         );
 
-        // Make alice msg.sender
-        vm.startPrank(alice);
-        wstETH.approve(address(levStrat), maxApprove);
+        // Make vault msg.sender
+        vm.prank(vault4626);
+        wstETH.transfer(address(levStrat), wstInvestAmount);
 
+        vm.prank(controller);
         levStrat.invest(wstInvestAmount, debtAmount, bptExpected);
-        vm.stopPrank();
-        //uint256 aft = AuraLPVault.balanceOf(address(levStrat));
 
-        //uint256 aftCRVUSD = crvUSD.balanceOf(address(levStrat));
         uint256 debt_before = crvUSDController.debt(address(levStrat));
 
         _pushDebtToRepay(debt_before);
 
+        vm.prank(controller);
         levStrat.unwindPosition(amounts);
 
         uint256 debt_after = crvUSDController.debt(address(levStrat));
@@ -104,7 +110,5 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         console.log("debt aft", debt_after);
 
         assertGt(debt_before, debt_after);
-
-
     }
 }

@@ -53,6 +53,7 @@ contract LeverageStrategy is AccessControl {
 
     bytes32 public constant KEEPER_ROLE = keccak256("KEEPER_ROLE");
     bytes32 public constant DAO_ROLE = keccak256("DAO_ROLE");
+    bytes32 public constant CONTROLLER_ROLE = keccak256("DAO_ROLE");
 
     uint256 public totalwstETHDeposited;
 
@@ -72,10 +73,11 @@ contract LeverageStrategy is AccessControl {
     // Add relevant events to log important contract actions/events
 
     // Constructor
-    constructor(address _dao) {
+    constructor(address _dao,address _controller) {
         treasury = _dao;
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _grantRole(DAO_ROLE, _dao);
+        _grantRole(CONTROLLER_ROLE, _controller);
     }
 
     //================================================EXTERNAL FUNCTIONS===============================================//
@@ -130,7 +132,8 @@ contract LeverageStrategy is AccessControl {
 
     // main contract functions
     // @param N Number of price bands to deposit into (to do autoliquidation-deliquidation of wsteth) if the price of the wsteth collateral goes too low
-    function invest(uint256 _wstETHAmount, uint256 _debtAmount, uint256 _bptAmountOut) external {
+    function invest(uint256 _wstETHAmount, uint256 _debtAmount, uint256 _bptAmountOut) external onlyRole(CONTROLLER_ROLE) {
+        require(_wstETHAmount <= wsteth.balanceOf(address(this)));
         // Opens a position on crvUSD if no loan already
         // Note this address is an owner of a crvUSD CDP
         // in the usual case we already have a CDP
@@ -142,25 +145,35 @@ contract LeverageStrategy is AccessControl {
             _borrowMore(_wstETHAmount, _debtAmount);
         }
 
-        // TODO: calculate borrow amount
-        // check if there's price in Curve or we should ping Oracle
-
-        // Exchange crvUSD to USDC on Curve
-
-        // TODO: check the actual token id's and transaction generation
-        // Note: seems that we have a different interface compared to supremedao/contracts
-
-        // pool crvUSD -> USDCPool
-        // For this Pool:
-        // token_id 1 = crvUSD
-        // token_id 0 = USDC
-        //uint[] memory amounts = [_debtAmount,0];
-        //uint usdcAmount = crvUSDUSDCPool.exchange({ sold_token_id: 0, bought_token_id: 2, amount: amounts[0], min_output_amount: 100000 });
-
         _exchangeCRVUSDtoUSDC(_debtAmount);
 
         // Provide liquidity to the D2D/USDC Pool on Balancer
         _joinPool(_debtAmount, _bptAmountOut, TokenIndex);
+
+        // Stake LP tokens on Aura Finance
+        _depositAllAura();
+        //auraBooster.deposit(pid, borrowAmount, true);
+    }
+
+    function investFromKeeper(uint256 _bptAmountOut) external onlyRole(KEEPER_ROLE) {
+        uint256 amountInStrategy = wsteth.balanceOf(address(this));
+
+        uint256 maxBorrowable = crvUSDController.max_borrowable(amountInStrategy, N); //Should the keeper always borrow max or some %
+        // Opens a position on crvUSD if no loan already
+        // Note this address is an owner of a crvUSD CDP
+        // in the usual case we already have a CDP
+        // But there also should be a case when we create a new one
+        if (!crvUSDController.loan_exists(address(this))) {
+            _depositAndCreateLoan(amountInStrategy, maxBorrowable);
+        } else {
+            //_addCollateral(_wstETHAmount);
+            _borrowMore(amountInStrategy, maxBorrowable);
+        }
+
+        _exchangeCRVUSDtoUSDC(maxBorrowable);
+
+        // Provide liquidity to the D2D/USDC Pool on Balancer
+        _joinPool(maxBorrowable, _bptAmountOut, TokenIndex);
 
         // Stake LP tokens on Aura Finance
         _depositAllAura();
@@ -176,7 +189,7 @@ contract LeverageStrategy is AccessControl {
         // Should we unwind the postion in this withdraw function or should we leave that to the keeper
     }
 
-    function unwindPosition(uint256[] calldata amounts) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function unwindPosition(uint256[] calldata amounts) external onlyRole(CONTROLLER_ROLE) {
         _unstakeAndWithdrawAura(amounts[0]);
 
         _exitPool(amounts[1], 0, amounts[2]);
@@ -201,7 +214,7 @@ contract LeverageStrategy is AccessControl {
     function _depositAndCreateLoan(uint256 _wstETHAmount, uint256 _debtAmount) internal {
         require(_wstETHAmount > 0, "Amount should be greater than 0");
 
-        require(IERC20(wsteth).transferFrom(msg.sender, address(this), _wstETHAmount), "Transfer failed");
+        //require(IERC20(wsteth).transferFrom(msg.sender, address(this), _wstETHAmount), "Transfer failed");
 
         require(IERC20(wsteth).approve(address(crvUSDController), _wstETHAmount), "Approval failed");
 
@@ -233,7 +246,7 @@ contract LeverageStrategy is AccessControl {
     /// @param _wstETHAmount the amount of wsteth deposited
     /// @param _debtAmount the amount of crvusd borrowed
     function _borrowMore(uint256 _wstETHAmount, uint256 _debtAmount) internal {
-        require(IERC20(wsteth).transferFrom(msg.sender, address(this), _wstETHAmount), "Transfer failed");
+        // require(IERC20(wsteth).transferFrom(msg.sender, address(this), _wstETHAmount), "Transfer failed");
 
         require(IERC20(wsteth).approve(address(crvUSDController), _wstETHAmount), "Approval failed");
 
