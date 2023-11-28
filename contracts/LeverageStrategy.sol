@@ -202,6 +202,7 @@ contract LeverageStrategy is AccessControl {
     function unwindPositionFromKeeper() external onlyRole(KEEPER_ROLE) {
 
         (int256 diff, bool drop) = _checkHealthChange() ;
+        // If drop is true and dif is greater than 14%
         if(drop && diff > 14){
         Vaults4626.withdrawAllAndUnwrap(true);
 
