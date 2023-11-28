@@ -35,10 +35,10 @@ contract BaseLeverageStrategyTest is BaseTest {
 
     uint256 internal aliceAmount = 7 * 1e18;
     uint256 internal wstApproveAmount = 2 ** 256 - 1;
-    uint256 internal wstInvestAmount = 2 * 1e18;
-    uint256 internal debtAmount = 100 * 1e18;
+    uint256 internal wstInvestAmount = 3 * 1e18;
+    uint256 internal debtAmount = 2000 * 1e18;
     uint256 internal investN = 10;
-    uint256 internal bptExpected = 2 * 1e18;
+    uint256 internal bptExpected = 50000 * 1e18;
 
     IERC20 public usdc;
     IERC20 public wstETH;
@@ -84,6 +84,10 @@ contract BaseLeverageStrategyTest is BaseTest {
 
         vm.label(address(levStrat), "LevStrategy");
         vm.label(alice, "Alice");
+        vm.label(address(d2dusdcBPT), "BPTlpToken");
+        vm.label(address(AuraLPVault), "AuraLPVault");
+        vm.label(address(AuraBooster), "AuraBooster");
+        vm.label(address(AuraLPtoken), "AuraLPtoken");
 
         // Amounts = [AuraLPtoken, BPTout, minUSDCExpected, debtToRepay]
         // amounts.push(AuraLPtokenExpected);

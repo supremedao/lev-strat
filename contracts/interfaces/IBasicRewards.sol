@@ -10,6 +10,8 @@ interface IBasicRewards {
 
     function earned(address) external view returns (uint256);
 
+    function rewards(address) external view returns (uint256);
+
     function withdrawAll(bool) external returns (bool);
 
     function withdraw(uint256, bool) external returns (bool);

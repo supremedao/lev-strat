@@ -210,6 +210,13 @@ contract LeverageStrategy is AccessControl {
         _repayCRVUSDLoan(crvUSD.balanceOf(address(this)));
     }
 
+    function claimStrategyRewards() external returns (uint256) {
+        uint rewards = Vaults4626.rewards(address(this));
+        _claimRewards();
+        return rewards;
+
+    }
+
     //================================================INTERNAL FUNCTIONS===============================================//
     /// @dev This helper function is a fast and cheap way to convert between IERC20[] and IAsset[] types
     function _convertERC20sToAssets(IERC20[] memory tokens) internal pure returns (IAsset[] memory assets) {
@@ -315,18 +322,12 @@ contract LeverageStrategy is AccessControl {
         balancerVault.exitPool(poolId, address(this), payable(address(this)), request);
     }
 
-    function _claimRewards() external {
-        // Claim rewards from Aura
+    function _claimRewards() internal  {
 
-        // TODO: figure out how to pass all the parameters
+        if (Vaults4626.rewards(address(this)) > 0 ){
+            Vaults4626.getReward();
+        }
 
-        // exchange for WSTETH
-
-        // Note: there is no BAL/AURA -> WSTETH Pool
-        // TODO: check if there is a single transaction on Balancer
-        // otherwise do a jumping transaction BAL -> ETH -> WSTETH
-
-        // call _invest
     }
 
     function _exchangeCRVUSDtoUSDC(uint256 _dx) internal {

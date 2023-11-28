@@ -149,4 +149,37 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
 
         assertGt(debt_before, debt_after);
     }
+
+    function testClaimReward() public subtest {
+        // Give wsteth tokens to alice's account
+        deal(address(wstETH), vault4626, wstEthToAcc);
+
+        levStrat.initializeContracts(
+            address(AuraBooster),
+            address(balancerVault),
+            address(crvUSD),
+            address(crvUSDController),
+            address(crvUSDUSDCPool),
+            address(wstETH),
+            address(usdc),
+            address(d2d),
+            investN
+        );
+
+        // Make our vault msg.sender as vault will transfer to strat when deposited into
+        vm.prank(vault4626);
+        wstETH.transfer(address(levStrat), wstInvestAmount);
+
+        vm.prank(controller);
+        levStrat.invest(wstInvestAmount, debtAmount, bptExpected);
+
+        vm.roll(block.number + 10);
+
+        //vm.warp(3 days);
+
+       // vm.roll(block.number + 1);
+
+        uint x = levStrat.claimStrategyRewards();
+        console.log("X IS ", x);
+    }
 }
