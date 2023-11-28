@@ -36,9 +36,9 @@ contract BaseLeverageStrategyTest is BaseTest {
     uint256 internal aliceAmount = 7 * 1e18;
     uint256 internal wstApproveAmount = 2 ** 256 - 1;
     uint256 internal wstInvestAmount = 3 * 1e18;
-    uint256 internal debtAmount = 2000 * 1e18;
+    uint256 internal debtAmount = 4000 * 1e18;
     uint256 internal investN = 10;
-    uint256 internal bptExpected = 50000 * 1e18;
+    uint256 internal bptExpected = 100000 * 1e18;
 
     IERC20 public usdc;
     IERC20 public wstETH;
