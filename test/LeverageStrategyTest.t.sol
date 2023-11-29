@@ -101,7 +101,7 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         uint256 debt_before = crvUSDController.debt(address(levStrat));
         console.log("debt b4", debt_before);
 
-        _pushDebtToRepay(crvUSD.balanceOf(address(levStrat)));
+        _pushDebtToRepay(debtAmountToRepay);
 
         vm.prank(controller);
         levStrat.unwindPosition(amounts);
@@ -110,7 +110,8 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
 
         console.log("debt aft", debt_after);
 
-        assertGt(debt_before, debt_after);
+        //assertGt(debt_before, debt_after);
+        assert(debt_before > debt_after);
     }
 
     function testUnwindFromPowerPool() public subtest {
@@ -147,7 +148,7 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
 
         console.log("debt aft", debt_after);
 
-        assertGt(debt_before, debt_after);
+        assert(debt_before > debt_after);
     }
 
     function testClaimReward() public subtest {

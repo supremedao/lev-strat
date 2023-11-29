@@ -203,9 +203,9 @@ contract LeverageStrategy is AccessControl {
 
         uint bptAmount = d2dusdcBPT.balanceOf(address(this));
 
-        _exitPool(bptAmount, 0, totalusdcAmount/2);
+        _exitPool(bptAmount, 0, usdc.balanceOf(address(this)));
  
-        _exchangeUSDCTocrvUSD(totalusdcAmount/2);
+        _exchangeUSDCTocrvUSD(usdc.balanceOf(address(this)));
 
         _repayCRVUSDLoan(crvUSD.balanceOf(address(this)));
     }
