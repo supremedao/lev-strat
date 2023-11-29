@@ -21,18 +21,7 @@ import "./interfaces/IERC20.sol";
 import "./interfaces/IBasicRewards.sol";
 
 contract LeverageStrategy is AccessControl {
-    //Struct to keep track of the users funds and where they are allocated
-    //TODO: see how many of the struct vars actually need the full uint256
-    struct UserInfo {
-        uint256 wstETHDeposited; // Total wsteth deposited by a user
-        uint256 crvUSDBorrowed; // Total crvusd borrowed by a user
-        uint256 usdcAmount; // Total usdc of the user after swapping from crvusd
-        uint256 balancerLPTokens; // Total balancer LP tokens the user
-        uint256 stakedInAura; // Total balancer LP tokens staked in aura for the user
-        uint256 totalYieldEarned; // Historical yield for the user, maybe unnecessary
-        uint256 loanBand; // The number of price bands in which the users wsteth will be deposited into
-    }
-
+  
     // State variables
     IAuraBooster public auraBooster;
     IBalancerVault public balancerVault;
@@ -52,20 +41,17 @@ contract LeverageStrategy is AccessControl {
     uint256 internal N; // Number of bands for the crvusd/wseth soft liquidation range
 
     bytes32 public constant KEEPER_ROLE = keccak256("KEEPER_ROLE");
-    bytes32 public constant DAO_ROLE = keccak256("DAO_ROLE");
     bytes32 public constant CONTROLLER_ROLE = keccak256("DAO_ROLE");
 
-    uint256 public totalwstETHDeposited; // Total wsteth deposited 
+    uint256 public totalWsthethDeposited; // Total wsteth deposited 
     uint256 public crvUSDBorrowed;// Total crvusd borrowed 
-    uint256 public totalusdcAmount; // Total usdc  after swapping from crvusd
-    uint256 public totalbalancerLPTokens; // Total balancer LP tokens the 
-    uint256 public totalstakedInAura; // Total balancer LP tokens staked in aura for the user
+    uint256 public totalUsdcAmount; // Total usdc  after swapping from crvusd
+    uint256 public totalBalancerLPTokens; // Total balancer LP tokens the 
+    uint256 public totalStakedInAura; // Total balancer LP tokens staked in aura for the user
 
     // mainnet addresses
     address public treasury; // recieves a fraction of yield
 
-    //mappings
-    mapping(address => UserInfo) public userInfo;
 
     // pools addresses
 
@@ -76,11 +62,13 @@ contract LeverageStrategy is AccessControl {
     // Events
     // Add relevant events to log important contract actions/events
 
-    // Constructor
+    /// Constructor
+    /// @param _dao is the treasury to withdraw too
+    /// @param _controller is the address of the strategy controller
+    /// @param _keeper is the address of the power pool keeper
     constructor(address _dao,address _controller, address _keeper) {
         treasury = _dao;
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
-        _grantRole(DAO_ROLE, _dao);
         _grantRole(CONTROLLER_ROLE, _controller);
         _grantRole(KEEPER_ROLE, _keeper);
 
@@ -139,6 +127,9 @@ contract LeverageStrategy is AccessControl {
     // main contract functions
     // @param N Number of price bands to deposit into (to do autoliquidation-deliquidation of wsteth) if the price of the wsteth collateral goes too low
     function invest(uint256 _wstETHAmount, uint256 _debtAmount, uint256 _bptAmountOut) external onlyRole(CONTROLLER_ROLE) {
+
+        // This check makes sure that the _wstETHAmount specified by the controller is actually available in this contract
+        // The strategy does not handle the deposit of funds, the vault takes the deposits and sends it directly to the strategy
         require(_wstETHAmount <= wsteth.balanceOf(address(this)));
         // Opens a position on crvUSD if no loan already
         // Note this address is an owner of a crvUSD CDP
@@ -172,18 +163,14 @@ contract LeverageStrategy is AccessControl {
         if (!crvUSDController.loan_exists(address(this))) {
             _depositAndCreateLoan(amountInStrategy, maxBorrowable);
         } else {
-            //_addCollateral(_wstETHAmount);
             _borrowMore(amountInStrategy, maxBorrowable);
         }
 
         _exchangeCRVUSDtoUSDC(maxBorrowable);
-
         // Provide liquidity to the D2D/USDC Pool on Balancer
         _joinPool(maxBorrowable, _bptAmountOut, TokenIndex);
-
         // Stake LP tokens on Aura Finance
         _depositAllAura();
-        //auraBooster.deposit(pid, borrowAmount, true);
     }
 
 
@@ -203,9 +190,9 @@ contract LeverageStrategy is AccessControl {
 
         uint bptAmount = d2dusdcBPT.balanceOf(address(this));
 
-        _exitPool(bptAmount, 0, totalusdcAmount/2);
+        _exitPool(bptAmount, 0, totalUsdcAmount/2);
  
-        _exchangeUSDCTocrvUSD(totalusdcAmount/2);
+        _exchangeUSDCTocrvUSD(totalUsdcAmount/2);
 
         _repayCRVUSDLoan(crvUSD.balanceOf(address(this)));
     }
@@ -232,7 +219,7 @@ contract LeverageStrategy is AccessControl {
         // Call create_loan on the controller
         crvUSDController.create_loan(_wstETHAmount, _debtAmount, N);
 
-        totalwstETHDeposited = totalwstETHDeposited + _wstETHAmount;
+        totalWsthethDeposited = totalWsthethDeposited + _wstETHAmount;
 
     }
 
@@ -246,20 +233,20 @@ contract LeverageStrategy is AccessControl {
         require(IERC20(wsteth).approve(address(crvUSDController), _wstETHAmount), "Approval failed");
 
         crvUSDController.add_collateral(_wstETHAmount, address(this));
-        totalwstETHDeposited = totalwstETHDeposited + _wstETHAmount;
+        totalWsthethDeposited = totalWsthethDeposited + _wstETHAmount;
     }
 
     /// @notice Borrow more crvusd,
     /// @param _wstETHAmount the amount of wsteth deposited
     /// @param _debtAmount the amount of crvusd borrowed
+    /// @dev We don't need to transferFrom msg.sender anymore as now the wsteth will be directly transferred by the vault
     function _borrowMore(uint256 _wstETHAmount, uint256 _debtAmount) internal {
-        // require(IERC20(wsteth).transferFrom(msg.sender, address(this), _wstETHAmount), "Transfer failed");
 
-        require(IERC20(wsteth).approve(address(crvUSDController), _wstETHAmount), "Approval failed");
+       require(IERC20(wsteth).approve(address(crvUSDController), _wstETHAmount), "Approval failed");
 
         crvUSDController.borrow_more(_wstETHAmount, _debtAmount);
 
-        totalwstETHDeposited = totalwstETHDeposited + _wstETHAmount;
+        totalWsthethDeposited = totalWsthethDeposited + _wstETHAmount;
 
 
     }
@@ -335,14 +322,14 @@ contract LeverageStrategy is AccessControl {
         uint256 expected = crvUSDUSDCPool.get_dy(1, 0, _dx) * 99 / 100;
 
         crvUSDUSDCPool.exchange(1, 0, _dx, expected, address(this));
-        totalusdcAmount = totalusdcAmount + expected;
+        totalUsdcAmount = totalUsdcAmount + expected;
     }
 
     function _exchangeUSDCTocrvUSD(uint256 _dx) internal {
         require(usdc.approve(address(crvUSDUSDCPool), _dx), "Approval failed");
         uint256 expected = crvUSDUSDCPool.get_dy(0, 1, _dx) * 99 / 100;
         crvUSDUSDCPool.exchange(0, 1, _dx, expected, address(this));
-        totalusdcAmount = totalusdcAmount - _dx;
+        totalUsdcAmount = totalUsdcAmount - _dx;
     }
 
     function _depositAllAura() internal {

@@ -55,7 +55,7 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
             address(usdc),
             address(d2d),
             investN
-        ); //levStrat.initializeContracts(_auraBooster, _balancerVault, _crvUSD, _crvUSDController, _crvUSDUSDCPool, _wstETH, _USDC, _D2D, Number_of_deposit_bands);
+        ); 
 
         // Make vault msg.sender
         vm.prank(vault4626);
