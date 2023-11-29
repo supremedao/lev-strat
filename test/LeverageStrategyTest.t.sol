@@ -178,9 +178,9 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
 
         //vm.warp(3 days);
 
-       // vm.roll(block.number + 1);
+        // vm.roll(block.number + 1);
 
-        uint x = levStrat.claimStrategyRewards();
+        uint256 x = levStrat.claimStrategyRewards();
         console.log("X IS ", x);
     }
 }

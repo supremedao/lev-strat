@@ -55,10 +55,10 @@ contract LeverageStrategy is AccessControl {
     bytes32 public constant DAO_ROLE = keccak256("DAO_ROLE");
     bytes32 public constant CONTROLLER_ROLE = keccak256("DAO_ROLE");
 
-    uint256 public totalwstETHDeposited; // Total wsteth deposited 
-    uint256 public crvUSDBorrowed;// Total crvusd borrowed 
+    uint256 public totalwstETHDeposited; // Total wsteth deposited
+    uint256 public crvUSDBorrowed; // Total crvusd borrowed
     uint256 public totalusdcAmount; // Total usdc  after swapping from crvusd
-    uint256 public totalbalancerLPTokens; // Total balancer LP tokens the 
+    uint256 public totalbalancerLPTokens; // Total balancer LP tokens the
     uint256 public totalstakedInAura; // Total balancer LP tokens staked in aura for the user
 
     // mainnet addresses
@@ -77,13 +77,12 @@ contract LeverageStrategy is AccessControl {
     // Add relevant events to log important contract actions/events
 
     // Constructor
-    constructor(address _dao,address _controller, address _keeper) {
+    constructor(address _dao, address _controller, address _keeper) {
         treasury = _dao;
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _grantRole(DAO_ROLE, _dao);
         _grantRole(CONTROLLER_ROLE, _controller);
         _grantRole(KEEPER_ROLE, _keeper);
-
     }
 
     //================================================EXTERNAL FUNCTIONS===============================================//
@@ -138,7 +137,10 @@ contract LeverageStrategy is AccessControl {
 
     // main contract functions
     // @param N Number of price bands to deposit into (to do autoliquidation-deliquidation of wsteth) if the price of the wsteth collateral goes too low
-    function invest(uint256 _wstETHAmount, uint256 _debtAmount, uint256 _bptAmountOut) external onlyRole(CONTROLLER_ROLE) {
+    function invest(uint256 _wstETHAmount, uint256 _debtAmount, uint256 _bptAmountOut)
+        external
+        onlyRole(CONTROLLER_ROLE)
+    {
         require(_wstETHAmount <= wsteth.balanceOf(address(this)));
         // Opens a position on crvUSD if no loan already
         // Note this address is an owner of a crvUSD CDP
@@ -186,7 +188,6 @@ contract LeverageStrategy is AccessControl {
         //auraBooster.deposit(pid, borrowAmount, true);
     }
 
-
     function unwindPosition(uint256[] calldata amounts) external onlyRole(CONTROLLER_ROLE) {
         _unstakeAndWithdrawAura(amounts[0]);
 
@@ -198,23 +199,21 @@ contract LeverageStrategy is AccessControl {
     }
 
     function unwindPositionFromKeeper() external onlyRole(KEEPER_ROLE) {
-
         Vaults4626.withdrawAllAndUnwrap(true);
 
-        uint bptAmount = d2dusdcBPT.balanceOf(address(this));
+        uint256 bptAmount = d2dusdcBPT.balanceOf(address(this));
 
         _exitPool(bptAmount, 0, usdc.balanceOf(address(this)));
- 
+
         _exchangeUSDCTocrvUSD(usdc.balanceOf(address(this)));
 
         _repayCRVUSDLoan(crvUSD.balanceOf(address(this)));
     }
 
     function claimStrategyRewards() external returns (uint256) {
-        uint rewards = Vaults4626.rewards(address(this));
+        uint256 rewards = Vaults4626.rewards(address(this));
         _claimRewards();
         return rewards;
-
     }
 
     //================================================INTERNAL FUNCTIONS===============================================//
@@ -240,7 +239,6 @@ contract LeverageStrategy is AccessControl {
         crvUSDController.create_loan(_wstETHAmount, _debtAmount, N);
 
         totalwstETHDeposited = totalwstETHDeposited + _wstETHAmount;
-
     }
 
     /// @notice Add collateral to a loan postion if the poistion is already initialised
@@ -267,8 +265,6 @@ contract LeverageStrategy is AccessControl {
         crvUSDController.borrow_more(_wstETHAmount, _debtAmount);
 
         totalwstETHDeposited = totalwstETHDeposited + _wstETHAmount;
-
-
     }
 
     function _repayCRVUSDLoan(uint256 deptToRepay) internal {
@@ -322,12 +318,10 @@ contract LeverageStrategy is AccessControl {
         balancerVault.exitPool(poolId, address(this), payable(address(this)), request);
     }
 
-    function _claimRewards() internal  {
-
-        if (Vaults4626.rewards(address(this)) > 0 ){
+    function _claimRewards() internal {
+        if (Vaults4626.rewards(address(this)) > 0) {
             Vaults4626.getReward();
         }
-
     }
 
     function _exchangeCRVUSDtoUSDC(uint256 _dx) internal {

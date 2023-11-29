@@ -21,6 +21,27 @@ interface IBalancerVault {
         MANAGEMENT_FEE_TOKENS_OUT // for InvestmentPool
     }
 
+    enum SwapKind {
+        GIVEN_IN,
+        GIVEN_OUT
+    }
+
+    struct BatchSwapStep {
+        bytes32 poolId;
+        uint256 assetInIndex;
+        uint256 assetOutIndex;
+        uint256 amount;
+        bytes userData;
+    }
+
+    struct FundManagement {
+        address sender;
+        bool fromInternalBalance;
+        address payable recipient;
+        bool toInternalBalance;
+    }
+
+
     /* @dev copied from the IVault.sol -\0_0/-
 
     /**
@@ -129,4 +150,13 @@ interface IBalancerVault {
         external
         view
         returns (IERC20[] memory tokens, uint256[] memory balances, uint256 lastChangeBlock);
+
+    function batchSwap(
+        SwapKind kind,
+        BatchSwapStep[] memory swaps,
+        IAsset[] memory assets,
+        FundManagement memory funds,
+        int256[] memory limits,
+        uint256 deadline
+    ) external payable returns (int256[] memory);
 }
