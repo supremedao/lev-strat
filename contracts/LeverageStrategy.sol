@@ -19,6 +19,7 @@ import "./interfaces/IcrvUSDController.sol";
 import "./interfaces/IcrvUSDUSDCPool.sol";
 import "./interfaces/IERC20.sol";
 import "./interfaces/IBasicRewards.sol";
+import {console2} from "forge-std/console2.sol";
 
 contract LeverageStrategy is AccessControl {
   
@@ -253,7 +254,7 @@ contract LeverageStrategy is AccessControl {
 
     function _repayCRVUSDLoan(uint256 deptToRepay) internal {
         require(crvUSD.approve(address(crvUSDController), deptToRepay), "Approval failed");
-
+        console2.log("crv usd repay loan",deptToRepay );
         crvUSDController.repay(deptToRepay);
     }
 
@@ -284,6 +285,7 @@ contract LeverageStrategy is AccessControl {
     }
 
     function _exitPool(uint256 bptAmountIn, uint256 exitTokenIndex, uint256 minAmountOut) internal {
+        
         (IERC20[] memory tokens,,) = balancerVault.getPoolTokens(poolId);
         uint256[] memory minAmountsOut = new uint256[](tokens.length);
         minAmountsOut[exitTokenIndex] = minAmountOut;
@@ -298,6 +300,10 @@ contract LeverageStrategy is AccessControl {
             userData: userData,
             toInternalBalance: false
         });
+
+        console2.log("bptAmountIn", bptAmountIn);
+        console2.log("exitTokenIndex", exitTokenIndex);
+        console2.log("minAmountOut", minAmountOut);
 
         balancerVault.exitPool(poolId, address(this), payable(address(this)), request);
     }
@@ -326,10 +332,13 @@ contract LeverageStrategy is AccessControl {
     }
 
     function _exchangeUSDCTocrvUSD(uint256 _dx) internal {
+        console2.log("USDC TO CRVUSD DX", _dx);
         require(usdc.approve(address(crvUSDUSDCPool), _dx), "Approval failed");
         uint256 expected = crvUSDUSDCPool.get_dy(0, 1, _dx) * 99 / 100;
         crvUSDUSDCPool.exchange(0, 1, _dx, expected, address(this));
         totalUsdcAmount = totalUsdcAmount - _dx;
+
+        console2.log("crvusd balance after exchange",crvUSD.balanceOf(address(this)));
     }
 
     function _depositAllAura() internal {
@@ -351,6 +360,7 @@ contract LeverageStrategy is AccessControl {
     }
 
     function _unstakeAndWithdrawAura(uint256 amount) internal {
+        console2.log("withdraw and unwrap from aura", amount);
         Vaults4626.withdrawAndUnwrap(amount, true);
     }
 }

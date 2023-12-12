@@ -101,12 +101,14 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         uint256 debt_before = crvUSDController.debt(address(levStrat));
         console2.log("debt b4", debt_before);
 
-        _pushDebtToRepay(crvUSD.balanceOf(address(levStrat)));
+        _pushDebtToRepay(1000000);
 
         vm.prank(controller);
         levStrat.unwindPosition(amounts);
 
         uint256 debt_after = crvUSDController.debt(address(levStrat));
+
+        console2.log("debt b4 2nd check", debt_before);
 
         console2.log("debt aft", debt_after);
 
@@ -144,6 +146,8 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         levStrat.unwindPositionFromKeeper();
 
         uint256 debt_after = crvUSDController.debt(address(levStrat));
+
+        console2.log("debt b4 2nd check", debt_before);
 
         console2.log("debt aft", debt_after);
 
