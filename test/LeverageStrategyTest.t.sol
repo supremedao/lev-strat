@@ -1,7 +1,7 @@
 pragma solidity ^0.8.0;
 
 import {BaseLeverageStrategyTest} from "./utils/BaseLeverageStrategyTest.sol";
-import {console} from "forge-std/console.sol";
+import {console2} from "forge-std/console2.sol";
 
 contract LeverageStrategyTest is BaseLeverageStrategyTest {
     function setUp() public {
@@ -32,13 +32,13 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         levStrat.invest(wstInvestAmount, debtAmount, bptExpected);
 
         uint256 aft = AuraLPVault.balanceOf(address(levStrat));
-        console.log("bal aft", aft);
+        console2.log("bal aft", aft);
         assertGt(aft, 0);
     }
 
     function testInvestIfCDPAlreadyExists() public subtest {
         uint256 before = AuraLPVault.balanceOf(address(levStrat));
-        console.log("bal b4", before);
+        console2.log("bal b4", before);
 
         // Give wsteth tokens to alice's account
         deal(address(wstETH), vault4626, wstEthToAcc);
@@ -71,7 +71,7 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         levStrat.invest(wstInvestAmount, debtAmount, bptExpected);
 
         uint256 aft = AuraLPVault.balanceOf(address(levStrat));
-        console.log("bal aft", aft);
+        console2.log("bal aft", aft);
         assertGt(aft, 0);
     }
 
@@ -99,7 +99,7 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         levStrat.invest(wstInvestAmount, debtAmount, bptExpected);
 
         uint256 debt_before = crvUSDController.debt(address(levStrat));
-        console.log("debt b4", debt_before);
+        console2.log("debt b4", debt_before);
 
         _pushDebtToRepay(crvUSD.balanceOf(address(levStrat)));
 
@@ -108,7 +108,7 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
 
         uint256 debt_after = crvUSDController.debt(address(levStrat));
 
-        console.log("debt aft", debt_after);
+        console2.log("debt aft", debt_after);
 
         assertGt(debt_before, debt_after);
     }
@@ -138,14 +138,14 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
 
         uint256 debt_before = crvUSDController.debt(address(levStrat));
 
-        console.log("debt b4", debt_before);
+        console2.log("debt b4", debt_before);
 
         vm.prank(powerPool);
         levStrat.unwindPositionFromKeeper();
 
         uint256 debt_after = crvUSDController.debt(address(levStrat));
 
-        console.log("debt aft", debt_after);
+        console2.log("debt aft", debt_after);
 
         assertGt(debt_before, debt_after);
     }

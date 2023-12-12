@@ -41,7 +41,7 @@ contract LeverageStrategy is AccessControl {
     uint256 internal N; // Number of bands for the crvusd/wseth soft liquidation range
 
     bytes32 public constant KEEPER_ROLE = keccak256("KEEPER_ROLE");
-    bytes32 public constant CONTROLLER_ROLE = keccak256("DAO_ROLE");
+    bytes32 public constant CONTROLLER_ROLE = keccak256("CONTROLLER_ROLE");
 
     uint256 public totalWsthethDeposited; // Total wsteth deposited 
     uint256 public crvUSDBorrowed;// Total crvusd borrowed 
