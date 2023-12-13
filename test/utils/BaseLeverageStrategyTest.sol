@@ -17,20 +17,27 @@ contract BaseLeverageStrategyTest is BaseTest {
     uint256 internal alicePk = 0xa11ce;
     uint256 internal bobPk = 0xb0b;
     uint256 internal daoPk = 0xDa0;
+    uint256 internal vault4626Pk = 0x5432;
+    uint256 internal powerPoolPk = 0x4565;
+    uint256 internal controllerPk = 0x54762;
+
     address internal owner = vm.addr(ownerPk);
     address internal alice = vm.addr(alicePk);
     address internal bob = vm.addr(bobPk);
     address internal dao = vm.addr(daoPk);
+    address internal vault4626 = vm.addr(vault4626Pk);
+    address internal powerPool = vm.addr(powerPoolPk);
+    address internal controller = vm.addr(controllerPk);
+
     uint256 maxApprove = 2 ** 256 - 1;
     uint256 wstEthToAcc = 20 * 1e18;
     uint256 wstInvestAmount2 = 1 * 1e18;
-    uint256 investN = 10;
 
     uint256 internal aliceAmount = 7 * 1e18;
     uint256 internal wstApproveAmount = 2 ** 256 - 1;
     uint256 internal wstInvestAmount = 2 * 1e18;
     uint256 internal debtAmount = 100 * 1e18;
-    uint256 internal insvestN = 10;
+    uint256 internal investN = 10;
     uint256 internal bptExpected = 2 * 1e18;
 
     IERC20 public usdc;
@@ -48,12 +55,13 @@ contract BaseLeverageStrategyTest is BaseTest {
 
     uint256[] public amounts;
 
-    uint AuraLPtokenExpected = 2000000000000000000;
-    uint BPTout = 2000000000000000000;
-    uint minUsdExpected =100000;
+    uint256 AuraLPtokenExpected = 2000000000000000000;
+    uint256 BPTout = 2000000000000000000;
+    uint256 minUsdExpected = 50000000;
+    uint256 debtToRepay = 40000000000000000000;
 
     function _deployContracts() internal {
-        levStrat = new LeverageStrategy(address(dao));
+        levStrat = new LeverageStrategy(dao,controller,powerPool);
 
         levStrat.setTokenIndex(1);
         levStrat.setPoolId(0x27c9f71cc31464b906e0006d4fcbc8900f48f15f00020000000000000000010f);
@@ -79,7 +87,7 @@ contract BaseLeverageStrategyTest is BaseTest {
         vm.label(alice, "Alice");
 
         // Amounts = [AuraLPtoken, BPTout, minUSDCExpected, debtToRepay]
-       // amounts.push(AuraLPtokenExpected);
+        // amounts.push(AuraLPtokenExpected);
         //amounts.push(BPTout);
         //xamounts.push(minUsdExpected);
     }
@@ -90,6 +98,5 @@ contract BaseLeverageStrategyTest is BaseTest {
         amounts.push(BPTout);
         amounts.push(minUsdExpected);
         amounts.push(_num);
-
     }
 }

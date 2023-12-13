@@ -18,6 +18,8 @@ interface IBasicRewards {
 
     function withdrawAndUnwrap(uint256 amount, bool claim) external returns (bool);
 
+    function withdrawAllAndUnwrap(bool claim) external;
+
     function getReward() external returns (bool);
 
     function stake(uint256) external returns (bool);

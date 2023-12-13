@@ -1,7 +1,7 @@
 pragma solidity ^0.8.0;
 
 import {BaseLeverageStrategyTest} from "./utils/BaseLeverageStrategyTest.sol";
-import {console} from "forge-std/console.sol";
+import {console2} from "forge-std/console2.sol";
 
 contract LeverageStrategyTest is BaseLeverageStrategyTest {
     function setUp() public {
@@ -9,8 +9,8 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
     }
 
     function testInvest() public subtest {
-        // Give wsteth tokens to alice's account
-        deal(address(wstETH), alice, wstEthToAcc);
+        // Wsteth gets deposited into vault
+        deal(address(wstETH), vault4626, wstEthToAcc);
 
         levStrat.initializeContracts(
             address(AuraBooster),
@@ -20,26 +20,28 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
             address(crvUSDUSDCPool),
             address(wstETH),
             address(usdc),
-            address(d2d)
+            address(d2d),
+            investN
         );
 
-        // Make alice msg.sender
-        vm.startPrank(alice);
-        wstETH.approve(address(levStrat), maxApprove);
+        // Make vault msg.sender
+        vm.prank(vault4626);
+        wstETH.transfer(address(levStrat), wstInvestAmount);
 
-        levStrat.invest(wstInvestAmount, debtAmount, insvestN, bptExpected);
-        vm.stopPrank();
+        vm.prank(controller);
+        levStrat.invest(wstInvestAmount, debtAmount, bptExpected);
+
         uint256 aft = AuraLPVault.balanceOf(address(levStrat));
-        console.log("bal aft", aft);
+        console2.log("bal aft", aft);
         assertGt(aft, 0);
     }
 
     function testInvestIfCDPAlreadyExists() public subtest {
         uint256 before = AuraLPVault.balanceOf(address(levStrat));
-        console.log("bal b4", before);
+        console2.log("bal b4", before);
 
         // Give wsteth tokens to alice's account
-        deal(address(wstETH), alice, wstEthToAcc);
+        deal(address(wstETH), vault4626, wstEthToAcc);
 
         wstETH.approve(address(levStrat), maxApprove);
 
@@ -51,24 +53,31 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
             address(crvUSDUSDCPool),
             address(wstETH),
             address(usdc),
-            address(d2d)
-        ); //levStrat.initializeContracts(_auraBooster, _balancerVault, _crvUSD, _crvUSDController, _crvUSDUSDCPool, _wstETH, _USDC, _D2D);
+            address(d2d),
+            investN
+        );
 
-        // Make alice msg.sender
-        vm.startPrank(alice);
-        wstETH.approve(address(levStrat), maxApprove);
-        levStrat.invest(wstInvestAmount, debtAmount, insvestN, bptExpected);
-        levStrat.invest(wstInvestAmount, debtAmount, insvestN, bptExpected);
-        vm.stopPrank();
+        // Make vault msg.sender
+        vm.prank(vault4626);
+        wstETH.transfer(address(levStrat), wstInvestAmount);
+
+        vm.prank(controller);
+        levStrat.invest(wstInvestAmount, debtAmount, bptExpected);
+
+        vm.prank(vault4626);
+        wstETH.transfer(address(levStrat), wstInvestAmount);
+
+        vm.prank(controller);
+        levStrat.invest(wstInvestAmount, debtAmount, bptExpected);
 
         uint256 aft = AuraLPVault.balanceOf(address(levStrat));
-        console.log("bal aft", aft);
+        console2.log("bal aft", aft);
         assertGt(aft, 0);
     }
 
     function testUnwind() public subtest {
         // Give wsteth tokens to alice's account
-        deal(address(wstETH), alice, wstEthToAcc);
+        deal(address(wstETH), vault4626, wstEthToAcc);
 
         levStrat.initializeContracts(
             address(AuraBooster),
@@ -78,30 +87,70 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
             address(crvUSDUSDCPool),
             address(wstETH),
             address(usdc),
-            address(d2d)
+            address(d2d),
+            investN
         );
 
-        // Make alice msg.sender
-        vm.startPrank(alice);
-        wstETH.approve(address(levStrat), maxApprove);
+        // Make vault msg.sender
+        vm.prank(vault4626);
+        wstETH.transfer(address(levStrat), wstInvestAmount);
 
-        levStrat.invest(wstInvestAmount, debtAmount, insvestN, bptExpected);
-        vm.stopPrank();
-        //uint256 aft = AuraLPVault.balanceOf(address(levStrat));
+        vm.prank(controller);
+        levStrat.invest(wstInvestAmount, debtAmount, bptExpected);
 
-        //uint256 aftCRVUSD = crvUSD.balanceOf(address(levStrat));
         uint256 debt_before = crvUSDController.debt(address(levStrat));
+        console2.log("debt b4", debt_before);
 
-        _pushDebtToRepay(debt_before);
+        _pushDebtToRepay(debtToRepay);
 
+        vm.prank(controller);
         levStrat.unwindPosition(amounts);
 
         uint256 debt_after = crvUSDController.debt(address(levStrat));
 
-        console.log("debt aft", debt_after);
+        console2.log("debt b4 2nd check", debt_before);
+
+        console2.log("debt aft", debt_after);
 
         assertGt(debt_before, debt_after);
+    }
 
+    function testUnwindFromPowerPool() public subtest {
+        // Give wsteth tokens to alice's account
+        deal(address(wstETH), vault4626, wstEthToAcc);
 
+        levStrat.initializeContracts(
+            address(AuraBooster),
+            address(balancerVault),
+            address(crvUSD),
+            address(crvUSDController),
+            address(crvUSDUSDCPool),
+            address(wstETH),
+            address(usdc),
+            address(d2d),
+            investN
+        );
+
+        // Make vault msg.sender
+        vm.prank(vault4626);
+        wstETH.transfer(address(levStrat), wstInvestAmount);
+
+        vm.prank(controller);
+        levStrat.invest(wstInvestAmount, debtAmount, bptExpected);
+
+        uint256 debt_before = crvUSDController.debt(address(levStrat));
+
+        console2.log("debt b4", debt_before);
+
+        vm.prank(powerPool);
+        levStrat.unwindPositionFromKeeper();
+
+        uint256 debt_after = crvUSDController.debt(address(levStrat));
+
+        console2.log("debt b4 2nd check", debt_before);
+
+        console2.log("debt aft", debt_after);
+
+        assertGt(debt_before, debt_after);
     }
 }
