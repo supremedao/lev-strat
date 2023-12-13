@@ -156,7 +156,41 @@ contract LeverageStrategy is AccessControl {
 
         // Stake LP tokens on Aura Finance
         _depositAllAura();
-        //auraBooster.deposit(pid, borrowAmount, true);
+    }
+
+    function invest2(uint256 _wstETHAmount, uint256 _debtAmount, uint256 _bptAmountOut)
+        external
+        onlyRole(CONTROLLER_ROLE)
+    {
+        // This check makes sure that the _wstETHAmount specified by the controller is actually available in this contract
+        // The strategy does not handle the deposit of funds, the vault takes the deposits and sends it directly to the strategy
+        require(_wstETHAmount <= wsteth.balanceOf(address(this)));
+        // Opens a position on crvUSD if no loan already
+        // Note this address is an owner of a crvUSD CDP
+        // in the usual case we already have a CDP
+        // But there also should be a case when we create a new one
+        console2.log("WSTETH BALANCE BEFORE CDP", _wstETHAmount);
+        if (!crvUSDController.loan_exists(address(this))) {
+            _depositAndCreateLoan(_wstETHAmount, _debtAmount);
+        } else {
+            //_addCollateral(_wstETHAmount);
+            _borrowMore(_wstETHAmount, _debtAmount);
+        }
+
+        console2.log("CRVUSD BALANCE AFTER CDP", crvUSD.balanceOf(address(this)));
+
+        _exchangeCRVUSDtoUSDC(_debtAmount);
+
+        console2.log("USDC BALANCE SWAP", usdc.balanceOf(address(this)));
+
+        // Provide liquidity to the D2D/USDC Pool on Balancer
+        _joinPool2(usdc.balanceOf(address(this)), d2d.balanceOf(address(this)), _bptAmountOut); 
+        
+
+        console2.log("D2DUSDC balance after joinPool", d2dusdcBPT.balanceOf(address(this)));
+
+        // Stake LP tokens on Aura Finance
+        _depositAllAura();
     }
 
     function investFromKeeper(uint256 _bptAmountOut) external onlyRole(KEEPER_ROLE) {
@@ -195,9 +229,11 @@ contract LeverageStrategy is AccessControl {
 
         uint256 bptAmount = d2dusdcBPT.balanceOf(address(this));
 
-        _exitPool(bptAmount, 0, totalUsdcAmount / 2);
+        _exitPool(bptAmount, 1, 10000);
 
-        _exchangeUSDCTocrvUSD(totalUsdcAmount / 2);
+        console2.log("usdc balance of strat in keeper unwind",usdc.balanceOf(address(this)));
+
+        _exchangeUSDCTocrvUSD(10000);
 
         _repayCRVUSDLoan(crvUSD.balanceOf(address(this)));
     }
@@ -282,6 +318,35 @@ contract LeverageStrategy is AccessControl {
         });
 
         balancerVault.joinPool(poolId, address(this), address(this), request);
+    }
+
+    function _joinPool2(uint256 usdcAmount, uint256 d2dAmount, uint256 minBptAmountOut) internal {
+
+        (IERC20[] memory tokens,,) = balancerVault.getPoolTokens(poolId);
+        uint256[] memory maxAmountsIn = new uint256[](tokens.length);
+
+        // Set the amounts for D2D and USDC according to their positions in the pool
+        maxAmountsIn[0] = d2dAmount; // D2D token amount
+        maxAmountsIn[1] = usdcAmount; // USDC token amount
+
+        // Approve the Balancer Vault to withdraw the respective tokens
+        require(IERC20(tokens[0]).approve(address(balancerVault), d2dAmount), "D2D Approval failed");
+        require(IERC20(tokens[1]).approve(address(balancerVault), usdcAmount), "USDC Approval failed");
+
+        console2.log("d2d balance of strat", IERC20(tokens[0]).balanceOf(address(this)));
+
+        uint256 joinKind = uint256(IBalancerVault.JoinKind.EXACT_TOKENS_IN_FOR_BPT_OUT);
+        bytes memory userData = abi.encode(joinKind, maxAmountsIn, minBptAmountOut);
+
+        IBalancerVault.JoinPoolRequest memory request = IBalancerVault.JoinPoolRequest({
+        assets: _convertERC20sToAssets(tokens),
+        maxAmountsIn: maxAmountsIn,
+        userData: userData,
+        fromInternalBalance: false
+        });
+
+        balancerVault.joinPool(poolId, address(this), address(this), request);
+        
     }
 
     function _exitPool(uint256 bptAmountIn, uint256 exitTokenIndex, uint256 minAmountOut) internal {
