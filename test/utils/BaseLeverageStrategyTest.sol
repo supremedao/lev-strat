@@ -57,7 +57,8 @@ contract BaseLeverageStrategyTest is BaseTest {
 
     uint256 AuraLPtokenExpected = 2000000000000000000;
     uint256 BPTout = 2000000000000000000;
-    uint256 minUsdExpected = 100000;
+    uint256 minUsdExpected = 50000000;
+    uint256 debtToRepay = 40000000000000000000;
 
     function _deployContracts() internal {
         levStrat = new LeverageStrategy(dao,controller,powerPool);

@@ -55,7 +55,7 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
             address(usdc),
             address(d2d),
             investN
-        ); 
+        );
 
         // Make vault msg.sender
         vm.prank(vault4626);
@@ -101,7 +101,7 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         uint256 debt_before = crvUSDController.debt(address(levStrat));
         console2.log("debt b4", debt_before);
 
-        _pushDebtToRepay(1000000);
+        _pushDebtToRepay(debtToRepay);
 
         vm.prank(controller);
         levStrat.unwindPosition(amounts);

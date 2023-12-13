@@ -22,7 +22,6 @@ import "./interfaces/IBasicRewards.sol";
 import {console2} from "forge-std/console2.sol";
 
 contract LeverageStrategy is AccessControl {
-  
     // State variables
     IAuraBooster public auraBooster;
     IBalancerVault public balancerVault;
@@ -44,15 +43,14 @@ contract LeverageStrategy is AccessControl {
     bytes32 public constant KEEPER_ROLE = keccak256("KEEPER_ROLE");
     bytes32 public constant CONTROLLER_ROLE = keccak256("CONTROLLER_ROLE");
 
-    uint256 public totalWsthethDeposited; // Total wsteth deposited 
-    uint256 public crvUSDBorrowed;// Total crvusd borrowed 
+    uint256 public totalWsthethDeposited; // Total wsteth deposited
+    uint256 public crvUSDBorrowed; // Total crvusd borrowed
     uint256 public totalUsdcAmount; // Total usdc  after swapping from crvusd
-    uint256 public totalBalancerLPTokens; // Total balancer LP tokens the 
+    uint256 public totalBalancerLPTokens; // Total balancer LP tokens the
     uint256 public totalStakedInAura; // Total balancer LP tokens staked in aura for the user
 
     // mainnet addresses
     address public treasury; // recieves a fraction of yield
-
 
     // pools addresses
 
@@ -67,12 +65,11 @@ contract LeverageStrategy is AccessControl {
     /// @param _dao is the treasury to withdraw too
     /// @param _controller is the address of the strategy controller
     /// @param _keeper is the address of the power pool keeper
-    constructor(address _dao,address _controller, address _keeper) {
+    constructor(address _dao, address _controller, address _keeper) {
         treasury = _dao;
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _grantRole(CONTROLLER_ROLE, _controller);
         _grantRole(KEEPER_ROLE, _keeper);
-
     }
 
     //================================================EXTERNAL FUNCTIONS===============================================//
@@ -127,8 +124,10 @@ contract LeverageStrategy is AccessControl {
 
     // main contract functions
     // @param N Number of price bands to deposit into (to do autoliquidation-deliquidation of wsteth) if the price of the wsteth collateral goes too low
-    function invest(uint256 _wstETHAmount, uint256 _debtAmount, uint256 _bptAmountOut) external onlyRole(CONTROLLER_ROLE) {
-
+    function invest(uint256 _wstETHAmount, uint256 _debtAmount, uint256 _bptAmountOut)
+        external
+        onlyRole(CONTROLLER_ROLE)
+    {
         // This check makes sure that the _wstETHAmount specified by the controller is actually available in this contract
         // The strategy does not handle the deposit of funds, the vault takes the deposits and sends it directly to the strategy
         require(_wstETHAmount <= wsteth.balanceOf(address(this)));
@@ -136,6 +135,7 @@ contract LeverageStrategy is AccessControl {
         // Note this address is an owner of a crvUSD CDP
         // in the usual case we already have a CDP
         // But there also should be a case when we create a new one
+        console2.log("WSTETH BALANCE BEFORE CDP", _wstETHAmount);
         if (!crvUSDController.loan_exists(address(this))) {
             _depositAndCreateLoan(_wstETHAmount, _debtAmount);
         } else {
@@ -143,10 +143,16 @@ contract LeverageStrategy is AccessControl {
             _borrowMore(_wstETHAmount, _debtAmount);
         }
 
+        console2.log("CRVUSD BALANCE AFTER CDP", crvUSD.balanceOf(address(this)));
+
         _exchangeCRVUSDtoUSDC(_debtAmount);
+
+        console2.log("USDC BALANCE SWAP", usdc.balanceOf(address(this)));
 
         // Provide liquidity to the D2D/USDC Pool on Balancer
         _joinPool(_debtAmount, _bptAmountOut, TokenIndex);
+
+        console2.log("D2DUSDC balance after joinPool", d2dusdcBPT.balanceOf(address(this)));
 
         // Stake LP tokens on Aura Finance
         _depositAllAura();
@@ -174,7 +180,6 @@ contract LeverageStrategy is AccessControl {
         _depositAllAura();
     }
 
-
     function unwindPosition(uint256[] calldata amounts) external onlyRole(CONTROLLER_ROLE) {
         _unstakeAndWithdrawAura(amounts[0]);
 
@@ -186,14 +191,13 @@ contract LeverageStrategy is AccessControl {
     }
 
     function unwindPositionFromKeeper() external onlyRole(KEEPER_ROLE) {
-
         Vaults4626.withdrawAllAndUnwrap(true);
 
-        uint bptAmount = d2dusdcBPT.balanceOf(address(this));
+        uint256 bptAmount = d2dusdcBPT.balanceOf(address(this));
 
-        _exitPool(bptAmount, 0, totalUsdcAmount/2);
- 
-        _exchangeUSDCTocrvUSD(totalUsdcAmount/2);
+        _exitPool(bptAmount, 0, totalUsdcAmount / 2);
+
+        _exchangeUSDCTocrvUSD(totalUsdcAmount / 2);
 
         _repayCRVUSDLoan(crvUSD.balanceOf(address(this)));
     }
@@ -221,7 +225,6 @@ contract LeverageStrategy is AccessControl {
         crvUSDController.create_loan(_wstETHAmount, _debtAmount, N);
 
         totalWsthethDeposited = totalWsthethDeposited + _wstETHAmount;
-
     }
 
     /// @notice Add collateral to a loan postion if the poistion is already initialised
@@ -242,19 +245,16 @@ contract LeverageStrategy is AccessControl {
     /// @param _debtAmount the amount of crvusd borrowed
     /// @dev We don't need to transferFrom msg.sender anymore as now the wsteth will be directly transferred by the vault
     function _borrowMore(uint256 _wstETHAmount, uint256 _debtAmount) internal {
-
-       require(IERC20(wsteth).approve(address(crvUSDController), _wstETHAmount), "Approval failed");
+        require(IERC20(wsteth).approve(address(crvUSDController), _wstETHAmount), "Approval failed");
 
         crvUSDController.borrow_more(_wstETHAmount, _debtAmount);
 
         totalWsthethDeposited = totalWsthethDeposited + _wstETHAmount;
-
-
     }
 
     function _repayCRVUSDLoan(uint256 deptToRepay) internal {
         require(crvUSD.approve(address(crvUSDController), deptToRepay), "Approval failed");
-        console2.log("crv usd repay loan",deptToRepay );
+        console2.log("crv usd repay loan", deptToRepay);
         crvUSDController.repay(deptToRepay);
     }
 
@@ -285,7 +285,6 @@ contract LeverageStrategy is AccessControl {
     }
 
     function _exitPool(uint256 bptAmountIn, uint256 exitTokenIndex, uint256 minAmountOut) internal {
-        
         (IERC20[] memory tokens,,) = balancerVault.getPoolTokens(poolId);
         uint256[] memory minAmountsOut = new uint256[](tokens.length);
         minAmountsOut[exitTokenIndex] = minAmountOut;
@@ -338,7 +337,7 @@ contract LeverageStrategy is AccessControl {
         crvUSDUSDCPool.exchange(0, 1, _dx, expected, address(this));
         totalUsdcAmount = totalUsdcAmount - _dx;
 
-        console2.log("crvusd balance after exchange",crvUSD.balanceOf(address(this)));
+        console2.log("crvusd balance after exchange", crvUSD.balanceOf(address(this)));
     }
 
     function _depositAllAura() internal {
