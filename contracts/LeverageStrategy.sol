@@ -185,8 +185,7 @@ contract LeverageStrategy is AccessControl {
         console2.log("USDC BALANCE SWAP", usdc.balanceOf(address(this)));
 
         // Provide liquidity to the D2D/USDC Pool on Balancer
-        _joinPool2(usdc.balanceOf(address(this)), d2d.balanceOf(address(this)), _bptAmountOut); 
-        
+        _joinPool2(usdc.balanceOf(address(this)), d2d.balanceOf(address(this)), _bptAmountOut);
 
         console2.log("D2DUSDC balance after joinPool", d2dusdcBPT.balanceOf(address(this)));
 
@@ -220,11 +219,13 @@ contract LeverageStrategy is AccessControl {
 
         _exitPool(amounts[1], 1, amounts[2]);
 
-        console2.log("usdc balance of strat in controller unwind",usdc.balanceOf(address(this)));
+        console2.log("usdc balance of strat in controller unwind", usdc.balanceOf(address(this)));
 
+        // TODO: Change the  values in the uint[] amounts param as in puts for _exchangeUSDCTocrvUSD and _repayCRVUSDLoan
+        // currently balanceOf(this contract) is used to make sure the tests pass
         _exchangeUSDCTocrvUSD(usdc.balanceOf(address(this)));
 
-        console2.log("crvusd balance of strat in controller unwind",crvUSD.balanceOf(address(this)));
+        console2.log("crvusd balance of strat in controller unwind", crvUSD.balanceOf(address(this)));
 
         _repayCRVUSDLoan(crvUSD.balanceOf(address(this)));
     }
@@ -234,9 +235,10 @@ contract LeverageStrategy is AccessControl {
 
         uint256 bptAmount = d2dusdcBPT.balanceOf(address(this));
 
+        // TODO: Change exit pool param from 10000 for minUSD expected to a % of total usd in the contract using totalUsdcAmount amount
         _exitPool(bptAmount, 1, 10000);
 
-        console2.log("usdc balance of strat in keeper unwind",usdc.balanceOf(address(this)));
+        console2.log("usdc balance of strat in keeper unwind", usdc.balanceOf(address(this)));
 
         _exchangeUSDCTocrvUSD(10000);
 
@@ -326,7 +328,6 @@ contract LeverageStrategy is AccessControl {
     }
 
     function _joinPool2(uint256 usdcAmount, uint256 d2dAmount, uint256 minBptAmountOut) internal {
-
         (IERC20[] memory tokens,,) = balancerVault.getPoolTokens(poolId);
         uint256[] memory maxAmountsIn = new uint256[](tokens.length);
 
@@ -344,14 +345,13 @@ contract LeverageStrategy is AccessControl {
         bytes memory userData = abi.encode(joinKind, maxAmountsIn, minBptAmountOut);
 
         IBalancerVault.JoinPoolRequest memory request = IBalancerVault.JoinPoolRequest({
-        assets: _convertERC20sToAssets(tokens),
-        maxAmountsIn: maxAmountsIn,
-        userData: userData,
-        fromInternalBalance: false
+            assets: _convertERC20sToAssets(tokens),
+            maxAmountsIn: maxAmountsIn,
+            userData: userData,
+            fromInternalBalance: false
         });
 
         balancerVault.joinPool(poolId, address(this), address(this), request);
-        
     }
 
     function _exitPool(uint256 bptAmountIn, uint256 exitTokenIndex, uint256 minAmountOut) internal {

@@ -28,11 +28,10 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         vm.prank(vault4626);
         wstETH.transfer(address(levStrat), wstInvestAmount);
 
-
         deal(address(d2d), address(levStrat), 1000e18);
 
         vm.prank(controller);
-    
+
         levStrat.invest2(wstInvestAmount, debtAmount, bptExpected);
 
         uint256 aft = AuraLPVault.balanceOf(address(levStrat));
@@ -68,7 +67,7 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         deal(address(d2d), address(levStrat), 1000e18);
 
         vm.prank(controller);
-     
+
         levStrat.invest2(wstInvestAmount, debtAmount, bptExpected);
 
         vm.prank(vault4626);
@@ -77,7 +76,7 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         deal(address(d2d), address(levStrat), 1000e18);
 
         vm.prank(controller);
-    
+
         levStrat.invest2(wstInvestAmount, debtAmount, bptExpected);
 
         uint256 aft = AuraLPVault.balanceOf(address(levStrat));
