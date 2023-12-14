@@ -102,8 +102,11 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         vm.prank(vault4626);
         wstETH.transfer(address(levStrat), wstInvestAmount);
 
+        deal(address(d2d), address(levStrat), 1000e18);
+
         vm.prank(controller);
-        levStrat.invest(wstInvestAmount, debtAmount, bptExpected);
+        //levStrat.invest(wstInvestAmount, debtAmount, bptExpected);
+        levStrat.invest2(wstInvestAmount, debtAmount, bptExpected);
 
         uint256 debt_before = crvUSDController.debt(address(levStrat));
         console2.log("debt b4", debt_before);

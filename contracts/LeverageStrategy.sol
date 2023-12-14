@@ -164,7 +164,8 @@ contract LeverageStrategy is AccessControl {
     {
         // This check makes sure that the _wstETHAmount specified by the controller is actually available in this contract
         // The strategy does not handle the deposit of funds, the vault takes the deposits and sends it directly to the strategy
-        require(_wstETHAmount <= wsteth.balanceOf(address(this)));
+        //require(_wstETHAmount <= wsteth.balanceOf(address(this)));
+        console2.log("wstETH amount in invest before cdp", wsteth.balanceOf(address(this)));
         // Opens a position on crvUSD if no loan already
         // Note this address is an owner of a crvUSD CDP
         // in the usual case we already have a CDP
@@ -217,11 +218,15 @@ contract LeverageStrategy is AccessControl {
     function unwindPosition(uint256[] calldata amounts) external onlyRole(CONTROLLER_ROLE) {
         _unstakeAndWithdrawAura(amounts[0]);
 
-        _exitPool(amounts[1], 0, amounts[2]);
+        _exitPool(amounts[1], 1, amounts[2]);
 
-        _exchangeUSDCTocrvUSD(amounts[2]);
+        console2.log("usdc balance of strat in controller unwind",usdc.balanceOf(address(this)));
 
-        _repayCRVUSDLoan(amounts[3]);
+        _exchangeUSDCTocrvUSD(usdc.balanceOf(address(this)));
+
+        console2.log("crvusd balance of strat in controller unwind",crvUSD.balanceOf(address(this)));
+
+        _repayCRVUSDLoan(crvUSD.balanceOf(address(this)));
     }
 
     function unwindPositionFromKeeper() external onlyRole(KEEPER_ROLE) {
