@@ -130,40 +130,6 @@ contract LeverageStrategy is AccessControl {
     {
         // This check makes sure that the _wstETHAmount specified by the controller is actually available in this contract
         // The strategy does not handle the deposit of funds, the vault takes the deposits and sends it directly to the strategy
-        require(_wstETHAmount <= wsteth.balanceOf(address(this)));
-        // Opens a position on crvUSD if no loan already
-        // Note this address is an owner of a crvUSD CDP
-        // in the usual case we already have a CDP
-        // But there also should be a case when we create a new one
-        console2.log("WSTETH BALANCE BEFORE CDP", _wstETHAmount);
-        if (!crvUSDController.loan_exists(address(this))) {
-            _depositAndCreateLoan(_wstETHAmount, _debtAmount);
-        } else {
-            //_addCollateral(_wstETHAmount);
-            _borrowMore(_wstETHAmount, _debtAmount);
-        }
-
-        console2.log("CRVUSD BALANCE AFTER CDP", crvUSD.balanceOf(address(this)));
-
-        _exchangeCRVUSDtoUSDC(_debtAmount);
-
-        console2.log("USDC BALANCE SWAP", usdc.balanceOf(address(this)));
-
-        // Provide liquidity to the D2D/USDC Pool on Balancer
-        _joinPool(_debtAmount, _bptAmountOut, TokenIndex);
-
-        console2.log("D2DUSDC balance after joinPool", d2dusdcBPT.balanceOf(address(this)));
-
-        // Stake LP tokens on Aura Finance
-        _depositAllAura();
-    }
-
-    function invest2(uint256 _wstETHAmount, uint256 _debtAmount, uint256 _bptAmountOut)
-        external
-        onlyRole(CONTROLLER_ROLE)
-    {
-        // This check makes sure that the _wstETHAmount specified by the controller is actually available in this contract
-        // The strategy does not handle the deposit of funds, the vault takes the deposits and sends it directly to the strategy
         //require(_wstETHAmount <= wsteth.balanceOf(address(this)));
         console2.log("wstETH amount in invest before cdp", wsteth.balanceOf(address(this)));
         // Opens a position on crvUSD if no loan already
@@ -185,7 +151,7 @@ contract LeverageStrategy is AccessControl {
         console2.log("USDC BALANCE SWAP", usdc.balanceOf(address(this)));
 
         // Provide liquidity to the D2D/USDC Pool on Balancer
-        _joinPool2(usdc.balanceOf(address(this)), d2d.balanceOf(address(this)), _bptAmountOut);
+        _joinPool(usdc.balanceOf(address(this)), d2d.balanceOf(address(this)), _bptAmountOut);
 
         console2.log("D2DUSDC balance after joinPool", d2dusdcBPT.balanceOf(address(this)));
 
@@ -304,30 +270,7 @@ contract LeverageStrategy is AccessControl {
     /// @notice Join balancer pool
     /// @dev Single side join with usdc
     /// @param usdcAmount the amount of usdc to deposit
-    function _joinPool(uint256 usdcAmount, uint256 bptAmountOut, uint256 enterTokenIndex) internal {
-        (IERC20[] memory tokens,,) = balancerVault.getPoolTokens(poolId);
-        uint256[] memory maxAmountsIn = new uint256[](tokens.length);
-        require(IERC20(usdc).approve(address(balancerVault), usdcAmount), "Approval failed");
-
-        maxAmountsIn[1] = IERC20(usdc).balanceOf(address(this));
-
-        ///@dev User sends an estimated but unknown (computed at run time) quantity of a single token, and receives a precise quantity of BPT.
-        uint256 joinKind = uint256(IBalancerVault.JoinKind.TOKEN_IN_FOR_EXACT_BPT_OUT);
-        bytes memory userData = abi.encode(joinKind, bptAmountOut, enterTokenIndex);
-
-        ///TODO: need to encode type of join to user data
-
-        IBalancerVault.JoinPoolRequest memory request = IBalancerVault.JoinPoolRequest({
-            assets: _convertERC20sToAssets(tokens),
-            maxAmountsIn: maxAmountsIn,
-            userData: userData,
-            fromInternalBalance: false
-        });
-
-        balancerVault.joinPool(poolId, address(this), address(this), request);
-    }
-
-    function _joinPool2(uint256 usdcAmount, uint256 d2dAmount, uint256 minBptAmountOut) internal {
+    function _joinPool(uint256 usdcAmount, uint256 d2dAmount, uint256 minBptAmountOut) internal {
         (IERC20[] memory tokens,,) = balancerVault.getPoolTokens(poolId);
         uint256[] memory maxAmountsIn = new uint256[](tokens.length);
 

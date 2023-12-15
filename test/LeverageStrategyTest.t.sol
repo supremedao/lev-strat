@@ -32,7 +32,7 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
 
         vm.prank(controller);
 
-        levStrat.invest2(wstInvestAmount, debtAmount, bptExpected);
+        levStrat.invest(wstInvestAmount, debtAmount, bptExpected);
 
         uint256 aft = AuraLPVault.balanceOf(address(levStrat));
         console2.log("bal aft", aft);
@@ -68,7 +68,7 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
 
         vm.prank(controller);
 
-        levStrat.invest2(wstInvestAmount, debtAmount, bptExpected);
+        levStrat.invest(wstInvestAmount, debtAmount, bptExpected);
 
         vm.prank(vault4626);
         wstETH.transfer(address(levStrat), wstInvestAmount);
@@ -77,7 +77,7 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
 
         vm.prank(controller);
 
-        levStrat.invest2(wstInvestAmount, debtAmount, bptExpected);
+        levStrat.invest(wstInvestAmount, debtAmount, bptExpected);
 
         uint256 aft = AuraLPVault.balanceOf(address(levStrat));
         console2.log("bal aft", aft);
@@ -108,7 +108,7 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
 
         vm.prank(controller);
 
-        levStrat.invest2(wstInvestAmount, debtAmount, bptExpected);
+        levStrat.invest(wstInvestAmount, debtAmount, bptExpected);
 
         uint256 debt_before = crvUSDController.debt(address(levStrat));
         console2.log("debt b4", debt_before);
@@ -151,7 +151,7 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
 
         vm.prank(controller);
 
-        levStrat.invest2(wstInvestAmount, debtAmount, bptExpected);
+        levStrat.invest(wstInvestAmount, debtAmount, bptExpected);
 
         uint256 debt_before = crvUSDController.debt(address(levStrat));
 
