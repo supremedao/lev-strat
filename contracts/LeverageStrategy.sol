@@ -187,8 +187,6 @@ contract LeverageStrategy is AccessControl {
 
         console2.log("usdc balance of strat in controller unwind", usdc.balanceOf(address(this)));
 
-        // TODO: Change the  values in the uint[] amounts param as in puts for _exchangeUSDCTocrvUSD and _repayCRVUSDLoan
-        // currently balanceOf(this contract) is used to make sure the tests pass
         _exchangeUSDCTocrvUSD(amounts[2]);
 
         _repayCRVUSDLoan(crvUSD.balanceOf(address(this)));
