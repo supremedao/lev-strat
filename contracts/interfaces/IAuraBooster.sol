@@ -9,4 +9,9 @@ interface IAuraBooster {
     function withdraw(uint256 _pid, uint256 _amount) external returns (bool);
     function withdrawAll(uint256 _pid) external returns (bool);
     function withdrawTo(uint256 _pid, uint256 _amount, address _to) external returns (bool);
+    function balanceOf(address _account) external view returns(uint256);
+    function totalSupply() external view returns(uint256);
+    function poolInfo(uint256) external view returns(address,address,address,address,address, bool);
+    function rewardClaimed(uint256,address,uint256) external;
+    function claimRewards(uint256,address) external returns(bool);
 }

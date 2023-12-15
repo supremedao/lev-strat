@@ -39,6 +39,44 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         assertGt(aft, 0);
     }
 
+    function testClaimRewards() public subtest {
+        // Wsteth gets deposited into vault
+        deal(address(wstETH), vault4626, wstEthToAcc);
+
+        levStrat.initializeContracts(
+            address(AuraBooster),
+            address(balancerVault),
+            address(crvUSD),
+            address(crvUSDController),
+            address(crvUSDUSDCPool),
+            address(wstETH),
+            address(usdc),
+            address(d2d),
+            investN
+        );
+
+        // Make vault msg.sender
+        vm.prank(vault4626);
+        wstETH.transfer(address(levStrat), wstInvestAmount);
+
+        deal(address(d2d), address(levStrat), 1000e18);
+
+        vm.startPrank(controller);
+
+        levStrat.invest(wstInvestAmount, debtAmount, bptExpected);
+
+        uint256 aft = AuraLPVault.balanceOf(address(levStrat));
+        console2.log("bal aft", aft);
+        assertGt(aft, 0);
+
+        vm.warp(20 days);
+
+        levStrat.claimRewardsFromController();
+
+        vm.stopPrank();
+    }
+
+
     function testInvestIfCDPAlreadyExists() public subtest {
         uint256 before = AuraLPVault.balanceOf(address(levStrat));
         console2.log("bal b4", before);

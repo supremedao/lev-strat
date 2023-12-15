@@ -212,6 +212,16 @@ contract LeverageStrategy is AccessControl {
         _repayCRVUSDLoan(crvUSD.balanceOf(address(this)));
     }
 
+
+    function claimRewardsFromController() external {
+        console2.log("In claim rewards");
+        _claimRewards();
+    }
+
+    function claimRewardsFromKeeper() external onlyRole(CONTROLLER_ROLE) {
+        _claimRewards();
+    }
+
     //================================================INTERNAL FUNCTIONS===============================================//
     /// @dev This helper function is a fast and cheap way to convert between IERC20[] and IAsset[] types
     function _convertERC20sToAssets(IERC20[] memory tokens) internal pure returns (IAsset[] memory assets) {
@@ -321,10 +331,9 @@ contract LeverageStrategy is AccessControl {
         balancerVault.exitPool(poolId, address(this), payable(address(this)), request);
     }
 
-    function _claimRewards() external {
+    function _claimRewards() internal {
         // Claim rewards from Aura
-
-        // TODO: figure out how to pass all the parameters
+        auraBooster.claimRewards(pid, 0x1249c510e066731FF14422500466A7102603da9e);
 
         // exchange for WSTETH
 
@@ -356,6 +365,8 @@ contract LeverageStrategy is AccessControl {
 
     function _depositAllAura() internal {
         require(d2dusdcBPT.approve(address(auraBooster), d2dusdcBPT.balanceOf(address(this))), "Approval failed");
+
+        console2.log("Deposit aura here", address(auraBooster));
         require(auraBooster.depositAll(pid, true));
     }
 
