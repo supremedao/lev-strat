@@ -201,12 +201,15 @@ contract LeverageStrategy is AccessControl {
 
         uint256 bptAmount = d2dusdcBPT.balanceOf(address(this));
 
-        // TODO: Change exit pool param from 10000 for minUSD expected to a % of total usd in the contract using totalUsdcAmount amount
-        _exitPool(bptAmount, 1, 10000);
+        // TODO: Make a setter with onlyRole(CONTROLLER_ROLE) for % value instead of 30
+
+        uint256 percentOfTotalUsdc = (totalUsdcAmount * 30) / 100;
+
+        _exitPool(bptAmount, 1, percentOfTotalUsdc);
 
         console2.log("usdc balance of strat in keeper unwind", usdc.balanceOf(address(this)));
 
-        _exchangeUSDCTocrvUSD(10000);
+        _exchangeUSDCTocrvUSD(usdc.balanceOf(address(this)));
 
         _repayCRVUSDLoan(crvUSD.balanceOf(address(this)));
     }
@@ -340,7 +343,7 @@ contract LeverageStrategy is AccessControl {
         uint256 expected = crvUSDUSDCPool.get_dy(1, 0, _dx) * 99 / 100;
 
         crvUSDUSDCPool.exchange(1, 0, _dx, expected, address(this));
-        totalUsdcAmount = totalUsdcAmount + expected;
+        totalUsdcAmount = usdc.balanceOf(address(this));
     }
 
     function _exchangeUSDCTocrvUSD(uint256 _dx) internal {
@@ -348,7 +351,7 @@ contract LeverageStrategy is AccessControl {
         require(usdc.approve(address(crvUSDUSDCPool), _dx), "Approval failed");
         uint256 expected = crvUSDUSDCPool.get_dy(0, 1, _dx) * 99 / 100;
         crvUSDUSDCPool.exchange(0, 1, _dx, expected, address(this));
-        totalUsdcAmount = totalUsdcAmount - _dx;
+        totalUsdcAmount = usdc.balanceOf(address(this));
 
         console2.log("crvusd balance after exchange", crvUSD.balanceOf(address(this)));
     }
