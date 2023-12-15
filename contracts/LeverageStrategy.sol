@@ -131,12 +131,10 @@ contract LeverageStrategy is AccessControl {
         // This check makes sure that the _wstETHAmount specified by the controller is actually available in this contract
         // The strategy does not handle the deposit of funds, the vault takes the deposits and sends it directly to the strategy
         //require(_wstETHAmount <= wsteth.balanceOf(address(this)));
-        console2.log("wstETH amount in invest before cdp", wsteth.balanceOf(address(this)));
         // Opens a position on crvUSD if no loan already
         // Note this address is an owner of a crvUSD CDP
         // in the usual case we already have a CDP
         // But there also should be a case when we create a new one
-        console2.log("WSTETH BALANCE BEFORE CDP", _wstETHAmount);
         if (!crvUSDController.loan_exists(address(this))) {
             _depositAndCreateLoan(_wstETHAmount, _debtAmount);
         } else {
@@ -144,16 +142,10 @@ contract LeverageStrategy is AccessControl {
             _borrowMore(_wstETHAmount, _debtAmount);
         }
 
-        console2.log("CRVUSD BALANCE AFTER CDP", crvUSD.balanceOf(address(this)));
-
         _exchangeCRVUSDtoUSDC(_debtAmount);
-
-        console2.log("USDC BALANCE SWAP", usdc.balanceOf(address(this)));
 
         // Provide liquidity to the D2D/USDC Pool on Balancer
         _joinPool(usdc.balanceOf(address(this)), d2d.balanceOf(address(this)), _bptAmountOut);
-
-        console2.log("D2DUSDC balance after joinPool", d2dusdcBPT.balanceOf(address(this)));
 
         // Stake LP tokens on Aura Finance
         _depositAllAura();
@@ -185,8 +177,6 @@ contract LeverageStrategy is AccessControl {
 
         _exitPool(amounts[1], 1, amounts[2]);
 
-        console2.log("usdc balance of strat in controller unwind", usdc.balanceOf(address(this)));
-
         _exchangeUSDCTocrvUSD(amounts[2]);
 
         _repayCRVUSDLoan(crvUSD.balanceOf(address(this)));
@@ -202,8 +192,6 @@ contract LeverageStrategy is AccessControl {
         uint256 percentOfTotalUsdc = (totalUsdcAmount * 30) / 100;
 
         _exitPool(bptAmount, 1, percentOfTotalUsdc);
-
-        console2.log("usdc balance of strat in keeper unwind", usdc.balanceOf(address(this)));
 
         _exchangeUSDCTocrvUSD(usdc.balanceOf(address(this)));
 
@@ -262,7 +250,6 @@ contract LeverageStrategy is AccessControl {
 
     function _repayCRVUSDLoan(uint256 deptToRepay) internal {
         require(crvUSD.approve(address(crvUSDController), deptToRepay), "Approval failed");
-        console2.log("crv usd repay loan", deptToRepay);
         crvUSDController.repay(deptToRepay);
     }
 
@@ -280,8 +267,6 @@ contract LeverageStrategy is AccessControl {
         // Approve the Balancer Vault to withdraw the respective tokens
         require(IERC20(tokens[0]).approve(address(balancerVault), d2dAmount), "D2D Approval failed");
         require(IERC20(tokens[1]).approve(address(balancerVault), usdcAmount), "USDC Approval failed");
-
-        console2.log("d2d balance of strat", IERC20(tokens[0]).balanceOf(address(this)));
 
         uint256 joinKind = uint256(IBalancerVault.JoinKind.EXACT_TOKENS_IN_FOR_BPT_OUT);
         bytes memory userData = abi.encode(joinKind, maxAmountsIn, minBptAmountOut);
@@ -312,10 +297,6 @@ contract LeverageStrategy is AccessControl {
             toInternalBalance: false
         });
 
-        console2.log("bptAmountIn", bptAmountIn);
-        console2.log("exitTokenIndex", exitTokenIndex);
-        console2.log("minAmountOut", minAmountOut);
-
         balancerVault.exitPool(poolId, address(this), payable(address(this)), request);
     }
 
@@ -343,13 +324,10 @@ contract LeverageStrategy is AccessControl {
     }
 
     function _exchangeUSDCTocrvUSD(uint256 _dx) internal {
-        console2.log("USDC TO CRVUSD DX", _dx);
         require(usdc.approve(address(crvUSDUSDCPool), _dx), "Approval failed");
         uint256 expected = crvUSDUSDCPool.get_dy(0, 1, _dx) * 99 / 100;
         crvUSDUSDCPool.exchange(0, 1, _dx, expected, address(this));
         totalUsdcAmount = usdc.balanceOf(address(this));
-
-        console2.log("crvusd balance after exchange", crvUSD.balanceOf(address(this)));
     }
 
     function _depositAllAura() internal {
@@ -371,7 +349,6 @@ contract LeverageStrategy is AccessControl {
     }
 
     function _unstakeAndWithdrawAura(uint256 amount) internal {
-        console2.log("withdraw and unwrap from aura", amount);
         Vaults4626.withdrawAndUnwrap(amount, true);
     }
 }
