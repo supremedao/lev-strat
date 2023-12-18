@@ -57,8 +57,8 @@ contract BaseLeverageStrategyTest is BaseTest {
 
     uint256 AuraLPtokenExpected = 2000000000000000000;
     uint256 BPTout = 2000000000000000000;
-    uint256 minUsdExpected = 50000000;
-    uint256 debtToRepay = 40000000000000000000;
+    uint256 minUsdExpected = 40000;
+    uint256 debtToRepay = 4000000;
 
     function _deployContracts() internal {
         levStrat = new LeverageStrategy(dao,controller,powerPool);
@@ -79,6 +79,7 @@ contract BaseLeverageStrategyTest is BaseTest {
         AuraBooster = IAuraBooster(0xA57b8d98dAE62B26Ec3bcC4a365338157060B234);
         AuraLPtoken = IERC20(0x2d63DBBb2ab267D4Dac3abf9C55b12f099D35093);
         AuraLPVault = IERC20(0xe39570EF26fB9A562bf26F8c708b7433F65050af);
+        d2d = IERC20(0x43D4A3cd90ddD2F8f4f693170C9c8098163502ad);
 
         levStrat.setBPTAddress(address(d2dusdcBPT));
         levStrat.setVaultAddress(address(AuraLPVault));
