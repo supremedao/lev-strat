@@ -128,9 +128,6 @@ contract LeverageStrategy is AccessControl {
         external
         onlyRole(CONTROLLER_ROLE)
     {
-        // This check makes sure that the _wstETHAmount specified by the controller is actually available in this contract
-        // The strategy does not handle the deposit of funds, the vault takes the deposits and sends it directly to the strategy
-        //require(_wstETHAmount <= wsteth.balanceOf(address(this)));
         // Opens a position on crvUSD if no loan already
         // Note this address is an owner of a crvUSD CDP
         // in the usual case we already have a CDP
@@ -141,12 +138,9 @@ contract LeverageStrategy is AccessControl {
             //_addCollateral(_wstETHAmount);
             _borrowMore(_wstETHAmount, _debtAmount);
         }
-
         _exchangeCRVUSDtoUSDC(_debtAmount);
-
         // Provide liquidity to the D2D/USDC Pool on Balancer
         _joinPool(usdc.balanceOf(address(this)), d2d.balanceOf(address(this)), _bptAmountOut);
-
         // Stake LP tokens on Aura Finance
         _depositAllAura();
     }
