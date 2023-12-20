@@ -51,6 +51,9 @@ contract LeverageStrategy is AccessControl {
 
     // mainnet addresses
     address public treasury; // recieves a fraction of yield
+    address public constant token_BAL = 0xba100000625a3754423978a60c9317c58a424e3D;
+    address public constant token_WETH = 0xdFCeA9088c8A88A76FF74892C1457C17dfeef9C1;
+    bytes32 public constant pool_BAL_WETH = 0x5c6ee304399dbdb9c8ef030ab642b10820db8f56000200000000000000000014;
 
     // pools addresses
 
@@ -192,6 +195,13 @@ contract LeverageStrategy is AccessControl {
         _repayCRVUSDLoan(crvUSD.balanceOf(address(this)));
     }
 
+    function swapReward(uint256 balAmount, uint256 minWethAmount, uint256 deadline)
+        external
+        onlyRole(CONTROLLER_ROLE)
+    {
+        _swapReward(balAmount, minWethAmount, deadline);
+    }
+
     //================================================INTERNAL FUNCTIONS===============================================//
     /// @dev This helper function is a fast and cheap way to convert between IERC20[] and IAsset[] types
     function _convertERC20sToAssets(IERC20[] memory tokens) internal pure returns (IAsset[] memory assets) {
@@ -294,18 +304,26 @@ contract LeverageStrategy is AccessControl {
         balancerVault.exitPool(poolId, address(this), payable(address(this)), request);
     }
 
-    function _claimRewards() external {
-        // Claim rewards from Aura
+    function _swapReward(uint256 balAmount, uint256 minWethAmount, uint256 deadline) internal {
+        IERC20(token_BAL).approve(0xBA12222222228d8Ba445958a75a0704d566BF2C8, balAmount);
 
-        // TODO: figure out how to pass all the parameters
+        IBalancerVault.SingleSwap memory singleSwap = IBalancerVault.SingleSwap({
+            poolId: pool_BAL_WETH,
+            kind: IBalancerVault.SwapKind.GIVEN_IN,
+            assetIn: IAsset(token_BAL),
+            assetOut: IAsset(token_WETH),
+            amount: balAmount,
+            userData: ""
+        });
 
-        // exchange for WSTETH
+        IBalancerVault.FundManagement memory funds = IBalancerVault.FundManagement({
+            sender: address(this),
+            fromInternalBalance: false,
+            recipient: payable(address(this)),
+            toInternalBalance: false
+        });
 
-        // Note: there is no BAL/AURA -> WSTETH Pool
-        // TODO: check if there is a single transaction on Balancer
-        // otherwise do a jumping transaction BAL -> ETH -> WSTETH
-
-        // call _invest
+        balancerVault.swap(singleSwap, funds, 1, deadline);
     }
 
     function _exchangeCRVUSDtoUSDC(uint256 _dx) internal {

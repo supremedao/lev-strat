@@ -21,7 +21,10 @@ interface IBalancerVault {
         MANAGEMENT_FEE_TOKENS_OUT // for InvestmentPool
     }
 
-    enum SwapKind { GIVEN_IN, GIVEN_OUT }
+    enum SwapKind {
+        GIVEN_IN,
+        GIVEN_OUT
+    }
 
     /**
      * @dev Data for a single swap executed by `swap`. `amount` is either `amountIn` or `amountOut` depending on
@@ -65,6 +68,11 @@ interface IBalancerVault {
         address payable recipient;
         bool toInternalBalance;
     }
+
+    function swap(SingleSwap memory singleSwap, FundManagement memory funds, uint256 limit, uint256 deadline)
+        external
+        payable
+        returns (uint256);
 
     /* @dev copied from the IVault.sol -\0_0/-
 
