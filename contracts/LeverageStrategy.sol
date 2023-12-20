@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-/*
 
+/*
 ________                                          ______________________ 
 __  ___/___  ____________________________ ___________  __ \__    |_  __ \
 _____ \_  / / /__  __ \_  ___/  _ \_  __ `__ \  _ \_  / / /_  /| |  / / /
@@ -303,6 +303,7 @@ contract LeverageStrategy is AccessControl {
 
         balancerVault.exitPool(poolId, address(this), payable(address(this)), request);
     }
+
 
     function _swapReward(uint256 balAmount, uint256 minWethAmount, uint256 deadline) internal {
         IERC20(token_BAL).approve(0xBA12222222228d8Ba445958a75a0704d566BF2C8, balAmount);
