@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-/*
 
+/*
 ________                                          ______________________ 
 __  ___/___  ____________________________ ___________  __ \__    |_  __ \
 _____ \_  / / /__  __ \_  ___/  _ \_  __ `__ \  _ \_  / / /_  /| |  / / /
@@ -294,7 +294,10 @@ contract LeverageStrategy is AccessControl {
         balancerVault.exitPool(poolId, address(this), payable(address(this)), request);
     }
 
-    function _claimRewards() external {
+    function claimRewards() external {
+        
+        Vaults4626.getReward();
+
         // Claim rewards from Aura
 
         // TODO: figure out how to pass all the parameters
