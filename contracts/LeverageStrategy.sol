@@ -51,6 +51,12 @@ contract LeverageStrategy is AccessControl {
 
     // mainnet addresses
     address public treasury; // recieves a fraction of yield
+    address public constant token_BAL = 0xba100000625a3754423978a60c9317c58a424e3D;
+    address public constant token_AURA = 0xC0c293ce456fF0ED870ADd98a0828Dd4d2903DBF;
+    address public constant token_WETH = 0xdFCeA9088c8A88A76FF74892C1457C17dfeef9C1;
+    bytes32 public constant pool_BAL_WETH = 0x5c6ee304399dbdb9c8ef030ab642b10820db8f56000200000000000000000014;
+    bytes32 public constant pool_AURA_WETH = 0xcfca23ca9ca720b6e98e3eb9b6aa0ffc4a5c08b9000200000000000000000274;
+    bytes32 public constant pool_WSTETH_WETH = 0x93d199263632a4ef4bb438f1feb99e57b4b5f0bd0000000000000000000005c2;
 
     // pools addresses
 
@@ -192,6 +198,14 @@ contract LeverageStrategy is AccessControl {
         _repayCRVUSDLoan(crvUSD.balanceOf(address(this)));
     }
 
+    function swapReward(uint256 balAmount,uint256 auraAmount, uint256 minWethAmountBal,uint256 minWethAmountAura, uint256 deadline)
+        external
+        onlyRole(CONTROLLER_ROLE)
+    {
+        _swapRewardBal(balAmount, minWethAmountBal, deadline);
+        _swapRewardAura(auraAmount, minWethAmountAura, deadline);
+    }
+
     //================================================INTERNAL FUNCTIONS===============================================//
     /// @dev This helper function is a fast and cheap way to convert between IERC20[] and IAsset[] types
     function _convertERC20sToAssets(IERC20[] memory tokens) internal pure returns (IAsset[] memory assets) {
@@ -294,21 +308,73 @@ contract LeverageStrategy is AccessControl {
         balancerVault.exitPool(poolId, address(this), payable(address(this)), request);
     }
 
-    function claimRewards() external {
+
+    function _swapRewardBal(uint256 balAmount, uint256 minWethAmount, uint256 deadline) internal {
+        IERC20(token_BAL).approve(0xBA12222222228d8Ba445958a75a0704d566BF2C8, balAmount);
+
+        IBalancerVault.SingleSwap memory singleSwap = IBalancerVault.SingleSwap({
+            poolId: pool_BAL_WETH,
+            kind: IBalancerVault.SwapKind.GIVEN_IN,
+            assetIn: IAsset(token_BAL),
+            assetOut: IAsset(token_WETH),
+            amount: balAmount,
+            userData: ""
+        });
+
+        IBalancerVault.FundManagement memory funds = IBalancerVault.FundManagement({
+            sender: address(this),
+            fromInternalBalance: false,
+            recipient: payable(address(this)),
+            toInternalBalance: false
+        });
+
+        balancerVault.swap(singleSwap, funds, 1, deadline);
+    }
+
+    function _swapRewardAura(uint256 auraAmount, uint256 minWethAmount, uint256 deadline) internal {
         
-        Vaults4626.getReward();
+        IERC20(token_AURA).approve(0xBA12222222228d8Ba445958a75a0704d566BF2C8, auraAmount);
 
-        // Claim rewards from Aura
+        IBalancerVault.SingleSwap memory singleSwap = IBalancerVault.SingleSwap({
+            poolId: pool_AURA_WETH,
+            kind: IBalancerVault.SwapKind.GIVEN_IN,
+            assetIn: IAsset(token_AURA),
+            assetOut: IAsset(token_WETH),
+            amount: auraAmount,
+            userData: ""
+        });
 
-        // TODO: figure out how to pass all the parameters
+        IBalancerVault.FundManagement memory funds = IBalancerVault.FundManagement({
+            sender: address(this),
+            fromInternalBalance: false,
+            recipient: payable(address(this)),
+            toInternalBalance: false
+        });
 
-        // exchange for WSTETH
+        balancerVault.swap(singleSwap, funds, 1, deadline);
+    }
 
-        // Note: there is no BAL/AURA -> WSTETH Pool
-        // TODO: check if there is a single transaction on Balancer
-        // otherwise do a jumping transaction BAL -> ETH -> WSTETH
+    function _swapRewardToWstEth(uint256 minWethAmount, uint256 deadline) internal {
+        
+        IERC20(token_WETH).approve(0xBA12222222228d8Ba445958a75a0704d566BF2C8, minWethAmount);
 
-        // call _invest
+        IBalancerVault.SingleSwap memory singleSwap = IBalancerVault.SingleSwap({
+            poolId: pool_WSTETH_WETH,
+            kind: IBalancerVault.SwapKind.GIVEN_IN,
+            assetIn: IAsset(token_WETH),
+            assetOut: IAsset(address(wsteth)),
+            amount: minWethAmount,
+            userData: ""
+        });
+
+        IBalancerVault.FundManagement memory funds = IBalancerVault.FundManagement({
+            sender: address(this),
+            fromInternalBalance: false,
+            recipient: payable(address(this)),
+            toInternalBalance: false
+        });
+
+        balancerVault.swap(singleSwap, funds, 1, deadline);
     }
 
     function _exchangeCRVUSDtoUSDC(uint256 _dx) internal {
