@@ -61,10 +61,9 @@ contract BaseLeverageStrategyTest is BaseTest {
     uint256 debtToRepay = 4000000;
 
     function _deployContracts() internal {
-        levStrat = new LeverageStrategy(dao,controller,powerPool);
+        levStrat = new LeverageStrategy(dao,controller,powerPool, 0x27c9f71cc31464b906e0006d4fcbc8900f48f15f00020000000000000000010f);
 
         levStrat.setTokenIndex(1);
-        levStrat.setPoolId(0x27c9f71cc31464b906e0006d4fcbc8900f48f15f00020000000000000000010f);
         levStrat.setPid(107);
 
         wstETH = IERC20(0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0);
