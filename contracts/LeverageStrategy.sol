@@ -19,21 +19,35 @@ import "./interfaces/IcrvUSDController.sol";
 import "./interfaces/IcrvUSDUSDCPool.sol";
 import "./interfaces/IERC20.sol";
 import "./interfaces/IBasicRewards.sol";
-import {console2} from "forge-std/console2.sol";
 
 contract LeverageStrategy is AccessControl {
     // State variables
+    //address of aura smart contract
     IAuraBooster public auraBooster;
+    // address of balancer vault
+    // fix: balancer vault is fixed across chains, we can set it as immutable
     IBalancerVault public balancerVault;
+
+    // fix: address of token will not change, we can set it as immutable
     IcrvUSD public crvUSD;
+
+    // fix: address of crvUSD will not change, we can set it as immutable
     IcrvUSDController public crvUSDController;
+
     IcrvUSDUSDCPool public crvUSDUSDCPool;
     IBasicRewards public Vaults4626;
 
+    // fix: address of token will most likely never change, we can set it as immutable
     IERC20 public wsteth;
     //IERC20 public crvusd;
+
+    // fix: address of token will most likely never change, we can set it as immutable
     IERC20 public usdc;
+
+    // fix: address of token will most likely never change, we can set it as immutable
     IERC20 public d2d;
+
+    // fix: address of token will most likely never change, we can set it as immutable
     IERC20 public d2dusdcBPT;
     bytes32 public poolId;
     uint256 public pid;
@@ -63,6 +77,8 @@ contract LeverageStrategy is AccessControl {
     // TODO:
     // DAO should be able to change pool parameters and tokens
     // NOTE: maybe we should an updateble strategy struct
+    // fix: DAO should only be able to change parameters but not tokens, because switching token will impatc existing tokens
+    // if DAO wants to use other token, then deploy a new startegy
 
     // Events
     // Add relevant events to log important contract actions/events
@@ -81,7 +97,7 @@ contract LeverageStrategy is AccessControl {
     //================================================EXTERNAL FUNCTIONS===============================================//
 
     // only DAO can initialize
-
+    // fix: use it directly inside the constructor
     function initializeContracts(
         address _auraBooster,
         address _balancerVault,
@@ -104,10 +120,12 @@ contract LeverageStrategy is AccessControl {
         N = _N;
     }
 
+    // fix: remove the setter functions as pool shouldn't be changed after strategy is deployed
     function setPoolId(bytes32 _poolId) external onlyRole(DEFAULT_ADMIN_ROLE) {
         poolId = _poolId;
     }
 
+    // fix: remove the setter functions as pool shouldn't be changed after strategy is deployed
     function setPid(uint256 _pid) external onlyRole(DEFAULT_ADMIN_ROLE) {
         pid = _pid;
     }
@@ -116,6 +134,7 @@ contract LeverageStrategy is AccessControl {
         TokenIndex = _TokenIndex;
     }
 
+    // fix: remove the setter functions as pool shouldn't be changed after strategy is deployed
     function setBPTAddress(address _bptAddress) external onlyRole(DEFAULT_ADMIN_ROLE) {
         d2dusdcBPT = IERC20(_bptAddress);
     }
@@ -132,6 +151,8 @@ contract LeverageStrategy is AccessControl {
     // @param N Number of price bands to deposit into (to do autoliquidation-deliquidation of wsteth) if the price of the wsteth collateral goes too low
     function invest(uint256 _wstETHAmount, uint256 _debtAmount, uint256 _bptAmountOut)
         external
+        // fix: why only controller can only invest, anyone should be able to invest
+        // fix: we need to keep track of how much a user have invested give and out shares
         onlyRole(CONTROLLER_ROLE)
     {
         // Opens a position on crvUSD if no loan already
@@ -151,6 +172,9 @@ contract LeverageStrategy is AccessControl {
         _depositAllAura();
     }
 
+    // fix: how would wstETH end up in this contract?
+    // fix: do not allow this operation, to keep track of who invested how much, 
+    //  we should only allow to invest directly
     function investFromKeeper(uint256 _bptAmountOut) external onlyRole(KEEPER_ROLE) {
         uint256 amountInStrategy = wsteth.balanceOf(address(this));
 
@@ -172,6 +196,8 @@ contract LeverageStrategy is AccessControl {
         _depositAllAura();
     }
 
+    // fix: unwind position only based on msg.sender share
+    // fix: anyone should be able to unwind their position
     function unwindPosition(uint256[] calldata amounts) external onlyRole(CONTROLLER_ROLE) {
         _unstakeAndWithdrawAura(amounts[0]);
 
@@ -182,6 +208,7 @@ contract LeverageStrategy is AccessControl {
         _repayCRVUSDLoan(crvUSD.balanceOf(address(this)));
     }
 
+    // fix: rename this to redeemRewardsToMaintainCDP()
     function unwindPositionFromKeeper() external onlyRole(KEEPER_ROLE) {
         Vaults4626.withdrawAllAndUnwrap(true);
 
@@ -198,6 +225,8 @@ contract LeverageStrategy is AccessControl {
         _repayCRVUSDLoan(crvUSD.balanceOf(address(this)));
     }
 
+    // fix: rename this to reinvestUsingRewards()
+    // note: when reinvesting, ensure the accounting of amount invested remains same.
     function swapReward(uint256 balAmount,uint256 auraAmount, uint256 minWethAmountBal,uint256 minWethAmountAura, uint256 deadline)
         external
         onlyRole(CONTROLLER_ROLE)
