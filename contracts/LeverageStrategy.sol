@@ -22,22 +22,11 @@ import "./interfaces/IBasicRewards.sol";
 import "./Periphery/BalancerUtils.sol";
 import "./Periphery/AuraUtils.sol";
 import "./Periphery/CurveUtils.sol";
+import "./LeverageStrategyStorage.sol";
 
-contract LeverageStrategy is BalancerUtils, AuraUtils, CurveUtils, AccessControl {
-    // State variables
-    uint256 internal TokenIndex;
-
+contract LeverageStrategy is BalancerUtils, AuraUtils, CurveUtils, AccessControl, LeverageStrategyStorage {
     bytes32 public constant KEEPER_ROLE = keccak256("KEEPER_ROLE");
     bytes32 public constant CONTROLLER_ROLE = keccak256("CONTROLLER_ROLE");
-
-    uint256 public crvUSDBorrowed; // Total crvusd borrowed
-    uint256 public totalBalancerLPTokens; // Total balancer LP tokens the
-    uint256 public totalStakedInAura; // Total balancer LP tokens staked in aura for the user
-
-    // mainnet addresses
-    address public treasury; // recieves a fraction of yield
-    
-    // pools addresses
 
     // TODO:
     // DAO should be able to change pool parameters and tokens
@@ -52,30 +41,25 @@ contract LeverageStrategy is BalancerUtils, AuraUtils, CurveUtils, AccessControl
     /// @param _dao is the treasury to withdraw too
     /// @param _controller is the address of the strategy controller
     /// @param _keeper is the address of the power pool keeper
-    constructor(address _dao, address _controller, address _keeper, bytes32 _poolId) BalancerUtils(_poolId) {
-        treasury = _dao;
-        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
-        _grantRole(CONTROLLER_ROLE, _controller);
-        _grantRole(KEEPER_ROLE, _keeper);
+    constructor(bytes32 _poolId) BalancerUtils(_poolId) {
+        
     }
 
     //================================================EXTERNAL FUNCTIONS===============================================//
 
     // only DAO can initialize
     // fix: use it directly inside the constructor
-    function initializeContracts(
-        address _balancerVault,
-        address _crvUSD,
-        address _crvUSDController,
-        address _crvUSDUSDCPool,
-        address _wstETH,
-        address _USDC,
-        address _D2D,
-        uint256 _N
+    function initialize(
+        uint256 _N,
+        address _dao,
+        address _controller,
+        address _keeper
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        crvUSDController = IcrvUSDController(_crvUSDController);
-        crvUSDUSDCPool = IcrvUSDUSDCPool(_crvUSDUSDCPool);
+        treasury = _dao;
         N = _N;
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        _grantRole(CONTROLLER_ROLE, _controller);
+        _grantRole(KEEPER_ROLE, _keeper);
     }
 
     function setTokenIndex(uint256 _TokenIndex) external onlyRole(DEFAULT_ADMIN_ROLE) {
