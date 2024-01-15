@@ -19,9 +19,9 @@ import "./interfaces/IcrvUSDController.sol";
 import "./interfaces/IcrvUSDUSDCPool.sol";
 import "./interfaces/IERC20.sol";
 import "./interfaces/IBasicRewards.sol";
-import "./Periphery/BalancerUtils.sol";
-import "./Periphery/AuraUtils.sol";
-import "./Periphery/CurveUtils.sol";
+import "./periphery/BalancerUtils.sol";
+import "./periphery/AuraUtils.sol";
+import "./periphery/CurveUtils.sol";
 import "./LeverageStrategyStorage.sol";
 
 contract LeverageStrategy is BalancerUtils, AuraUtils, CurveUtils, AccessControl, LeverageStrategyStorage {
