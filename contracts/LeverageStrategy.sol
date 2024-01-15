@@ -21,24 +21,16 @@ import "./interfaces/IERC20.sol";
 import "./interfaces/IBasicRewards.sol";
 import "./Periphery/BalancerUtils.sol";
 import "./Periphery/AuraUtils.sol";
+import "./Periphery/CurveUtils.sol";
 
-contract LeverageStrategy is BalancerUtils, AuraUtils, AccessControl {
+contract LeverageStrategy is BalancerUtils, AuraUtils, CurveUtils, AccessControl {
     // State variables
-
-    // fix: address of crvUSD will not change, we can set it as immutable
-    IcrvUSDController public crvUSDController;
-
-    IcrvUSDUSDCPool public crvUSDUSDCPool;
-
     uint256 internal TokenIndex;
-    uint256 internal N; // Number of bands for the crvusd/wseth soft liquidation range
 
     bytes32 public constant KEEPER_ROLE = keccak256("KEEPER_ROLE");
     bytes32 public constant CONTROLLER_ROLE = keccak256("CONTROLLER_ROLE");
 
-    uint256 public totalWsthethDeposited; // Total wsteth deposited
     uint256 public crvUSDBorrowed; // Total crvusd borrowed
-    uint256 public totalUsdcAmount; // Total usdc  after swapping from crvusd
     uint256 public totalBalancerLPTokens; // Total balancer LP tokens the
     uint256 public totalStakedInAura; // Total balancer LP tokens staked in aura for the user
 
@@ -183,68 +175,6 @@ contract LeverageStrategy is BalancerUtils, AuraUtils, AccessControl {
     }
 
     //================================================INTERNAL FUNCTIONS===============================================//
-
-    /// @notice Create a loan position for the strategy, only used if this is the first position created
-    /// @param _wstETHAmount the amount of wsteth deposited
-    /// @param _debtAmount the amount of crvusd borrowed
-    function _depositAndCreateLoan(uint256 _wstETHAmount, uint256 _debtAmount) internal {
-        require(_wstETHAmount > 0, "Amount should be greater than 0");
-
-        //require(IERC20(wsteth).transferFrom(msg.sender, address(this), _wstETHAmount), "Transfer failed");
-
-        require(wstETH.approve(address(crvUSDController), _wstETHAmount), "Approval failed");
-
-        // Call create_loan on the controller
-        crvUSDController.create_loan(_wstETHAmount, _debtAmount, N);
-
-        totalWsthethDeposited = totalWsthethDeposited + _wstETHAmount;
-    }
-
-    /// @notice Add collateral to a loan postion if the poistion is already initialised
-    /// @param _wstETHAmount the amount of wsteth deposited
-    function _addCollateral(uint256 _wstETHAmount) internal {
-        require(_wstETHAmount > 0, "Amount should be greater than 0");
-
-        require(wstETH.transferFrom(msg.sender, address(this), _wstETHAmount), "Transfer failed");
-
-        require(wstETH.approve(address(crvUSDController), _wstETHAmount), "Approval failed");
-
-        crvUSDController.add_collateral(_wstETHAmount, address(this));
-        totalWsthethDeposited = totalWsthethDeposited + _wstETHAmount;
-    }
-
-    /// @notice Borrow more crvusd,
-    /// @param _wstETHAmount the amount of wsteth deposited
-    /// @param _debtAmount the amount of crvusd borrowed
-    /// @dev We don't need to transferFrom msg.sender anymore as now the wsteth will be directly transferred by the vault
-    function _borrowMore(uint256 _wstETHAmount, uint256 _debtAmount) internal {
-        require(wstETH.approve(address(crvUSDController), _wstETHAmount), "Approval failed");
-
-        crvUSDController.borrow_more(_wstETHAmount, _debtAmount);
-
-        totalWsthethDeposited = totalWsthethDeposited + _wstETHAmount;
-    }
-
-    function _repayCRVUSDLoan(uint256 deptToRepay) internal {
-        require(crvUSD.approve(address(crvUSDController), deptToRepay), "Approval failed");
-        crvUSDController.repay(deptToRepay);
-    }
-
-    function _exchangeCRVUSDtoUSDC(uint256 _dx) internal {
-        require(crvUSD.approve(address(crvUSDUSDCPool), _dx), "Approval failed");
-
-        uint256 expected = crvUSDUSDCPool.get_dy(1, 0, _dx) * 99 / 100;
-
-        crvUSDUSDCPool.exchange(1, 0, _dx, expected, address(this));
-        totalUsdcAmount = USDC.balanceOf(address(this));
-    }
-
-    function _exchangeUSDCTocrvUSD(uint256 _dx) internal {
-        require(USDC.approve(address(crvUSDUSDCPool), _dx), "Approval failed");
-        uint256 expected = crvUSDUSDCPool.get_dy(0, 1, _dx) * 99 / 100;
-        crvUSDUSDCPool.exchange(0, 1, _dx, expected, address(this));
-        totalUsdcAmount = USDC.balanceOf(address(this));
-    }
 
     function _tokenToStake() internal view virtual override returns(IERC20) {
         return D2D_USDC_BPT;
