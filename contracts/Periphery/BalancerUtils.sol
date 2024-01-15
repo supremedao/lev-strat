@@ -15,7 +15,7 @@ import "../interfaces/IBalancerVault.sol";
 import "../interfaces/IERC20.sol";
 import "./Tokens.sol";
 
-contract BalancerUtils is Tokens {
+abstract contract BalancerUtils is Tokens {
     // address of balancer vault
     // fix: balancer vault is fixed across chains, we can set it as immutable
     IBalancerVault public constant BAL_VAULT = IBalancerVault(0xBA12222222228d8Ba445958a75a0704d566BF2C8);bytes32 public constant POOL_BAL_WETH_ID = 0x5c6ee304399dbdb9c8ef030ab642b10820db8f56000200000000000000000014;

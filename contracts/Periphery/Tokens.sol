@@ -14,7 +14,7 @@ pragma solidity ^0.8.0;
 import "../interfaces/IcrvUSD.sol";
 import "../interfaces/IERC20.sol";
 
-contract Tokens {
+abstract contract Tokens {
     address public constant BAL = 0xba100000625a3754423978a60c9317c58a424e3D;
     address public constant AURA = 0xC0c293ce456fF0ED870ADd98a0828Dd4d2903DBF;
     address public constant WETH = 0xdFCeA9088c8A88A76FF74892C1457C17dfeef9C1;
