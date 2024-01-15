@@ -18,7 +18,8 @@ import "./Tokens.sol";
 abstract contract BalancerUtils is Tokens {
     // address of balancer vault
     // fix: balancer vault is fixed across chains, we can set it as immutable
-    IBalancerVault public constant BAL_VAULT = IBalancerVault(0xBA12222222228d8Ba445958a75a0704d566BF2C8);bytes32 public constant POOL_BAL_WETH_ID = 0x5c6ee304399dbdb9c8ef030ab642b10820db8f56000200000000000000000014;
+    IBalancerVault public constant BAL_VAULT = IBalancerVault(0xBA12222222228d8Ba445958a75a0704d566BF2C8);
+    bytes32 public constant POOL_BAL_WETH_ID = 0x5c6ee304399dbdb9c8ef030ab642b10820db8f56000200000000000000000014;
     bytes32 public constant POOL_AURA_WETH_ID = 0xcfca23ca9ca720b6e98e3eb9b6aa0ffc4a5c08b9000200000000000000000274;
     bytes32 public constant POOL_WSTETH_WETH_ID = 0x93d199263632a4ef4bb438f1feb99e57b4b5f0bd0000000000000000000005c2;
     uint256 public constant FIXED_LIMIT = 1;
@@ -78,7 +79,6 @@ abstract contract BalancerUtils is Tokens {
         BAL_VAULT.exitPool(POOL_ID, address(this), payable(address(this)), request);
     }
 
-
     function _swapRewardBal(uint256 balAmount, uint256 minWethAmount, uint256 deadline) internal {
         IERC20(BAL).approve(address(BAL_VAULT), balAmount);
 
@@ -102,7 +102,6 @@ abstract contract BalancerUtils is Tokens {
     }
 
     function _swapRewardAura(uint256 auraAmount, uint256 minWethAmount, uint256 deadline) internal {
-        
         IERC20(AURA).approve(address(BAL_VAULT), auraAmount);
 
         IBalancerVault.SingleSwap memory singleSwap = IBalancerVault.SingleSwap({
@@ -125,7 +124,6 @@ abstract contract BalancerUtils is Tokens {
     }
 
     function _swapRewardToWstEth(uint256 minWethAmount, uint256 deadline) internal {
-        
         IERC20(WETH).approve(address(BAL_VAULT), minWethAmount);
 
         IBalancerVault.SingleSwap memory singleSwap = IBalancerVault.SingleSwap({

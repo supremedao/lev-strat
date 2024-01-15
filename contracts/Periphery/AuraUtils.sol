@@ -21,16 +21,17 @@ import "../interfaces/IBasicRewards.sol";
 import "./Tokens.sol";
 
 abstract contract AuraUtils {
-    
     uint256 public constant AURA_PID = 107;
     //address of aura smart contract
     IAuraBooster public constant AURA_BOOSTER = IAuraBooster(0xA57b8d98dAE62B26Ec3bcC4a365338157060B234);
     IBasicRewards public constant AURA_VAULT = IBasicRewards(0xe39570EF26fB9A562bf26F8c708b7433F65050af);
 
-    function _tokenToStake() internal view virtual returns(IERC20);
+    function _tokenToStake() internal view virtual returns (IERC20);
 
     function _depositAllAura() internal {
-        require(_tokenToStake().approve(address(AURA_BOOSTER), _tokenToStake().balanceOf(address(this))), "Approval failed");
+        require(
+            _tokenToStake().approve(address(AURA_BOOSTER), _tokenToStake().balanceOf(address(this))), "Approval failed"
+        );
         require(AURA_BOOSTER.depositAll(AURA_PID, true));
     }
 

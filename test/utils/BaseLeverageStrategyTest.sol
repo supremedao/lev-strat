@@ -61,7 +61,9 @@ contract BaseLeverageStrategyTest is BaseTest {
     uint256 debtToRepay = 4000000;
 
     function _deployContracts() internal {
-        levStrat = new LeverageStrategy(dao,controller,powerPool, 0x27c9f71cc31464b906e0006d4fcbc8900f48f15f00020000000000000000010f);
+        levStrat = new LeverageStrategy(
+            dao, controller, powerPool, 0x27c9f71cc31464b906e0006d4fcbc8900f48f15f00020000000000000000010f
+        );
 
         levStrat.setTokenIndex(1);
 

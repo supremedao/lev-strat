@@ -165,6 +165,4 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
 
         assertGt(debt_before, debt_after);
     }
-
-
 }

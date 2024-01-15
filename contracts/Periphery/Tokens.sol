@@ -23,5 +23,4 @@ abstract contract Tokens {
     IERC20 public constant D2D = IERC20(0x43D4A3cd90ddD2F8f4f693170C9c8098163502ad);
     IERC20 public constant D2D_USDC_BPT = IERC20(0x27C9f71cC31464B906E0006d4FcBC8900F48f15f);
     IcrvUSD public constant crvUSD = IcrvUSD(0xf939E0A03FB07F59A73314E73794Be0E57ac1b4E);
-
 }

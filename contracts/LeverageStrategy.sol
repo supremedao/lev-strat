@@ -41,20 +41,16 @@ contract LeverageStrategy is BalancerUtils, AuraUtils, CurveUtils, AccessControl
     /// @param _dao is the treasury to withdraw too
     /// @param _controller is the address of the strategy controller
     /// @param _keeper is the address of the power pool keeper
-    constructor(bytes32 _poolId) BalancerUtils(_poolId) {
-        
-    }
+    constructor(bytes32 _poolId) BalancerUtils(_poolId) {}
 
     //================================================EXTERNAL FUNCTIONS===============================================//
 
     // only DAO can initialize
     // fix: use it directly inside the constructor
-    function initialize(
-        uint256 _N,
-        address _dao,
-        address _controller,
-        address _keeper
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function initialize(uint256 _N, address _dao, address _controller, address _keeper)
+        external
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
         treasury = _dao;
         N = _N;
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
@@ -96,7 +92,7 @@ contract LeverageStrategy is BalancerUtils, AuraUtils, CurveUtils, AccessControl
     }
 
     // fix: how would wstETH end up in this contract?
-    // fix: do not allow this operation, to keep track of who invested how much, 
+    // fix: do not allow this operation, to keep track of who invested how much,
     //  we should only allow to invest directly
     function investFromKeeper(uint256 _bptAmountOut) external onlyRole(KEEPER_ROLE) {
         uint256 amountInStrategy = wstETH.balanceOf(address(this));
@@ -150,17 +146,20 @@ contract LeverageStrategy is BalancerUtils, AuraUtils, CurveUtils, AccessControl
 
     // fix: rename this to reinvestUsingRewards()
     // note: when reinvesting, ensure the accounting of amount invested remains same.
-    function swapReward(uint256 balAmount,uint256 auraAmount, uint256 minWethAmountBal,uint256 minWethAmountAura, uint256 deadline)
-        external
-        onlyRole(CONTROLLER_ROLE)
-    {
+    function swapReward(
+        uint256 balAmount,
+        uint256 auraAmount,
+        uint256 minWethAmountBal,
+        uint256 minWethAmountAura,
+        uint256 deadline
+    ) external onlyRole(CONTROLLER_ROLE) {
         _swapRewardBal(balAmount, minWethAmountBal, deadline);
         _swapRewardAura(auraAmount, minWethAmountAura, deadline);
     }
 
     //================================================INTERNAL FUNCTIONS===============================================//
 
-    function _tokenToStake() internal view virtual override returns(IERC20) {
+    function _tokenToStake() internal view virtual override returns (IERC20) {
         return D2D_USDC_BPT;
     }
 }
