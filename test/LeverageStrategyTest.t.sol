@@ -14,7 +14,6 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         deal(address(wstETH), vault4626, wstEthToAcc);
 
         levStrat.initializeContracts(
-            address(AuraBooster),
             address(balancerVault),
             address(crvUSD),
             address(crvUSDController),
@@ -50,7 +49,6 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         wstETH.approve(address(levStrat), maxApprove);
 
         levStrat.initializeContracts(
-            address(AuraBooster),
             address(balancerVault),
             address(crvUSD),
             address(crvUSDController),
@@ -90,7 +88,6 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         deal(address(wstETH), vault4626, wstEthToAcc);
 
         levStrat.initializeContracts(
-            address(AuraBooster),
             address(balancerVault),
             address(crvUSD),
             address(crvUSDController),
@@ -133,7 +130,6 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         deal(address(wstETH), vault4626, wstEthToAcc);
 
         levStrat.initializeContracts(
-            address(AuraBooster),
             address(balancerVault),
             address(crvUSD),
             address(crvUSDController),

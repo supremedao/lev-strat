@@ -20,21 +20,16 @@ import "./interfaces/IcrvUSDUSDCPool.sol";
 import "./interfaces/IERC20.sol";
 import "./interfaces/IBasicRewards.sol";
 import "./Periphery/BalancerUtils.sol";
+import "./Periphery/AuraUtils.sol";
 
-contract LeverageStrategy is BalancerUtils, AccessControl {
+contract LeverageStrategy is BalancerUtils, AuraUtils, AccessControl {
     // State variables
-    //address of aura smart contract
-    IAuraBooster public auraBooster;
 
     // fix: address of crvUSD will not change, we can set it as immutable
     IcrvUSDController public crvUSDController;
 
     IcrvUSDUSDCPool public crvUSDUSDCPool;
-    IBasicRewards public Vaults4626;
 
-    // fix: address of token will most likely never change, we can set it as immutable
-    IERC20 public d2dusdcBPT;
-    uint256 public pid;
     uint256 internal TokenIndex;
     uint256 internal N; // Number of bands for the crvusd/wseth soft liquidation range
 
@@ -77,7 +72,6 @@ contract LeverageStrategy is BalancerUtils, AccessControl {
     // only DAO can initialize
     // fix: use it directly inside the constructor
     function initializeContracts(
-        address _auraBooster,
         address _balancerVault,
         address _crvUSD,
         address _crvUSDController,
@@ -87,28 +81,13 @@ contract LeverageStrategy is BalancerUtils, AccessControl {
         address _D2D,
         uint256 _N
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        auraBooster = IAuraBooster(_auraBooster);
         crvUSDController = IcrvUSDController(_crvUSDController);
         crvUSDUSDCPool = IcrvUSDUSDCPool(_crvUSDUSDCPool);
         N = _N;
     }
 
-    // fix: remove the setter functions as pool shouldn't be changed after strategy is deployed
-    function setPid(uint256 _pid) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        pid = _pid;
-    }
-
     function setTokenIndex(uint256 _TokenIndex) external onlyRole(DEFAULT_ADMIN_ROLE) {
         TokenIndex = _TokenIndex;
-    }
-
-    // fix: remove the setter functions as pool shouldn't be changed after strategy is deployed
-    function setBPTAddress(address _bptAddress) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        d2dusdcBPT = IERC20(_bptAddress);
-    }
-
-    function setVaultAddress(address _vaultAddress) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        Vaults4626 = IBasicRewards(_vaultAddress);
     }
 
     function strategyHealth() external view returns (int256) {
@@ -178,9 +157,9 @@ contract LeverageStrategy is BalancerUtils, AccessControl {
 
     // fix: rename this to redeemRewardsToMaintainCDP()
     function unwindPositionFromKeeper() external onlyRole(KEEPER_ROLE) {
-        Vaults4626.withdrawAllAndUnwrap(true);
+        _unstakeAllAndWithdrawAura();
 
-        uint256 bptAmount = d2dusdcBPT.balanceOf(address(this));
+        uint256 bptAmount = _tokenToStake().balanceOf(address(this));
 
         // TODO: Make a setter with onlyRole(CONTROLLER_ROLE) for % value instead of 30
 
@@ -267,25 +246,7 @@ contract LeverageStrategy is BalancerUtils, AccessControl {
         totalUsdcAmount = USDC.balanceOf(address(this));
     }
 
-    function _depositAllAura() internal {
-        require(d2dusdcBPT.approve(address(auraBooster), d2dusdcBPT.balanceOf(address(this))), "Approval failed");
-        require(auraBooster.depositAll(pid, true));
-    }
-
-    function _depositAura(uint256 ammount) internal {
-        require(d2dusdcBPT.approve(address(auraBooster), ammount), "Approval failed");
-        require(auraBooster.deposit(pid, ammount, true));
-    }
-
-    function _withdrawAllAura() internal {
-        auraBooster.withdrawAll(pid);
-    }
-
-    function _withdrawAura(uint256 ammount) internal {
-        auraBooster.withdraw(pid, ammount);
-    }
-
-    function _unstakeAndWithdrawAura(uint256 amount) internal {
-        Vaults4626.withdrawAndUnwrap(amount, true);
+    function _tokenToStake() internal view virtual override returns(IERC20) {
+        return D2D_USDC_BPT;
     }
 }
