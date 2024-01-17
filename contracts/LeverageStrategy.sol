@@ -98,13 +98,20 @@ contract LeverageStrategy is ERC4626, BalancerUtils, AuraUtils, CurveUtils, Acce
 
     // main contract functions
     // @param N Number of price bands to deposit into (to do autoliquidation-deliquidation of wsteth) if the price of the wsteth collateral goes too low
-    function invest(uint256 _wstETHAmount, uint256 _debtAmount, uint256 _bptAmountOut)
+    function invest(uint256 _debtAmount, uint256 _bptAmountOut)
         external
         // fix: why only controller can only invest, anyone should be able to invest
         // fix: we need to keep track of how much a user have invested give and out shares
         onlyRole(CONTROLLER_ROLE)
     {
-        _invest(_wstETHAmount, _debtAmount, _bptAmountOut);
+        // calculate total wstETH by traversing through all the deposit records
+        (uint256 wstEthAmount, uint256 startKeyId, uint256 totalDeposits) = _computeAndRebalanceDepsoitRecords();
+        uint256 beforeBalance = AURA_VAULT.balanceOf(address(this));
+
+        _invest(wstEthAmount, _debtAmount, _bptAmountOut);
+
+        uint256 addedAssets = AURA_VAULT.balanceOf(address(this)) - beforeBalance;
+        _mintMultipleShares(startKeyId, addedAssets/totalDeposits);
     }
 
     // fix: how would wstETH end up in this contract?
@@ -231,6 +238,29 @@ contract LeverageStrategy is ERC4626, BalancerUtils, AuraUtils, CurveUtils, Acce
         bool transferSuccess = wstETH.transferFrom(from, address(this), value);
         if(!transferSuccess) {
             revert ERC20_TransferFromFailed();
+        }
+    }
+
+    function _computeAndRebalanceDepsoitRecords() internal returns(uint256 _wstEthAmount, uint256 _startKeyId, uint256 _totalDeposits) {
+        uint256 length = depositCounter - lastUsedDepositKey;
+        _startKeyId = lastUsedDepositKey + 1;
+        lastUsedDepositKey = depositCounter;
+
+        for(uint256 i; i<length; i++) {
+            if(deposits[_startKeyId + i].state == DepositState.DEPOSITED) {
+                _totalDeposits++;
+                _wstEthAmount += deposits[_startKeyId + i].amount;
+                deposits[_startKeyId + i].state = DepositState.INVESTED;
+            }
+        }
+        return (_wstEthAmount, _startKeyId, _totalDeposits);
+    }
+
+    function _mintMultipleShares(uint256 _startKeyId, uint256 _assets) internal {
+        for(_startKeyId; _startKeyId <=lastUsedDepositKey; _startKeyId++) {
+            if(deposits[_startKeyId].state == DepositState.INVESTED) {
+                _mintShares(_assets, deposits[_startKeyId].receiver);
+            }
         }
     }
 

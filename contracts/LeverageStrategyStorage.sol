@@ -28,6 +28,7 @@ abstract contract LeverageStrategyStorage {
         DepositState state;
     }
     uint256 public depositCounter;
+    uint256 public lastUsedDepositKey;
     mapping(uint256 => DepositRecord) public deposits;
 
     event Deposited(uint256 indexed depositKey, uint256 amount, address indexed sender, address indexed receiver);
