@@ -54,12 +54,12 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         // Make vault msg.sender
         vm.startPrank(alice);
         wstETH.approve(address(levStrat), wstInvestAmount);
-        levStrat.depositAndInvest(wstInvestAmount, alice, wstInvestAmount, debtAmount, bptExpected);
+        levStrat.depositAndInvest(wstInvestAmount, alice, debtAmount, bptExpected);
         vm.stopPrank();
 
         vm.startPrank(bob);
         wstETH.approve(address(levStrat), wstInvestAmount);
-        levStrat.depositAndInvest(wstInvestAmount, bob, wstInvestAmount, debtAmount, bptExpected);
+        levStrat.depositAndInvest(wstInvestAmount, bob, debtAmount, bptExpected);
         vm.stopPrank();
 
         uint256 aft = AuraLPVault.balanceOf(address(levStrat));
