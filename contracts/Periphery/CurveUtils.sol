@@ -11,14 +11,10 @@ ____/ // /_/ /__  /_/ /  /   /  __/  / / / / /  __/  /_/ /_  ___ / /_/ /
 
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/access/AccessControl.sol";
-import "../interfaces/IAuraBooster.sol";
-import "../interfaces/IBalancerVault.sol";
 import "../interfaces/IcrvUSD.sol";
 import "../interfaces/IcrvUSDController.sol";
 import "../interfaces/IcrvUSDUSDCPool.sol";
 import "../interfaces/IERC20.sol";
-import "../interfaces/IBasicRewards.sol";
 import "./Tokens.sol";
 
 abstract contract CurveUtils is Tokens {
