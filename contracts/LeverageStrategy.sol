@@ -11,20 +11,22 @@ ____/ // /_/ /__  /_/ /  /   /  __/  / / / / /  __/  /_/ /_  ___ / /_/ /
 
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/access/AccessControl.sol";
-import "./interfaces/IAuraBooster.sol";
-import "./interfaces/IBalancerVault.sol";
-import "./interfaces/IcrvUSD.sol";
-import "./interfaces/IcrvUSDController.sol";
-import "./interfaces/IcrvUSDUSDCPool.sol";
-import "./interfaces/IERC20.sol";
-import "./interfaces/IBasicRewards.sol";
-import "./periphery/BalancerUtils.sol";
-import "./periphery/AuraUtils.sol";
-import "./periphery/CurveUtils.sol";
-import "./LeverageStrategyStorage.sol";
+import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
+import {ERC4626} from "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
+import {IAuraBooster} from "./interfaces/IAuraBooster.sol";
+import {IBalancerVault} from "./interfaces/IBalancerVault.sol";
+import {IcrvUSD} from "./interfaces/IcrvUSD.sol";
+import {IcrvUSDController} from "./interfaces/IcrvUSDController.sol";
+import {IcrvUSDUSDCPool} from "./interfaces/IcrvUSDUSDCPool.sol";
+import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IBasicRewards} from "./interfaces/IBasicRewards.sol";
+import {BalancerUtils} from "./periphery/BalancerUtils.sol";
+import {AuraUtils} from "./periphery/AuraUtils.sol";
+import {CurveUtils} from "./periphery/CurveUtils.sol";
+import {LeverageStrategyStorage} from "./LeverageStrategyStorage.sol";
 
-contract LeverageStrategy is BalancerUtils, AuraUtils, CurveUtils, AccessControl, LeverageStrategyStorage {
+contract LeverageStrategy is ERC4626, BalancerUtils, AuraUtils, CurveUtils, AccessControl, LeverageStrategyStorage {
     bytes32 public constant KEEPER_ROLE = keccak256("KEEPER_ROLE");
     bytes32 public constant CONTROLLER_ROLE = keccak256("CONTROLLER_ROLE");
 
@@ -38,7 +40,7 @@ contract LeverageStrategy is BalancerUtils, AuraUtils, CurveUtils, AccessControl
     // Add relevant events to log important contract actions/events
 
     /// Constructor
-    constructor(bytes32 _poolId) BalancerUtils(_poolId) {
+    constructor(bytes32 _poolId) BalancerUtils(_poolId) ERC20("Vault Shares wstETH", "vs:wstETH") ERC4626(wstETH) {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
 

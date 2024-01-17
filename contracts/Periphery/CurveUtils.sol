@@ -14,7 +14,7 @@ pragma solidity ^0.8.0;
 import "../interfaces/IcrvUSD.sol";
 import "../interfaces/IcrvUSDController.sol";
 import "../interfaces/IcrvUSDUSDCPool.sol";
-import "../interfaces/IERC20.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./Tokens.sol";
 
 abstract contract CurveUtils is Tokens {
