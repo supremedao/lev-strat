@@ -38,15 +38,17 @@ contract LeverageStrategy is BalancerUtils, AuraUtils, CurveUtils, AccessControl
     // Add relevant events to log important contract actions/events
 
     /// Constructor
-    /// @param _dao is the treasury to withdraw too
-    /// @param _controller is the address of the strategy controller
-    /// @param _keeper is the address of the power pool keeper
-    constructor(bytes32 _poolId) BalancerUtils(_poolId) {}
+    constructor(bytes32 _poolId) BalancerUtils(_poolId) {
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+    }
 
     //================================================EXTERNAL FUNCTIONS===============================================//
 
     // only DAO can initialize
     // fix: use it directly inside the constructor
+    /// @param _dao is the treasury to withdraw too
+    /// @param _controller is the address of the strategy controller
+    /// @param _keeper is the address of the power pool keeper
     function initialize(uint256 _N, address _dao, address _controller, address _keeper)
         external
         onlyRole(DEFAULT_ADMIN_ROLE)

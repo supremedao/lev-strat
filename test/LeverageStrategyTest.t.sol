@@ -13,15 +13,8 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         // Wsteth gets deposited into vault
         deal(address(wstETH), vault4626, wstEthToAcc);
 
-        levStrat.initializeContracts(
-            address(balancerVault),
-            address(crvUSD),
-            address(crvUSDController),
-            address(crvUSDUSDCPool),
-            address(wstETH),
-            address(usdc),
-            address(d2d),
-            investN
+        levStrat.initialize(
+            investN,dao, controller, powerPool
         );
 
         // Make vault msg.sender
@@ -48,15 +41,8 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
 
         wstETH.approve(address(levStrat), maxApprove);
 
-        levStrat.initializeContracts(
-            address(balancerVault),
-            address(crvUSD),
-            address(crvUSDController),
-            address(crvUSDUSDCPool),
-            address(wstETH),
-            address(usdc),
-            address(d2d),
-            investN
+        levStrat.initialize(
+            investN,dao, controller, powerPool
         );
 
         // Make vault msg.sender
@@ -87,15 +73,8 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         // Give wsteth tokens to alice's account
         deal(address(wstETH), vault4626, wstEthToAcc);
 
-        levStrat.initializeContracts(
-            address(balancerVault),
-            address(crvUSD),
-            address(crvUSDController),
-            address(crvUSDUSDCPool),
-            address(wstETH),
-            address(usdc),
-            address(d2d),
-            investN
+        levStrat.initialize(
+            investN,dao, controller, powerPool
         );
 
         // Make vault msg.sender
@@ -129,15 +108,8 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         // Give wsteth tokens to alice's account
         deal(address(wstETH), vault4626, wstEthToAcc);
 
-        levStrat.initializeContracts(
-            address(balancerVault),
-            address(crvUSD),
-            address(crvUSDController),
-            address(crvUSDUSDCPool),
-            address(wstETH),
-            address(usdc),
-            address(d2d),
-            investN
+        levStrat.initialize(
+            investN,dao, controller, powerPool
         );
 
         // Make vault msg.sender

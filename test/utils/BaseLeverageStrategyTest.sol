@@ -62,7 +62,7 @@ contract BaseLeverageStrategyTest is BaseTest {
 
     function _deployContracts() internal {
         levStrat = new LeverageStrategy(
-            dao, controller, powerPool, 0x27c9f71cc31464b906e0006d4fcbc8900f48f15f00020000000000000000010f
+            0x27c9f71cc31464b906e0006d4fcbc8900f48f15f00020000000000000000010f
         );
 
         levStrat.setTokenIndex(1);
