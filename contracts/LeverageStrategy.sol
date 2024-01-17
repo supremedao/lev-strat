@@ -12,7 +12,7 @@ ____/ // /_/ /__  /_/ /  /   /  __/  / / / / /  __/  /_/ /_  ___ / /_/ /
 pragma solidity ^0.8.0;
 
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
-import {ERC4626} from "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
+import {ERC4626, Math} from "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
 import {IAuraBooster} from "./interfaces/IAuraBooster.sol";
 import {IBalancerVault} from "./interfaces/IBalancerVault.sol";
 import {IcrvUSD} from "./interfaces/IcrvUSD.sol";
@@ -40,7 +40,7 @@ contract LeverageStrategy is ERC4626, BalancerUtils, AuraUtils, CurveUtils, Acce
     // Add relevant events to log important contract actions/events
 
     /// Constructor
-    constructor(bytes32 _poolId) BalancerUtils(_poolId) ERC20("Vault Shares wstETH", "vs:wstETH") ERC4626(wstETH) {
+    constructor(bytes32 _poolId) BalancerUtils(_poolId) ERC20("Supreme Aura D2D-USDC vault", "sAura-D2D-USD") ERC4626(IERC20(address(AURA_VAULT))) {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
 
@@ -70,6 +70,32 @@ contract LeverageStrategy is ERC4626, BalancerUtils, AuraUtils, CurveUtils, Acce
         return crvUSDController.health(address(this), false);
     }
 
+    function cancelDeposit(uint256 _key) external {
+        DepositRecord memory deposit = deposits[_key];
+        if(deposit.depositor != msg.sender && deposit.receiver != msg.sender) {
+            revert UnknownExecuter();
+        }
+        if(deposit.state != DepositState.DEPOSITED) {
+            revert DepositCancellationNotAllowed();
+        }
+        delete deposits[_key];
+        _pushwstEth(deposit.depositor, deposit.amount);
+        emit DepositCancelled(_key);
+    }
+
+    // 2) deposit and invest - put money into the vault, mint shares and invest money into aura
+    function depositAndInvest(uint256 assets, address receiver, uint256 _wstETHAmount, uint256 _debtAmount, uint256 _bptAmountOut) public virtual returns (uint256) {
+        // pull funds from the msg.sender
+        _pullwstEth(msg.sender, assets);
+        uint256 beforeBalance = IERC20(address(AURA_VAULT)).balanceOf(address(this));
+        // invest
+        _invest(_wstETHAmount, _debtAmount, _bptAmountOut);
+        // mint shares to the msg.sender
+        uint256 afterbalance = IERC20(address(AURA_VAULT)).balanceOf(address(this));
+        uint256 vsAssets = afterbalance - beforeBalance;
+        _mintShares(vsAssets, receiver);
+    }
+
     // main contract functions
     // @param N Number of price bands to deposit into (to do autoliquidation-deliquidation of wsteth) if the price of the wsteth collateral goes too low
     function invest(uint256 _wstETHAmount, uint256 _debtAmount, uint256 _bptAmountOut)
@@ -78,21 +104,7 @@ contract LeverageStrategy is ERC4626, BalancerUtils, AuraUtils, CurveUtils, Acce
         // fix: we need to keep track of how much a user have invested give and out shares
         onlyRole(CONTROLLER_ROLE)
     {
-        // Opens a position on crvUSD if no loan already
-        // Note this address is an owner of a crvUSD CDP
-        // in the usual case we already have a CDP
-        // But there also should be a case when we create a new one
-        if (!crvUSDController.loan_exists(address(this))) {
-            _depositAndCreateLoan(_wstETHAmount, _debtAmount);
-        } else {
-            //_addCollateral(_wstETHAmount);
-            _borrowMore(_wstETHAmount, _debtAmount);
-        }
-        _exchangeCRVUSDtoUSDC(_debtAmount);
-        // Provide liquidity to the D2D/USDC Pool on Balancer
-        _joinPool(USDC.balanceOf(address(this)), D2D.balanceOf(address(this)), _bptAmountOut);
-        // Stake LP tokens on Aura Finance
-        _depositAllAura();
+        _invest(_wstETHAmount, _debtAmount, _bptAmountOut);
     }
 
     // fix: how would wstETH end up in this contract?
@@ -165,5 +177,68 @@ contract LeverageStrategy is ERC4626, BalancerUtils, AuraUtils, CurveUtils, Acce
 
     function _tokenToStake() internal view virtual override returns (IERC20) {
         return D2D_USDC_BPT;
+    }
+
+    function _invest(uint256 _wstETHAmount, uint256 _debtAmount, uint256 _bptAmountOut) internal {
+        // Opens a position on crvUSD if no loan already
+        // Note this address is an owner of a crvUSD CDP
+        // in the usual case we already have a CDP
+        // But there also should be a case when we create a new one
+        if (!crvUSDController.loan_exists(address(this))) {
+            _depositAndCreateLoan(_wstETHAmount, _debtAmount);
+        } else {
+            //_addCollateral(_wstETHAmount);
+            _borrowMore(_wstETHAmount, _debtAmount);
+        }
+        _exchangeCRVUSDtoUSDC(_debtAmount);
+        // Provide liquidity to the D2D/USDC Pool on Balancer
+        _joinPool(USDC.balanceOf(address(this)), D2D.balanceOf(address(this)), _bptAmountOut);
+        // Stake LP tokens on Aura Finance
+        _depositAllAura();
+    }
+
+    function _mintShares(uint256 assets, address to) internal {
+        uint256 shares;
+        if(totalSupply() == 0) {
+            shares = assets; // 1:1 ratio when supply is zero
+        } else {
+            shares = _convertToShares(assets, Math.Rounding.Floor);
+        }
+        _mint(to, shares);
+    }
+
+    function _recordDeposit(uint256 _amount, address _depositor, address _receiver) internal returns(uint256 recordKey) {
+        uint256 currentKey = ++depositCounter;
+        deposits[currentKey].depositor = _depositor;
+        deposits[currentKey].amount = _amount;
+        deposits[currentKey].receiver = _receiver;
+        deposits[currentKey].state = DepositState.DEPOSITED;
+        return currentKey;
+    }
+
+    // two functions
+    // 1) deposit - put money into the vault and mint shares to user
+    function _deposit(address caller, address receiver, uint256 assets, uint256 shares) internal virtual override {
+        // add it to deposit and generate a key
+        uint256 depositKey = _recordDeposit(assets, caller, receiver);
+        _pullwstEth(caller, assets);
+        // emit
+        emit Deposited(depositKey, assets, caller, receiver);
+    }
+
+    function _pullwstEth(address from, uint256 value) internal {
+        // pull funds from the msg.sender
+        bool transferSuccess = wstETH.transferFrom(from, address(this), value);
+        if(!transferSuccess) {
+            revert ERC20_TransferFromFailed();
+        }
+    }
+
+    function _pushwstEth(address to, uint256 value) internal {
+        // pull funds from the msg.sender
+        bool transferSuccess = wstETH.transfer(to, value);
+        if(!transferSuccess) {
+            revert ERC20_TransferFailed();
+        }
     }
 }

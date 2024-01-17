@@ -32,6 +32,45 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         assertGt(aft, 0);
     }
 
+    function testDepositAndInvest() public subtest {
+        // Wsteth gets deposited into vault
+        deal(address(wstETH), alice, wstEthToAcc);
+        deal(address(wstETH), bob, wstEthToAcc);
+
+        levStrat.initialize(
+            investN,dao, controller, powerPool
+        );
+
+        uint256 vsbefore = levStrat.balanceOf(alice);
+        assertEq(vsbefore, 0);
+        uint256 vsBobbefore = levStrat.balanceOf(bob);
+        assertEq(vsBobbefore, 0);
+
+        deal(address(AuraLPVault), address(levStrat), 10);
+
+        // Make vault msg.sender
+        vm.startPrank(alice);
+        wstETH.approve(address(levStrat), wstInvestAmount);
+        levStrat.depositAndInvest(wstInvestAmount, alice, wstInvestAmount, debtAmount, bptExpected);
+        vm.stopPrank();
+
+        vm.startPrank(bob);
+        wstETH.approve(address(levStrat), wstInvestAmount);
+        levStrat.depositAndInvest(wstInvestAmount, bob, wstInvestAmount, debtAmount, bptExpected);
+        vm.stopPrank();
+
+        uint256 aft = AuraLPVault.balanceOf(address(levStrat));
+        uint256 shares = levStrat.totalSupply();
+        uint256 vsAft = levStrat.balanceOf(alice);
+        uint256 vsBobAft = levStrat.balanceOf(bob);
+        console2.log("bal aft", aft);
+        assertGt(aft, 0);
+        assertLe(shares, aft);
+        assertGt(vsAft, vsbefore);
+        assertGt(vsBobAft, vsBobbefore);
+        assertNotEq(vsBobAft, vsAft);
+    }
+
     function testInvestIfCDPAlreadyExists() public subtest {
         uint256 before = AuraLPVault.balanceOf(address(levStrat));
         console2.log("bal b4", before);
