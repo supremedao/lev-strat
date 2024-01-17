@@ -118,24 +118,16 @@ contract LeverageStrategy is ERC4626, BalancerUtils, AuraUtils, CurveUtils, Acce
     // fix: do not allow this operation, to keep track of who invested how much,
     //  we should only allow to invest directly
     function investFromKeeper(uint256 _bptAmountOut) external onlyRole(KEEPER_ROLE) {
-        uint256 amountInStrategy = wstETH.balanceOf(address(this));
+        // calculate total wstETH by traversing through all the deposit records
+        (uint256 wstEthAmount, uint256 startKeyId, uint256 totalDeposits) = _computeAndRebalanceDepsoitRecords();
+        uint256 beforeBalance = AURA_VAULT.balanceOf(address(this));
 
-        uint256 maxBorrowable = crvUSDController.max_borrowable(amountInStrategy, N); //Should the keeper always borrow max or some %
-        // Opens a position on crvUSD if no loan already
-        // Note this address is an owner of a crvUSD CDP
-        // in the usual case we already have a CDP
-        // But there also should be a case when we create a new one
-        if (!crvUSDController.loan_exists(address(this))) {
-            _depositAndCreateLoan(amountInStrategy, maxBorrowable);
-        } else {
-            _borrowMore(amountInStrategy, maxBorrowable);
-        }
-
-        _exchangeCRVUSDtoUSDC(maxBorrowable);
-        // Provide liquidity to the D2D/USDC Pool on Balancer
-        _joinPool(maxBorrowable, _bptAmountOut, TokenIndex);
-        // Stake LP tokens on Aura Finance
-        _depositAllAura();
+        uint256 maxBorrowable = crvUSDController.max_borrowable(wstEthAmount, N); //Should the keeper always borrow max or some %
+        
+        _invest(wstEthAmount, maxBorrowable, _bptAmountOut);
+        
+        uint256 addedAssets = AURA_VAULT.balanceOf(address(this)) - beforeBalance;
+        _mintMultipleShares(startKeyId, addedAssets/totalDeposits);
     }
 
     // fix: unwind position only based on msg.sender share
