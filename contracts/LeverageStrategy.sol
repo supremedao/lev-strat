@@ -40,7 +40,11 @@ contract LeverageStrategy is ERC4626, BalancerUtils, AuraUtils, CurveUtils, Acce
     // Add relevant events to log important contract actions/events
 
     /// Constructor
-    constructor(bytes32 _poolId) BalancerUtils(_poolId) ERC20("Supreme Aura D2D-USDC vault", "sAura-D2D-USD") ERC4626(IERC20(address(AURA_VAULT))) {
+    constructor(bytes32 _poolId)
+        BalancerUtils(_poolId)
+        ERC20("Supreme Aura D2D-USDC vault", "sAura-D2D-USD")
+        ERC4626(IERC20(address(AURA_VAULT)))
+    {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
 
@@ -73,18 +77,18 @@ contract LeverageStrategy is ERC4626, BalancerUtils, AuraUtils, CurveUtils, Acce
     /// @notice Cancel a deposit before the amount is invested by keeper or controller
     ///         depositor and sender are both same and can be used interchangebly.
     /// @dev deletes a DepositRecord and returns the tokens back to sender
-    /// @param key the key/id of the deposit record
+    /// @param _key the key/id of the deposit record
     function cancelDeposit(uint256 _key) external {
         // get the deposit record for the key
         DepositRecord memory deposit = deposits[_key];
 
         // ensure that the msg.sender is either the sender or receiver of the deposit
-        if(deposit.depositor != msg.sender && deposit.receiver != msg.sender) {
+        if (deposit.depositor != msg.sender && deposit.receiver != msg.sender) {
             revert UnknownExecuter();
         }
 
         // ensure that the funds deposited are still not used or already cancelled
-        if(deposit.state != DepositState.DEPOSITED) {
+        if (deposit.state != DepositState.DEPOSITED) {
             revert DepositCancellationNotAllowed();
         }
 
@@ -97,13 +101,17 @@ contract LeverageStrategy is ERC4626, BalancerUtils, AuraUtils, CurveUtils, Acce
     }
 
     /// @notice deposit and invest without waiting for keeper to execute it
-    /// @note vault shares are minted to receiver in this same operation
+    /// @notice vault shares are minted to receiver in this same operation
     /// @dev when a user calls this function, their deposit isn't added to deposit record as the deposit is used immediately
     /// @param assets amount of wstETH to be deposited
     /// @param receiver receiver of the vault shares after the wstETH is utilized
     /// @param _debtAmount amount of crvUSD to be borrowed
     /// @param _bptAmountOut amount of BPT token expected out once liquidity is provided
-    function depositAndInvest(uint256 assets, address receiver, uint256 _debtAmount, uint256 _bptAmountOut) public virtual returns (uint256) {
+    function depositAndInvest(uint256 assets, address receiver, uint256 _debtAmount, uint256 _bptAmountOut)
+        public
+        virtual
+        returns (uint256)
+    {
         // pull funds from the msg.sender
         _pullwstEth(msg.sender, assets);
         uint256 beforeBalance = IERC20(address(AURA_VAULT)).balanceOf(address(this));
@@ -138,7 +146,7 @@ contract LeverageStrategy is ERC4626, BalancerUtils, AuraUtils, CurveUtils, Acce
         uint256 addedAssets = AURA_VAULT.balanceOf(address(this)) - beforeBalance;
 
         // we equally mint vault shares to the receivers of each deposit record that was used
-        _mintMultipleShares(startKeyId, addedAssets/totalDeposits);
+        _mintMultipleShares(startKeyId, addedAssets / totalDeposits);
     }
 
     // fix: how would wstETH end up in this contract?
@@ -153,14 +161,14 @@ contract LeverageStrategy is ERC4626, BalancerUtils, AuraUtils, CurveUtils, Acce
         uint256 beforeBalance = AURA_VAULT.balanceOf(address(this));
 
         uint256 maxBorrowable = crvUSDController.max_borrowable(wstEthAmount, N); //Should the keeper always borrow max or some %
-        
+
         _invest(wstEthAmount, maxBorrowable, _bptAmountOut);
-        
+
         // calculate total new shares minted
         // here assets is Aura Vault shares
         uint256 addedAssets = AURA_VAULT.balanceOf(address(this)) - beforeBalance;
         // we equally mint vault shares to the receivers of each deposit record that was used
-        _mintMultipleShares(startKeyId, addedAssets/totalDeposits);
+        _mintMultipleShares(startKeyId, addedAssets / totalDeposits);
     }
 
     // fix: unwind position only based on msg.sender share
@@ -235,7 +243,7 @@ contract LeverageStrategy is ERC4626, BalancerUtils, AuraUtils, CurveUtils, Acce
     /// @param to receiver of the vault shares (Leverage Stratgey Vault Shares)
     function _mintShares(uint256 assets, address to) internal {
         uint256 shares;
-        if(totalSupply() == 0) {
+        if (totalSupply() == 0) {
             shares = assets; // 1:1 ratio when supply is zero
         } else {
             shares = _convertToShares(assets, Math.Rounding.Floor);
@@ -247,7 +255,10 @@ contract LeverageStrategy is ERC4626, BalancerUtils, AuraUtils, CurveUtils, Acce
     /// @param _amount amount of wstETH deposited
     /// @param _depositor depositor of the wstETH
     /// @param _receiver receiver of the vault shares after wstETH is invested successfully
-    function _recordDeposit(uint256 _amount, address _depositor, address _receiver) internal returns(uint256 recordKey) {
+    function _recordDeposit(uint256 _amount, address _depositor, address _receiver)
+        internal
+        returns (uint256 recordKey)
+    {
         uint256 currentKey = ++depositCounter;
         deposits[currentKey].depositor = _depositor;
         deposits[currentKey].amount = _amount;
@@ -258,9 +269,9 @@ contract LeverageStrategy is ERC4626, BalancerUtils, AuraUtils, CurveUtils, Acce
 
     /// @notice take wstETH and create a deposit record
     /// @dev overrides inherited method
-    /// @note deposit is a two step process:
+    /// @notice deposit is a two step process:
     ///       1) User deposits wstETH to the vault and a record of their deposit is stored
-    ///       2) Keeper/Controller invokes `invest` which invests the wstETH into aura. 
+    ///       2) Keeper/Controller invokes `invest` which invests the wstETH into aura.
     ///          Upon successful invest, vault shares are minted to receivers
     /// @param caller depositor address
     /// @param receiver receiver of vault shares
@@ -279,7 +290,7 @@ contract LeverageStrategy is ERC4626, BalancerUtils, AuraUtils, CurveUtils, Acce
     function _pullwstEth(address from, uint256 value) internal {
         // pull funds from the msg.sender
         bool transferSuccess = wstETH.transferFrom(from, address(this), value);
-        if(!transferSuccess) {
+        if (!transferSuccess) {
             revert ERC20_TransferFromFailed();
         }
     }
@@ -289,7 +300,10 @@ contract LeverageStrategy is ERC4626, BalancerUtils, AuraUtils, CurveUtils, Acce
     /// @return _wstEthAmount total wstETH amount to be used
     /// @return _startKeyId the first deposit record whose wstETH haven't been used for investment
     /// @return _totalDeposits total number of deposit records utilised in this invest operation
-    function _computeAndRebalanceDepsoitRecords() internal returns(uint256 _wstEthAmount, uint256 _startKeyId, uint256 _totalDeposits) {
+    function _computeAndRebalanceDepsoitRecords()
+        internal
+        returns (uint256 _wstEthAmount, uint256 _startKeyId, uint256 _totalDeposits)
+    {
         // calculate number of deposit record which needs to be analysed
         uint256 length = depositCounter - lastUsedDepositKey;
         // set the key ID of first deposit record that will be used
@@ -298,9 +312,9 @@ contract LeverageStrategy is ERC4626, BalancerUtils, AuraUtils, CurveUtils, Acce
         lastUsedDepositKey = depositCounter;
 
         // loop over deposit records
-        for(uint256 i; i<length; i++) {
+        for (uint256 i; i < length; i++) {
             // only use the deposit record if the deposit is not cancelled
-            if(deposits[_startKeyId + i].state == DepositState.DEPOSITED) {
+            if (deposits[_startKeyId + i].state == DepositState.DEPOSITED) {
                 // increase the count of total genuine deposits to be used
                 _totalDeposits++;
                 // add the amount of depsoit to total wstETH to be used
@@ -317,9 +331,9 @@ contract LeverageStrategy is ERC4626, BalancerUtils, AuraUtils, CurveUtils, Acce
     /// @param _assets amount of Aura vault shares that were minted per deposit record
     function _mintMultipleShares(uint256 _startKeyId, uint256 _assets) internal {
         // loop over the deposit records starting from the start deposit key ID
-        for(_startKeyId; _startKeyId <=lastUsedDepositKey; _startKeyId++) {
+        for (_startKeyId; _startKeyId <= lastUsedDepositKey; _startKeyId++) {
             // only mint vault shares to deposit records whose funds have been utilised
-            if(deposits[_startKeyId].state == DepositState.INVESTED) {
+            if (deposits[_startKeyId].state == DepositState.INVESTED) {
                 _mintShares(_assets, deposits[_startKeyId].receiver);
             }
         }
@@ -331,7 +345,7 @@ contract LeverageStrategy is ERC4626, BalancerUtils, AuraUtils, CurveUtils, Acce
     function _pushwstEth(address to, uint256 value) internal {
         // pull funds from the msg.sender
         bool transferSuccess = wstETH.transfer(to, value);
-        if(!transferSuccess) {
+        if (!transferSuccess) {
             revert ERC20_TransferFailed();
         }
     }

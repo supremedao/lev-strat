@@ -13,9 +13,7 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         // Wsteth gets deposited into vault
         deal(address(wstETH), vault4626, wstEthToAcc);
 
-        levStrat.initialize(
-            investN,dao, controller, powerPool
-        );
+        levStrat.initialize(investN, dao, controller, powerPool);
 
         // Make vault msg.sender
         vm.startPrank(vault4626);
@@ -40,9 +38,7 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         deal(address(wstETH), alice, wstEthToAcc);
         deal(address(wstETH), bob, wstEthToAcc);
 
-        levStrat.initialize(
-            investN,dao, controller, powerPool
-        );
+        levStrat.initialize(investN, dao, controller, powerPool);
 
         uint256 vsbefore = levStrat.balanceOf(alice);
         assertEq(vsbefore, 0);
@@ -83,9 +79,7 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
 
         wstETH.approve(address(levStrat), maxApprove);
 
-        levStrat.initialize(
-            investN,dao, controller, powerPool
-        );
+        levStrat.initialize(investN, dao, controller, powerPool);
 
         // Make vault msg.sender
         vm.startPrank(vault4626);
@@ -121,9 +115,7 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         // Give wsteth tokens to alice's account
         deal(address(wstETH), vault4626, wstEthToAcc);
 
-        levStrat.initialize(
-            investN,dao, controller, powerPool
-        );
+        levStrat.initialize(investN, dao, controller, powerPool);
 
         // Make vault msg.sender
         vm.startPrank(vault4626);
@@ -159,9 +151,7 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         // Give wsteth tokens to alice's account
         deal(address(wstETH), vault4626, wstEthToAcc);
 
-        levStrat.initialize(
-            investN,dao, controller, powerPool
-        );
+        levStrat.initialize(investN, dao, controller, powerPool);
 
         // Make vault msg.sender
         vm.startPrank(vault4626);

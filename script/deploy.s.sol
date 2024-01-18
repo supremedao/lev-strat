@@ -29,13 +29,13 @@ contract Deploy is Script {
          *             address d2d= 0x43D4A3cd90ddD2F8f4f693170C9c8098163502ad;
          *             address d2dusdcBPT= 0x27C9f71cC31464B906E0006d4FcBC8900F48f15f;
          *             address AuraLPVault= 0xe39570EF26fB9A562bf26F8c708b7433F65050af;
-         * 
+         *
          *             levStrat = new LeverageStrategy(dao);
-         * 
+         *
          *             levStrat.setTokenIndex(1);
          *             levStrat.setPoolId(0x27c9f71cc31464b906e0006d4fcbc8900f48f15f00020000000000000000010f);
          *             levStrat.setPid(107);
-         * 
+         *
          *             levStrat.initializeContracts(
          *                 AuraBooster,
          *                 balancerVault,
@@ -46,7 +46,7 @@ contract Deploy is Script {
          *                 usdc,
          *                 d2d
          *             );
-         * 
+         *
          *             levStrat.setBPTAddress(d2dusdcBPT);
          *             levStrat.setVaultAddress(AuraLPVault);
          */

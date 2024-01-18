@@ -12,7 +12,12 @@ ____/ // /_/ /__  /_/ /  /   /  __/  / / / / /  __/  /_/ /_  ___ / /_/ /
 pragma solidity ^0.8.0;
 
 abstract contract LeverageStrategyStorage {
-    enum DepositState{NO_DEPOSIT, DEPOSITED, INVESTED, CANCELLED}
+    enum DepositState {
+        NO_DEPOSIT,
+        DEPOSITED,
+        INVESTED,
+        CANCELLED
+    }
 
     // State variables
     uint256 internal TokenIndex;
@@ -27,6 +32,7 @@ abstract contract LeverageStrategyStorage {
         uint256 amount;
         DepositState state;
     }
+
     uint256 public depositCounter;
     uint256 public lastUsedDepositKey;
     mapping(uint256 => DepositRecord) public deposits;
