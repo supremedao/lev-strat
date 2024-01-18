@@ -191,13 +191,13 @@ contract LeverageStrategy is ERC4626, BalancerUtils, AuraUtils, CurveUtils, Acce
 
         // TODO: Make a setter with onlyRole(CONTROLLER_ROLE) for % value instead of 30
 
-        uint256 percentOfTotalUsdc = (totalUsdcAmount * 30) / 100;
+        uint256 percentOfTotalBPT = (bptAmount * 30) / 100;
+        uint256 beforeUsdcBalance = USDC.balanceOf(address(this));
+        _exitPool(percentOfTotalBPT, 1, 1);
+        uint256 beforeCrvUSDBalance = crvUSD.balanceOf(address(this));
+        _exchangeUSDCTocrvUSD(USDC.balanceOf(address(this)) - beforeUsdcBalance);
 
-        _exitPool(bptAmount, 1, percentOfTotalUsdc);
-
-        _exchangeUSDCTocrvUSD(USDC.balanceOf(address(this)));
-
-        _repayCRVUSDLoan(crvUSD.balanceOf(address(this)));
+        _repayCRVUSDLoan(crvUSD.balanceOf(address(this)) - beforeCrvUSDBalance);
     }
 
     // fix: rename this to reinvestUsingRewards()

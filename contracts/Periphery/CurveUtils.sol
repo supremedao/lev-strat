@@ -24,7 +24,7 @@ abstract contract CurveUtils is Tokens {
 
     uint256 public totalWsthethDeposited; // Total wsteth deposited
     uint256 public totalUsdcAmount; // Total usdc  after swapping from crvusd
-    uint256 internal N; // Number of bands for the crvusd/wseth soft liquidation range
+    uint256 public N; // Number of bands for the crvusd/wseth soft liquidation range
 
     /// @notice Create a loan position for the strategy, only used if this is the first position created
     /// @param _wstETHAmount the amount of wsteth deposited

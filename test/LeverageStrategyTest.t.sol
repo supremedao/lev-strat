@@ -160,8 +160,12 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
 
         console2.log("debt b4", debt_before);
 
+        uint256 wstEthBalBefore = wstETH.balanceOf(address(levStrat));
+        uint256 ethBalanceBefore = address(levStrat).balance;
         vm.prank(powerPool);
         levStrat.unwindPositionFromKeeper();
+        uint256 wstEthBalAfterUnwind = wstETH.balanceOf(address(levStrat));
+        uint256 ethBalanceAfterUnwind = address(levStrat).balance;
 
         uint256 debt_after = crvUSDController.debt(address(levStrat));
 
@@ -169,6 +173,8 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
 
         console2.log("debt aft", debt_after);
 
+        assertEq(wstEthBalAfterUnwind, wstEthBalBefore);
+        assertEq(ethBalanceAfterUnwind, ethBalanceBefore);
         assertGt(debt_before, debt_after);
     }
 }
