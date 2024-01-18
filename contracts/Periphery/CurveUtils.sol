@@ -76,15 +76,16 @@ abstract contract CurveUtils is Tokens {
         require(crvUSD.approve(address(crvUSDUSDCPool), _dx), "Approval failed");
 
         uint256 expected = crvUSDUSDCPool.get_dy(1, 0, _dx) * 99 / 100;
-
+        uint256 beforeUsdcBalance = USDC.balanceOf(address(this));
         crvUSDUSDCPool.exchange(1, 0, _dx, expected, address(this));
-        totalUsdcAmount = USDC.balanceOf(address(this));
+        totalUsdcAmount += USDC.balanceOf(address(this)) - beforeUsdcBalance;
     }
 
     function _exchangeUSDCTocrvUSD(uint256 _dx) internal {
         require(USDC.approve(address(crvUSDUSDCPool), _dx), "Approval failed");
         uint256 expected = crvUSDUSDCPool.get_dy(0, 1, _dx) * 99 / 100;
+        uint256 beforeUsdcBalance = USDC.balanceOf(address(this));
         crvUSDUSDCPool.exchange(0, 1, _dx, expected, address(this));
-        totalUsdcAmount = USDC.balanceOf(address(this));
+        totalUsdcAmount -= beforeUsdcBalance - USDC.balanceOf(address(this));
     }
 }

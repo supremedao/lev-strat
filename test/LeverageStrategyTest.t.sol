@@ -45,8 +45,6 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         uint256 vsBobbefore = levStrat.balanceOf(bob);
         assertEq(vsBobbefore, 0);
 
-        deal(address(AuraLPVault), address(levStrat), 10);
-
         // Make vault msg.sender
         vm.startPrank(alice);
         wstETH.approve(address(levStrat), wstInvestAmount);
@@ -87,8 +85,6 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         levStrat.deposit(wstInvestAmount, vault4626);
         vm.stopPrank();
 
-        deal(address(d2d), address(levStrat), 1000e18);
-
         vm.prank(controller);
 
         levStrat.invest(debtAmount, bptExpected);
@@ -98,8 +94,6 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         wstETH.approve(address(levStrat), wstInvestAmount);
         levStrat.deposit(wstInvestAmount, vault4626);
         vm.stopPrank();
-
-        deal(address(d2d), address(levStrat), 1000e18);
 
         vm.prank(controller);
 
@@ -122,8 +116,6 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         wstETH.approve(address(levStrat), wstInvestAmount);
         levStrat.deposit(wstInvestAmount, vault4626);
         vm.stopPrank();
-
-        deal(address(d2d), address(levStrat), 1000e18);
 
         vm.prank(controller);
 
@@ -158,8 +150,6 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         wstETH.approve(address(levStrat), wstInvestAmount);
         levStrat.deposit(wstInvestAmount, vault4626);
         vm.stopPrank();
-
-        deal(address(d2d), address(levStrat), 1000e18);
 
         vm.prank(controller);
 
