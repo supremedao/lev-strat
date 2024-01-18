@@ -29,6 +29,8 @@ import {LeverageStrategyStorage} from "./LeverageStrategyStorage.sol";
 contract LeverageStrategy is ERC4626, BalancerUtils, AuraUtils, CurveUtils, AccessControl, LeverageStrategyStorage {
     bytes32 public constant KEEPER_ROLE = keccak256("KEEPER_ROLE");
     bytes32 public constant CONTROLLER_ROLE = keccak256("CONTROLLER_ROLE");
+    uint256 public constant FIXED_UNWIND_PERCENTAGE = 30 * 10 ** 10;
+    uint256 public constant BASIS_POINTS = 10 ** 12;
 
     // TODO:
     // DAO should be able to change pool parameters and tokens
@@ -173,31 +175,37 @@ contract LeverageStrategy is ERC4626, BalancerUtils, AuraUtils, CurveUtils, Acce
 
     // fix: unwind position only based on msg.sender share
     // fix: anyone should be able to unwind their position
-    function unwindPosition(uint256[] calldata amounts) external onlyRole(CONTROLLER_ROLE) {
-        _unstakeAndWithdrawAura(amounts[0]);
-
-        _exitPool(amounts[1], 1, amounts[2]);
-
-        _exchangeUSDCTocrvUSD(amounts[2]);
-
-        _repayCRVUSDLoan(crvUSD.balanceOf(address(this)));
+    function unwindPosition(uint256 auraShares) external onlyRole(CONTROLLER_ROLE) {
+        _unwindPosition(auraShares, _convertToPercentage(auraShares, AURA_VAULT.balanceOf(address(this))));
     }
 
     // fix: rename this to redeemRewardsToMaintainCDP()
     function unwindPositionFromKeeper() external onlyRole(KEEPER_ROLE) {
-        _unstakeAllAndWithdrawAura();
+        _unwindPosition(
+            _convertToValue(AURA_VAULT.balanceOf(address(this)), FIXED_UNWIND_PERCENTAGE), FIXED_UNWIND_PERCENTAGE
+        );
+    }
+
+    function _unwindPosition(uint256 _auraShares, uint256 percentageUnwind) internal {
+        _unstakeAndWithdrawAura(_auraShares);
 
         uint256 bptAmount = _tokenToStake().balanceOf(address(this));
 
-        // TODO: Make a setter with onlyRole(CONTROLLER_ROLE) for % value instead of 30
-
-        uint256 percentOfTotalBPT = (bptAmount * 30) / 100;
+        uint256 percentOfTotalBPT = _convertToValue(bptAmount, percentageUnwind); // (bptAmount * percentageUnwind) / 100;
         uint256 beforeUsdcBalance = USDC.balanceOf(address(this));
         _exitPool(percentOfTotalBPT, 1, 1);
         uint256 beforeCrvUSDBalance = crvUSD.balanceOf(address(this));
         _exchangeUSDCTocrvUSD(USDC.balanceOf(address(this)) - beforeUsdcBalance);
 
         _repayCRVUSDLoan(crvUSD.balanceOf(address(this)) - beforeCrvUSDBalance);
+    }
+
+    function _convertToPercentage(uint256 value, uint256 total) internal pure returns (uint256 percent) {
+        return value * BASIS_POINTS / total;
+    }
+
+    function _convertToValue(uint256 total, uint256 percent) internal pure returns (uint256 value) {
+        return total * percent / BASIS_POINTS;
     }
 
     // fix: rename this to reinvestUsingRewards()

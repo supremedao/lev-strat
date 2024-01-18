@@ -128,7 +128,7 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         _pushDebtToRepay(debtToRepay);
 
         vm.prank(controller);
-        levStrat.unwindPosition(amounts);
+        levStrat.unwindPosition(amounts[0]);
 
         uint256 debt_after = crvUSDController.debt(address(levStrat));
 
@@ -172,6 +172,26 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         console2.log("debt b4 2nd check", debt_before);
 
         console2.log("debt aft", debt_after);
+
+        vm.startPrank(address(levStrat));
+        uint256 wstETHUsed = crvUSDController.min_collateral(debt_before, levStrat.N());
+        uint256 debtCleared = debt_before - debt_after;
+        uint256 percentageOfDebtCleared = debtCleared * 100 / debt_before;
+        uint256 totalCollateral = crvUSDController.user_state(address(levStrat))[0];
+        uint256 amountOfWstEthToBeRemoved = totalCollateral * percentageOfDebtCleared / 100;
+        uint256 withdrawablewstEth = crvUSDController.min_collateral(debtCleared, levStrat.N());
+        crvUSDController.remove_collateral(amountOfWstEthToBeRemoved, false);
+        uint256 wstEthBalAfterRemove = wstETH.balanceOf(address(levStrat));
+        uint256 ethBalanceAfterRemove = address(levStrat).balance;
+        uint256[4] memory userState = crvUSDController.user_state(address(levStrat));
+        console2.log("Collateral:", userState[0]);
+        console2.log("wstETH used", amountOfWstEthToBeRemoved);
+        console2.log("Percent of debt cleared", percentageOfDebtCleared);
+        console2.log("ETH balance after unwind", ethBalanceAfterUnwind);
+        console2.log("ETH balance after remove", ethBalanceAfterRemove);
+        console2.log("wstETH balance after unwind", wstEthBalAfterUnwind);
+        console2.log("wstETH balance after remove", wstEthBalAfterRemove);
+        vm.stopPrank();
 
         assertEq(wstEthBalAfterUnwind, wstEthBalBefore);
         assertEq(ethBalanceAfterUnwind, ethBalanceBefore);
