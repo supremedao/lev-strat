@@ -11,21 +11,16 @@ ____/ // /_/ /__  /_/ /  /   /  __/  / / / / /  __/  /_/ /_  ___ / /_/ /
 
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/access/AccessControl.sol";
-import "../interfaces/IAuraBooster.sol";
-import "../interfaces/IBalancerVault.sol";
 import "../interfaces/IcrvUSD.sol";
 import "../interfaces/IcrvUSDController.sol";
 import "../interfaces/IcrvUSDUSDCPool.sol";
-import "../interfaces/IERC20.sol";
-import "../interfaces/IBasicRewards.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./Tokens.sol";
 
 abstract contract CurveUtils is Tokens {
     // fix: address of crvUSD will not change, we can set it as immutable
-    IcrvUSDController public crvUSDController;
-
-    IcrvUSDUSDCPool public crvUSDUSDCPool;
+    IcrvUSDController public constant crvUSDController = IcrvUSDController(0x100dAa78fC509Db39Ef7D04DE0c1ABD299f4C6CE);
+    IcrvUSDUSDCPool public constant crvUSDUSDCPool = IcrvUSDUSDCPool(0x4DEcE678ceceb27446b35C672dC7d61F30bAD69E);
 
     uint256 public totalWsthethDeposited; // Total wsteth deposited
     uint256 public totalUsdcAmount; // Total usdc  after swapping from crvusd

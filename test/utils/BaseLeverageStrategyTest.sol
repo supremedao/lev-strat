@@ -2,7 +2,7 @@ pragma solidity ^0.8.0;
 
 import "forge-std/Test.sol";
 import {LeverageStrategy} from "../../contracts/LeverageStrategy.sol";
-import {IERC20} from "../../contracts/interfaces/IERC20.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IcrvUSDController} from "../../contracts/interfaces/IcrvUSDController.sol";
 import {IBalancerVault} from "../../contracts/interfaces/IBalancerVault.sol";
 import {IcrvUSDUSDCPool} from "../../contracts/interfaces/IcrvUSDUSDCPool.sol";
@@ -62,7 +62,7 @@ contract BaseLeverageStrategyTest is BaseTest {
 
     function _deployContracts() internal {
         levStrat = new LeverageStrategy(
-            dao, controller, powerPool, 0x27c9f71cc31464b906e0006d4fcbc8900f48f15f00020000000000000000010f
+            0x27c9f71cc31464b906e0006d4fcbc8900f48f15f00020000000000000000010f
         );
 
         levStrat.setTokenIndex(1);

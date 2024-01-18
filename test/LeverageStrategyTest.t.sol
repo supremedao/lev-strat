@@ -13,30 +13,65 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         // Wsteth gets deposited into vault
         deal(address(wstETH), vault4626, wstEthToAcc);
 
-        levStrat.initializeContracts(
-            address(balancerVault),
-            address(crvUSD),
-            address(crvUSDController),
-            address(crvUSDUSDCPool),
-            address(wstETH),
-            address(usdc),
-            address(d2d),
-            investN
+        levStrat.initialize(
+            investN,dao, controller, powerPool
         );
 
         // Make vault msg.sender
-        vm.prank(vault4626);
-        wstETH.transfer(address(levStrat), wstInvestAmount);
+        vm.startPrank(vault4626);
+        wstETH.approve(address(levStrat), wstInvestAmount);
+        levStrat.deposit(wstInvestAmount, vault4626);
+        vm.stopPrank();
 
         deal(address(d2d), address(levStrat), 1000e18);
 
         vm.prank(controller);
 
-        levStrat.invest(wstInvestAmount, debtAmount, bptExpected);
+        levStrat.invest(debtAmount, bptExpected);
+        assertGt(levStrat.balanceOf(vault4626), 0);
 
         uint256 aft = AuraLPVault.balanceOf(address(levStrat));
         console2.log("bal aft", aft);
         assertGt(aft, 0);
+    }
+
+    function testDepositAndInvest() public subtest {
+        // Wsteth gets deposited into vault
+        deal(address(wstETH), alice, wstEthToAcc);
+        deal(address(wstETH), bob, wstEthToAcc);
+
+        levStrat.initialize(
+            investN,dao, controller, powerPool
+        );
+
+        uint256 vsbefore = levStrat.balanceOf(alice);
+        assertEq(vsbefore, 0);
+        uint256 vsBobbefore = levStrat.balanceOf(bob);
+        assertEq(vsBobbefore, 0);
+
+        deal(address(AuraLPVault), address(levStrat), 10);
+
+        // Make vault msg.sender
+        vm.startPrank(alice);
+        wstETH.approve(address(levStrat), wstInvestAmount);
+        levStrat.depositAndInvest(wstInvestAmount, alice, debtAmount, bptExpected);
+        vm.stopPrank();
+
+        vm.startPrank(bob);
+        wstETH.approve(address(levStrat), wstInvestAmount);
+        levStrat.depositAndInvest(wstInvestAmount, bob, debtAmount, bptExpected);
+        vm.stopPrank();
+
+        uint256 aft = AuraLPVault.balanceOf(address(levStrat));
+        uint256 shares = levStrat.totalSupply();
+        uint256 vsAft = levStrat.balanceOf(alice);
+        uint256 vsBobAft = levStrat.balanceOf(bob);
+        console2.log("bal aft", aft);
+        assertGt(aft, 0);
+        assertLe(shares, aft);
+        assertGt(vsAft, vsbefore);
+        assertGt(vsBobAft, vsBobbefore);
+        assertNotEq(vsBobAft, vsAft);
     }
 
     function testInvestIfCDPAlreadyExists() public subtest {
@@ -48,35 +83,34 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
 
         wstETH.approve(address(levStrat), maxApprove);
 
-        levStrat.initializeContracts(
-            address(balancerVault),
-            address(crvUSD),
-            address(crvUSDController),
-            address(crvUSDUSDCPool),
-            address(wstETH),
-            address(usdc),
-            address(d2d),
-            investN
+        levStrat.initialize(
+            investN,dao, controller, powerPool
         );
 
         // Make vault msg.sender
-        vm.prank(vault4626);
-        wstETH.transfer(address(levStrat), wstInvestAmount);
+        vm.startPrank(vault4626);
+        wstETH.approve(address(levStrat), wstInvestAmount);
+        levStrat.deposit(wstInvestAmount, vault4626);
+        vm.stopPrank();
 
         deal(address(d2d), address(levStrat), 1000e18);
 
         vm.prank(controller);
 
-        levStrat.invest(wstInvestAmount, debtAmount, bptExpected);
+        levStrat.invest(debtAmount, bptExpected);
+        assertGt(levStrat.balanceOf(vault4626), 0);
 
-        vm.prank(vault4626);
-        wstETH.transfer(address(levStrat), wstInvestAmount);
+        vm.startPrank(vault4626);
+        wstETH.approve(address(levStrat), wstInvestAmount);
+        levStrat.deposit(wstInvestAmount, vault4626);
+        vm.stopPrank();
 
         deal(address(d2d), address(levStrat), 1000e18);
 
         vm.prank(controller);
 
-        levStrat.invest(wstInvestAmount, debtAmount, bptExpected);
+        levStrat.invest(debtAmount, bptExpected);
+        assertGt(levStrat.balanceOf(vault4626), 0);
 
         uint256 aft = AuraLPVault.balanceOf(address(levStrat));
         console2.log("bal aft", aft);
@@ -87,26 +121,22 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         // Give wsteth tokens to alice's account
         deal(address(wstETH), vault4626, wstEthToAcc);
 
-        levStrat.initializeContracts(
-            address(balancerVault),
-            address(crvUSD),
-            address(crvUSDController),
-            address(crvUSDUSDCPool),
-            address(wstETH),
-            address(usdc),
-            address(d2d),
-            investN
+        levStrat.initialize(
+            investN,dao, controller, powerPool
         );
 
         // Make vault msg.sender
-        vm.prank(vault4626);
-        wstETH.transfer(address(levStrat), wstInvestAmount);
+        vm.startPrank(vault4626);
+        wstETH.approve(address(levStrat), wstInvestAmount);
+        levStrat.deposit(wstInvestAmount, vault4626);
+        vm.stopPrank();
 
         deal(address(d2d), address(levStrat), 1000e18);
 
         vm.prank(controller);
 
-        levStrat.invest(wstInvestAmount, debtAmount, bptExpected);
+        levStrat.invest(debtAmount, bptExpected);
+        assertGt(levStrat.balanceOf(vault4626), 0);
 
         uint256 debt_before = crvUSDController.debt(address(levStrat));
         console2.log("debt b4", debt_before);
@@ -129,26 +159,22 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         // Give wsteth tokens to alice's account
         deal(address(wstETH), vault4626, wstEthToAcc);
 
-        levStrat.initializeContracts(
-            address(balancerVault),
-            address(crvUSD),
-            address(crvUSDController),
-            address(crvUSDUSDCPool),
-            address(wstETH),
-            address(usdc),
-            address(d2d),
-            investN
+        levStrat.initialize(
+            investN,dao, controller, powerPool
         );
 
         // Make vault msg.sender
-        vm.prank(vault4626);
-        wstETH.transfer(address(levStrat), wstInvestAmount);
+        vm.startPrank(vault4626);
+        wstETH.approve(address(levStrat), wstInvestAmount);
+        levStrat.deposit(wstInvestAmount, vault4626);
+        vm.stopPrank();
 
         deal(address(d2d), address(levStrat), 1000e18);
 
         vm.prank(controller);
 
-        levStrat.invest(wstInvestAmount, debtAmount, bptExpected);
+        levStrat.invest(debtAmount, bptExpected);
+        assertGt(levStrat.balanceOf(vault4626), 0);
 
         uint256 debt_before = crvUSDController.debt(address(levStrat));
 

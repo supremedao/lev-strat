@@ -12,7 +12,7 @@ ____/ // /_/ /__  /_/ /  /   /  __/  / / / / /  __/  /_/ /_  ___ / /_/ /
 pragma solidity ^0.8.0;
 
 import "../interfaces/IcrvUSD.sol";
-import "../interfaces/IERC20.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 abstract contract Tokens {
     address public constant BAL = 0xba100000625a3754423978a60c9317c58a424e3D;
