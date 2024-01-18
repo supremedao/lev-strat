@@ -79,7 +79,7 @@ abstract contract BalancerUtils is Tokens {
         BAL_VAULT.exitPool(POOL_ID, address(this), payable(address(this)), request);
     }
 
-    function _swapRewardBal(uint256 balAmount, uint256 minWethAmount, uint256 deadline) internal {
+    function _swapRewardBal(uint256 balAmount, uint256, uint256 deadline) internal {
         IERC20(BAL).approve(address(BAL_VAULT), balAmount);
 
         IBalancerVault.SingleSwap memory singleSwap = IBalancerVault.SingleSwap({
@@ -101,7 +101,7 @@ abstract contract BalancerUtils is Tokens {
         BAL_VAULT.swap(singleSwap, funds, FIXED_LIMIT, deadline);
     }
 
-    function _swapRewardAura(uint256 auraAmount, uint256 minWethAmount, uint256 deadline) internal {
+    function _swapRewardAura(uint256 auraAmount, uint256, uint256 deadline) internal {
         IERC20(AURA).approve(address(BAL_VAULT), auraAmount);
 
         IBalancerVault.SingleSwap memory singleSwap = IBalancerVault.SingleSwap({
