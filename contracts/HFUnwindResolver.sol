@@ -1,8 +1,9 @@
 pragma solidity ^0.8.0;
 
 import {LeverageStrategy} from "./LeverageStrategy.sol";
+import {Tokens} from "./periphery/Tokens.sol";
 
-contract StrategyResolver {
+contract StrategyResolver is Tokens {
     LeverageStrategy public leverageStrategy;
     int256 private lastHealthCheck;
 
@@ -19,6 +20,17 @@ contract StrategyResolver {
         int256 currentHealth = leverageStrategy.strategyHealth();
         int256 fifteenPercentDecrease = (lastHealthCheck * 85) / 100;
         return currentHealth <= fifteenPercentDecrease;
+    }
+
+    function checkBalanceAndReturnCalldata() public view returns (bool flag, bytes memory cdata) {
+        if (wstETH.balanceOf(address(leverageStrategy)) > 0) {
+            cdata = abi.encodeWithSelector(leverageStrategy.investFromKeeper.selector, 1);
+            flag = true;
+        } else {
+            cdata = bytes("");
+            flag = false;
+        }
+        return (flag, cdata);
     }
 
     function checkAndReturnCalldata() public view returns (bool flag, bytes memory cdata) {
