@@ -33,6 +33,41 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         assertGt(aft, 0);
     }
 
+    function testMultipleUsersInvest() public subtest {
+        // Wsteth gets deposited into vault
+        deal(address(wstETH), vault4626, wstEthToAcc);
+        deal(address(wstETH), alice, wstEthToAcc);
+
+        levStrat.initialize(investN, dao, controller, powerPool);
+
+        // Make vault msg.sender
+        vm.startPrank(vault4626);
+        wstETH.approve(address(levStrat), wstInvestAmount);
+        levStrat.deposit(wstInvestAmount, vault4626);
+        vm.stopPrank();
+
+        // Make vault msg.sender
+        vm.startPrank(alice);
+        wstETH.approve(address(levStrat), wstInvestAmount * 2);
+        levStrat.deposit(wstInvestAmount * 2, alice);
+        vm.stopPrank();
+
+        uint256 collateralAmount = wstETH.balanceOf(address(levStrat));
+        uint256 maxDebtAmount = crvUSDController.max_borrowable(collateralAmount, investN);
+        vm.prank(controller);
+        levStrat.invest(debtAmount, bptExpected);
+        assertGt(levStrat.balanceOf(vault4626), 0);
+
+        uint256 aliceShares = levStrat.balanceOf(alice);
+        uint256 vaultShares = levStrat.balanceOf(vault4626);
+
+        assertEq(aliceShares / 2, vaultShares);
+
+        uint256 aft = AuraLPVault.balanceOf(address(levStrat));
+        console2.log("bal aft", aft);
+        assertGt(aft, 0);
+    }
+
     function testDepositAndInvest() public subtest {
         // Wsteth gets deposited into vault
         deal(address(wstETH), alice, wstEthToAcc);

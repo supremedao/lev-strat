@@ -188,7 +188,7 @@ contract LeverageStrategy is ERC4626, BalancerUtils, AuraUtils, CurveUtils, Acce
         onlyRole(CONTROLLER_ROLE)
     {
         // calculate total wstETH by traversing through all the deposit records
-        (uint256 wstEthAmount, uint256 startKeyId, uint256 totalDeposits) = _computeAndRebalanceDepsoitRecords();
+        (uint256 wstEthAmount, uint256 startKeyId,) = _computeAndRebalanceDepsoitRecords();
 
         uint256 currentShares = totalSupply();
         // get the current balance of the Aura vault shares
@@ -202,8 +202,8 @@ contract LeverageStrategy is ERC4626, BalancerUtils, AuraUtils, CurveUtils, Acce
         // here assets is Aura Vault shares
         uint256 addedAssets = AURA_VAULT.balanceOf(address(this)) - beforeBalance;
 
-        // we equally mint vault shares to the receivers of each deposit record that was used
-        _mintMultipleShares(startKeyId, currentShares, beforeBalance, addedAssets / totalDeposits);
+        // we mint vault shares propotional to deposits made by receivers of each deposit record that was used
+        _mintMultipleShares(startKeyId, currentShares, beforeBalance, addedAssets * BASIS_POINTS / wstEthAmount);
     }
 
     // fix: how would wstETH end up in this contract?
@@ -211,7 +211,7 @@ contract LeverageStrategy is ERC4626, BalancerUtils, AuraUtils, CurveUtils, Acce
     //  we should only allow to invest directly
     function investFromKeeper(uint256 _bptAmountOut) external onlyRole(KEEPER_ROLE) {
         // calculate total wstETH by traversing through all the deposit records
-        (uint256 wstEthAmount, uint256 startKeyId, uint256 totalDeposits) = _computeAndRebalanceDepsoitRecords();
+        (uint256 wstEthAmount, uint256 startKeyId,) = _computeAndRebalanceDepsoitRecords();
 
         uint256 currentTotalShares = totalSupply();
         // get the current balance of the Aura vault shares
@@ -226,7 +226,7 @@ contract LeverageStrategy is ERC4626, BalancerUtils, AuraUtils, CurveUtils, Acce
         // here assets is Aura Vault shares
         uint256 addedAssets = AURA_VAULT.balanceOf(address(this)) - beforeBalance;
         // we equally mint vault shares to the receivers of each deposit record that was used
-        _mintMultipleShares(startKeyId, currentTotalShares, beforeBalance, addedAssets / totalDeposits);
+        _mintMultipleShares(startKeyId, currentTotalShares, beforeBalance, addedAssets * BASIS_POINTS / wstEthAmount);
     }
 
     // fix: unwind position only based on msg.sender share
@@ -416,7 +416,8 @@ contract LeverageStrategy is ERC4626, BalancerUtils, AuraUtils, CurveUtils, Acce
         for (_startKeyId; _startKeyId <= lastUsedDepositKey; _startKeyId++) {
             // only mint vault shares to deposit records whose funds have been utilised
             if (deposits[_startKeyId].state == DepositState.INVESTED) {
-                _mintShares(_assets, currentShares, currentAssets, deposits[_startKeyId].receiver);
+                uint256 contribution = _assets * deposits[_startKeyId].amount / BASIS_POINTS;
+                _mintShares(contribution, currentShares, currentAssets, deposits[_startKeyId].receiver);
             }
         }
     }
