@@ -3,6 +3,7 @@ pragma solidity ^0.8.0;
 import {BaseLeverageStrategyTest} from "./utils/BaseLeverageStrategyTest.sol";
 import {console2} from "forge-std/console2.sol";
 import {IBasicRewards} from "../contracts/interfaces/IBasicRewards.sol";
+import {LeverageStrategyStorage} from "../contracts/LeverageStrategyStorage.sol";
 
 contract LeverageStrategyTest is BaseLeverageStrategyTest {
     function setUp() public {
@@ -66,6 +67,16 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         uint256 aft = AuraLPVault.balanceOf(address(levStrat));
         console2.log("bal aft", aft);
         assertGt(aft, 0);
+    }
+
+    function testRevertZeroDeposit() public subtest {
+        levStrat.initialize(investN, dao, controller, powerPool);
+
+        // Make vault msg.sender
+        vm.startPrank(vault4626);
+        vm.expectRevert(LeverageStrategyStorage.ZeroDepositNotAllowed.selector);
+        levStrat.deposit(0, vault4626);
+        vm.stopPrank();
     }
 
     function testDepositAndInvest() public subtest {

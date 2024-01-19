@@ -357,6 +357,9 @@ contract LeverageStrategy is ERC4626, BalancerUtils, AuraUtils, CurveUtils, Acce
     /// @param receiver receiver of vault shares
     /// @param assets amount of wstETH to be deposited (it's different from Aura Vault Shares)
     function _deposit(address caller, address receiver, uint256 assets, uint256) internal virtual override {
+        if (assets == 0) {
+            revert ZeroDepositNotAllowed();
+        }
         // add it to deposit and generate a key
         uint256 depositKey = _recordDeposit(assets, caller, receiver);
         _pullwstEth(caller, assets);
