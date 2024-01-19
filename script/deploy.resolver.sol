@@ -1,20 +1,19 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
-import {LeverageStrategy} from "../contracts/LeverageStrategy.sol";
+import {StrategyResolver} from "../contracts/HFUnwindResolver.sol";
 import "forge-std/Script.sol";
 
-contract Deploy is Script {
+contract DeployResolver is Script {
     function setUp() public {}
 
     function run() public {
         // get pvt key from env file, log associated address
         uint256 privateKey = vm.envUint("PRIVATE_KEY");
-        bytes32 poolId = vm.envBytes32("POOL_ID");
+        address levStart = vm.envAddress("LEV_STRAT");
 
         vm.startBroadcast();
-        LeverageStrategy levStrat = new LeverageStrategy(poolId);
-        levStrat.setTokenIndex(1);
+        StrategyResolver resolver = new StrategyResolver(levStart);
         vm.stopBroadcast();
     }
 }

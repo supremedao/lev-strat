@@ -8,7 +8,6 @@ contract StrategyResolver {
 
     constructor(address _leverageStrategyAddress) {
         leverageStrategy = LeverageStrategy(_leverageStrategyAddress);
-        lastHealthCheck = leverageStrategy.strategyHealth();
     }
 
     function updateHealthCheck() public {
