@@ -177,6 +177,9 @@ contract LeverageStrategy is
         nonReentrant
         returns (uint256)
     {
+        if (assets == 0) {
+            revert ZeroDepositNotAllowed();
+        }
         // calculate shares
         uint256 currentTotalShares = totalSupply();
         // pull funds from the msg.sender
@@ -296,6 +299,11 @@ contract LeverageStrategy is
     }
 
     function _invest(uint256 _wstETHAmount, uint256 _debtAmount, uint256 _bptAmountOut) internal {
+        // only invest if _wstETHAmount >
+        if (_wstETHAmount == 0) {
+            revert ZeroInvestmentNotAllowed();
+        }
+
         // Opens a position on crvUSD if no loan already
         // Note this address is an owner of a crvUSD CDP
         // in the usual case we already have a CDP

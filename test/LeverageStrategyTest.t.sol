@@ -79,6 +79,16 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         vm.stopPrank();
     }
 
+    function testRevertZeroInvestment() public subtest {
+        levStrat.initialize(investN, dao, controller, powerPool);
+
+        // Make vault msg.sender
+        vm.startPrank(controller);
+        vm.expectRevert(LeverageStrategyStorage.ZeroInvestmentNotAllowed.selector);
+        levStrat.invest(100, bptExpected);
+        vm.stopPrank();
+    }
+
     function testDepositAndInvest() public subtest {
         // Wsteth gets deposited into vault
         deal(address(wstETH), alice, wstEthToAcc);
