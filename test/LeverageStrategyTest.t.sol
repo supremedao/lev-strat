@@ -150,9 +150,15 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         wstETH.approve(address(levStrat), wstInvestAmount);
         levStrat.deposit(wstInvestAmount, vault4626);
         vm.stopPrank();
+        {
+            uint256[4] memory userStateBeforeInvest = crvUSDController.user_state(address(levStrat));
+            console2.log("User State 0 [before invest]:", userStateBeforeInvest[0]);
+            console2.log("User State 1 [before invest]:", userStateBeforeInvest[1]);
+            console2.log("User State 2 [before invest]:", userStateBeforeInvest[2]);
+            console2.log("User State 3 [before invest]:", userStateBeforeInvest[3]);
+        }
 
         vm.prank(controller);
-
         levStrat.invest(debtAmount, bptExpected);
         assertGt(levStrat.balanceOf(vault4626), 0);
 
@@ -162,6 +168,13 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
 
         uint256 wstEthBalBefore = wstETH.balanceOf(address(levStrat));
         uint256 ethBalanceBefore = address(levStrat).balance;
+        {
+            uint256[4] memory userStateBeforeUnwind = crvUSDController.user_state(address(levStrat));
+            console2.log("User State 0 [Aftre invest but before Unwind]:", userStateBeforeUnwind[0]);
+            console2.log("User State 1 [Aftre invest but before Unwind]:", userStateBeforeUnwind[1]);
+            console2.log("User State 2 [Aftre invest but before Unwind]:", userStateBeforeUnwind[2]);
+            console2.log("User State 3 [Aftre invest but before Unwind]:", userStateBeforeUnwind[3]);
+        }
         vm.prank(powerPool);
         levStrat.unwindPositionFromKeeper();
         uint256 wstEthBalAfterUnwind = wstETH.balanceOf(address(levStrat));
@@ -173,28 +186,125 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
 
         console2.log("debt aft", debt_after);
 
-        vm.startPrank(address(levStrat));
-        uint256 wstETHUsed = crvUSDController.min_collateral(debt_before, levStrat.N());
-        uint256 debtCleared = debt_before - debt_after;
-        uint256 percentageOfDebtCleared = debtCleared * 100 / debt_before;
-        uint256 totalCollateral = crvUSDController.user_state(address(levStrat))[0];
-        uint256 amountOfWstEthToBeRemoved = totalCollateral * percentageOfDebtCleared / 100;
-        uint256 withdrawablewstEth = crvUSDController.min_collateral(debtCleared, levStrat.N());
-        crvUSDController.remove_collateral(amountOfWstEthToBeRemoved, false);
+        {
+            vm.startPrank(address(levStrat));
+            uint256 wstETHUsed = crvUSDController.min_collateral(debt_before, levStrat.N());
+            uint256 debtCleared = debt_before - debt_after;
+            uint256 percentageOfDebtCleared = debtCleared * 100 / debt_before;
+            uint256[4] memory userStateBeforeRemove = crvUSDController.user_state(address(levStrat));
+            console2.log("User State 0 [Aftre unwind but before Remove]:", userStateBeforeRemove[0]);
+            console2.log("User State 1 [Aftre unwind but before Remove]:", userStateBeforeRemove[1]);
+            console2.log("User State 2 [Aftre unwind but before Remove]:", userStateBeforeRemove[2]);
+            console2.log("User State 3 [Aftre unwind but before Remove]:", userStateBeforeRemove[3]);
+            uint256 totalCollateral = userStateBeforeRemove[0];
+            uint256 amountOfWstEthToBeRemoved = totalCollateral * percentageOfDebtCleared / 100;
+            uint256 withdrawablewstEth = crvUSDController.min_collateral(debtCleared, levStrat.N());
+            crvUSDController.remove_collateral(amountOfWstEthToBeRemoved, false);
+            console2.log("wstETH used", amountOfWstEthToBeRemoved);
+            console2.log("Percent of debt cleared", percentageOfDebtCleared);
+        }
         uint256 wstEthBalAfterRemove = wstETH.balanceOf(address(levStrat));
         uint256 ethBalanceAfterRemove = address(levStrat).balance;
-        uint256[4] memory userState = crvUSDController.user_state(address(levStrat));
-        console2.log("Collateral:", userState[0]);
-        console2.log("wstETH used", amountOfWstEthToBeRemoved);
-        console2.log("Percent of debt cleared", percentageOfDebtCleared);
+        {
+            uint256[4] memory userState = crvUSDController.user_state(address(levStrat));
+            console2.log("User State 0 [After Remove]:", userState[0]);
+            console2.log("User State 1 [After Remove]:", userState[1]);
+            console2.log("User State 2 [After Remove]:", userState[2]);
+            console2.log("User State 3 [After Remove]:", userState[3]);
+        }
         console2.log("ETH balance after unwind", ethBalanceAfterUnwind);
         console2.log("ETH balance after remove", ethBalanceAfterRemove);
         console2.log("wstETH balance after unwind", wstEthBalAfterUnwind);
         console2.log("wstETH balance after remove", wstEthBalAfterRemove);
-        vm.stopPrank();
 
         assertEq(wstEthBalAfterUnwind, wstEthBalBefore);
         assertEq(ethBalanceAfterUnwind, ethBalanceBefore);
         assertGt(debt_before, debt_after);
+    }
+
+    function test_UserWithdraw() public {
+        // give tokens to user 1 and user 2
+        deal(address(wstETH), alice, wstInvestAmount);
+        deal(address(wstETH), bob, wstInvestAmount * 2);
+        deal(address(wstETH), team, wstInvestAmount);
+
+        // variables
+        uint256 collateralAmount;
+        uint256 maxDebtAmount;
+
+        uint256 startingAliceBalance = wstETH.balanceOf(alice);
+        uint256 startingBobBalance = wstETH.balanceOf(bob);
+
+        // initialize
+        levStrat.initialize(investN, dao, controller, powerPool);
+
+        // team deposit
+        vm.startPrank(team);
+        wstETH.approve(address(levStrat), wstInvestAmount);
+        levStrat.deposit(wstInvestAmount, team);
+        vm.stopPrank();
+
+        // invest
+        collateralAmount = wstETH.balanceOf(address(levStrat));
+        maxDebtAmount = crvUSDController.max_borrowable(collateralAmount, investN);
+        vm.prank(controller);
+        levStrat.invest(maxDebtAmount, bptExpected);
+        console2.log("team's vault shares", levStrat.balanceOf(team));
+
+        // user 1 deposit
+        vm.startPrank(alice);
+        wstETH.approve(address(levStrat), wstInvestAmount);
+        levStrat.deposit(wstInvestAmount, alice);
+        vm.stopPrank();
+
+        // invest
+        collateralAmount = wstETH.balanceOf(address(levStrat));
+        maxDebtAmount = crvUSDController.max_borrowable(collateralAmount, investN);
+        vm.prank(controller);
+        levStrat.invest(maxDebtAmount, bptExpected);
+        console2.log("alice's vault shares", levStrat.balanceOf(alice));
+
+        // user 2 deposit
+        vm.startPrank(bob);
+        wstETH.approve(address(levStrat), wstInvestAmount * 2);
+        levStrat.deposit(wstInvestAmount * 2, bob);
+        vm.stopPrank();
+
+        // invest
+        collateralAmount = wstETH.balanceOf(address(levStrat));
+        maxDebtAmount = crvUSDController.max_borrowable(collateralAmount, investN);
+        vm.prank(controller);
+        levStrat.invest(maxDebtAmount, bptExpected);
+        console2.log("Bob's vault shares", levStrat.balanceOf(bob));
+
+        uint256 beforeRedeemAliceBalance = wstETH.balanceOf(alice);
+        uint256 beforeRedeemBobBalance = wstETH.balanceOf(bob);
+
+        // user 1 withdraw
+        uint256 amountOfVaultSharesToWithdraw = levStrat.balanceOf(alice);
+        vm.startPrank(alice);
+        levStrat.approve(address(levStrat), amountOfVaultSharesToWithdraw);
+        levStrat.redeem(amountOfVaultSharesToWithdraw, alice, alice);
+        vm.stopPrank();
+
+        // user 2 withdraw
+        amountOfVaultSharesToWithdraw = levStrat.balanceOf(bob);
+        vm.startPrank(bob);
+        levStrat.approve(address(levStrat), amountOfVaultSharesToWithdraw);
+        levStrat.redeem(amountOfVaultSharesToWithdraw, bob, bob);
+        vm.stopPrank();
+
+        uint256 afterRedeemAliceBalance = wstETH.balanceOf(alice);
+        uint256 afterRedeemBobBalance = wstETH.balanceOf(bob);
+
+        // ensure user 1 receives the funds, vault shares are burnt and no funds is wasted
+        console2.log("Assert 1");
+        assertLt(beforeRedeemAliceBalance, afterRedeemAliceBalance);
+        console2.log("Assert 2");
+        assertLt(startingAliceBalance, afterRedeemAliceBalance);
+        console2.log("Assert 3");
+        assertLt(beforeRedeemBobBalance, afterRedeemBobBalance);
+        console2.log("Assert 4");
+        assertGt(startingBobBalance, afterRedeemBobBalance);
     }
 }
