@@ -150,13 +150,6 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         wstETH.approve(address(levStrat), wstInvestAmount);
         levStrat.deposit(wstInvestAmount, vault4626);
         vm.stopPrank();
-        {
-            uint256[4] memory userStateBeforeInvest = crvUSDController.user_state(address(levStrat));
-            console2.log("User State 0 [before invest]:", userStateBeforeInvest[0]);
-            console2.log("User State 1 [before invest]:", userStateBeforeInvest[1]);
-            console2.log("User State 2 [before invest]:", userStateBeforeInvest[2]);
-            console2.log("User State 3 [before invest]:", userStateBeforeInvest[3]);
-        }
 
         vm.prank(controller);
         levStrat.invest(debtAmount, bptExpected);
@@ -164,17 +157,8 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
 
         uint256 debt_before = crvUSDController.debt(address(levStrat));
 
-        console2.log("debt b4", debt_before);
-
         uint256 wstEthBalBefore = wstETH.balanceOf(address(levStrat));
         uint256 ethBalanceBefore = address(levStrat).balance;
-        {
-            uint256[4] memory userStateBeforeUnwind = crvUSDController.user_state(address(levStrat));
-            console2.log("User State 0 [Aftre invest but before Unwind]:", userStateBeforeUnwind[0]);
-            console2.log("User State 1 [Aftre invest but before Unwind]:", userStateBeforeUnwind[1]);
-            console2.log("User State 2 [Aftre invest but before Unwind]:", userStateBeforeUnwind[2]);
-            console2.log("User State 3 [Aftre invest but before Unwind]:", userStateBeforeUnwind[3]);
-        }
         vm.prank(powerPool);
         levStrat.unwindPositionFromKeeper();
         uint256 wstEthBalAfterUnwind = wstETH.balanceOf(address(levStrat));
@@ -182,40 +166,19 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
 
         uint256 debt_after = crvUSDController.debt(address(levStrat));
 
-        console2.log("debt b4 2nd check", debt_before);
-
-        console2.log("debt aft", debt_after);
-
         {
             vm.startPrank(address(levStrat));
             uint256 wstETHUsed = crvUSDController.min_collateral(debt_before, levStrat.N());
             uint256 debtCleared = debt_before - debt_after;
             uint256 percentageOfDebtCleared = debtCleared * 100 / debt_before;
             uint256[4] memory userStateBeforeRemove = crvUSDController.user_state(address(levStrat));
-            console2.log("User State 0 [Aftre unwind but before Remove]:", userStateBeforeRemove[0]);
-            console2.log("User State 1 [Aftre unwind but before Remove]:", userStateBeforeRemove[1]);
-            console2.log("User State 2 [Aftre unwind but before Remove]:", userStateBeforeRemove[2]);
-            console2.log("User State 3 [Aftre unwind but before Remove]:", userStateBeforeRemove[3]);
             uint256 totalCollateral = userStateBeforeRemove[0];
             uint256 amountOfWstEthToBeRemoved = totalCollateral * percentageOfDebtCleared / 100;
             uint256 withdrawablewstEth = crvUSDController.min_collateral(debtCleared, levStrat.N());
             crvUSDController.remove_collateral(amountOfWstEthToBeRemoved, false);
-            console2.log("wstETH used", amountOfWstEthToBeRemoved);
-            console2.log("Percent of debt cleared", percentageOfDebtCleared);
         }
         uint256 wstEthBalAfterRemove = wstETH.balanceOf(address(levStrat));
         uint256 ethBalanceAfterRemove = address(levStrat).balance;
-        {
-            uint256[4] memory userState = crvUSDController.user_state(address(levStrat));
-            console2.log("User State 0 [After Remove]:", userState[0]);
-            console2.log("User State 1 [After Remove]:", userState[1]);
-            console2.log("User State 2 [After Remove]:", userState[2]);
-            console2.log("User State 3 [After Remove]:", userState[3]);
-        }
-        console2.log("ETH balance after unwind", ethBalanceAfterUnwind);
-        console2.log("ETH balance after remove", ethBalanceAfterRemove);
-        console2.log("wstETH balance after unwind", wstEthBalAfterUnwind);
-        console2.log("wstETH balance after remove", wstEthBalAfterRemove);
 
         assertEq(wstEthBalAfterUnwind, wstEthBalBefore);
         assertEq(ethBalanceAfterUnwind, ethBalanceBefore);
@@ -249,7 +212,6 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         maxDebtAmount = crvUSDController.max_borrowable(collateralAmount, investN);
         vm.prank(controller);
         levStrat.invest(maxDebtAmount, bptExpected);
-        console2.log("team's vault shares", levStrat.balanceOf(team));
 
         // user 1 deposit
         vm.startPrank(alice);
@@ -262,7 +224,6 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         maxDebtAmount = crvUSDController.max_borrowable(collateralAmount, investN);
         vm.prank(controller);
         levStrat.invest(maxDebtAmount, bptExpected);
-        console2.log("alice's vault shares", levStrat.balanceOf(alice));
 
         // user 2 deposit
         vm.startPrank(bob);
@@ -275,7 +236,6 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         maxDebtAmount = crvUSDController.max_borrowable(collateralAmount, investN);
         vm.prank(controller);
         levStrat.invest(maxDebtAmount, bptExpected);
-        console2.log("Bob's vault shares", levStrat.balanceOf(bob));
 
         uint256 beforeRedeemAliceBalance = wstETH.balanceOf(alice);
         uint256 beforeRedeemBobBalance = wstETH.balanceOf(bob);
@@ -298,13 +258,9 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         uint256 afterRedeemBobBalance = wstETH.balanceOf(bob);
 
         // ensure user 1 receives the funds, vault shares are burnt and no funds is wasted
-        console2.log("Assert 1");
         assertLt(beforeRedeemAliceBalance, afterRedeemAliceBalance);
-        console2.log("Assert 2");
         assertLt(startingAliceBalance, afterRedeemAliceBalance);
-        console2.log("Assert 3");
         assertLt(beforeRedeemBobBalance, afterRedeemBobBalance);
-        console2.log("Assert 4");
         assertGt(startingBobBalance, afterRedeemBobBalance);
     }
 }
