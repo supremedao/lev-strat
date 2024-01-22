@@ -25,6 +25,7 @@ contract BaseLeverageStrategyTest is BaseTest {
     address internal alice = vm.addr(alicePk);
     address internal bob = vm.addr(bobPk);
     address internal dao = vm.addr(daoPk);
+    address internal team = makeAddr("team");
     address internal vault4626 = vm.addr(vault4626Pk);
     address internal powerPool = vm.addr(powerPoolPk);
     address internal controller = vm.addr(controllerPk);

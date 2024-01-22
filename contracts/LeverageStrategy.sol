@@ -25,10 +25,23 @@ import {BalancerUtils} from "./periphery/BalancerUtils.sol";
 import {AuraUtils} from "./periphery/AuraUtils.sol";
 import {CurveUtils} from "./periphery/CurveUtils.sol";
 import {LeverageStrategyStorage} from "./LeverageStrategyStorage.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
-contract LeverageStrategy is ERC4626, BalancerUtils, AuraUtils, CurveUtils, AccessControl, LeverageStrategyStorage {
+contract LeverageStrategy is
+    ERC4626,
+    ReentrancyGuard,
+    BalancerUtils,
+    AuraUtils,
+    CurveUtils,
+    AccessControl,
+    LeverageStrategyStorage
+{
+    using Math for uint256;
+
     bytes32 public constant KEEPER_ROLE = keccak256("KEEPER_ROLE");
     bytes32 public constant CONTROLLER_ROLE = keccak256("CONTROLLER_ROLE");
+    uint256 public constant FIXED_UNWIND_PERCENTAGE = 30 * 10 ** 10;
+    uint256 public constant BASIS_POINTS = 10 ** 12;
 
     // TODO:
     // DAO should be able to change pool parameters and tokens
@@ -78,7 +91,7 @@ contract LeverageStrategy is ERC4626, BalancerUtils, AuraUtils, CurveUtils, Acce
     ///         depositor and sender are both same and can be used interchangebly.
     /// @dev deletes a DepositRecord and returns the tokens back to sender
     /// @param _key the key/id of the deposit record
-    function cancelDeposit(uint256 _key) external {
+    function cancelDeposit(uint256 _key) external nonReentrant {
         // get the deposit record for the key
         DepositRecord memory deposit = deposits[_key];
 
@@ -100,6 +113,57 @@ contract LeverageStrategy is ERC4626, BalancerUtils, AuraUtils, CurveUtils, Acce
         emit DepositCancelled(_key);
     }
 
+    /// @notice withdraw funds by burning vault shares
+    /// @dev Explain to a developer any extra details
+    /// @param caller a parameter just like in doxygen (must be followed by parameter name)
+    /// @param receiver a parameter just like in doxygen (must be followed by parameter name)
+    /// @param owner a parameter just like in doxygen (must be followed by parameter name)
+    /// @param assets a parameter just like in doxygen (must be followed by parameter name)
+    /// @param shares a parameter just like in doxygen (must be followed by parameter name)
+    function _withdraw(address caller, address receiver, address owner, uint256 assets, uint256 shares)
+        internal
+        virtual
+        override
+        nonReentrant
+    {
+        if (caller != owner) {
+            _spendAllowance(owner, caller, shares);
+        }
+
+        uint256 totalWithdrawableWstETH;
+
+        // calculate percentage of shares to be withdrawn
+        uint256 percentageToBeWithdrawn = _convertToPercentage(shares, totalSupply());
+
+        // assets location 1 - wstETH in contract
+        // if someone sends ETH to this contract, it will be utilised to withdraw
+        // stranfer makes donation
+        totalWithdrawableWstETH += _convertToValue(wstETH.balanceOf(address(this)), percentageToBeWithdrawn);
+
+        // assets location 2 - wstETH as extra collateral (collateral not utilised to create CDP)
+        // assets location 3 - wstTH used to borrow
+        // funds from assets location 2 and 3 can be withdrawn using unwind and withdraw wstETH
+        uint256 auraPositionToBeClosed = convertToAssets(shares);
+        uint256 debtBefore = crvUSDController.debt(address(this));
+        _unwindPosition(AURA_VAULT.balanceOf(address(this)), percentageToBeWithdrawn);
+        uint256 debtAfter = crvUSDController.debt(address(this));
+        totalWithdrawableWstETH += _removeCollateral(percentageToBeWithdrawn, debtBefore - debtAfter);
+
+        _burn(owner, shares);
+        _pushwstEth(receiver, totalWithdrawableWstETH);
+
+        emit Withdraw(caller, receiver, owner, assets, shares);
+    }
+
+    function _removeCollateral(uint256 _percent, uint256 _debtCleared) internal returns (uint256 _removedWstAmount) {
+        uint256 minimumCollateralFreed = crvUSDController.min_collateral(_debtCleared, N);
+        uint256 totalCollateral = crvUSDController.user_state(address(this))[0];
+        uint256 amountOfWstEthToBeRemoved = _convertToValue(totalCollateral, _percent);
+        amountOfWstEthToBeRemoved = Math.min(minimumCollateralFreed, amountOfWstEthToBeRemoved);
+        crvUSDController.remove_collateral(amountOfWstEthToBeRemoved, false);
+        return amountOfWstEthToBeRemoved;
+    }
+
     /// @notice deposit and invest without waiting for keeper to execute it
     /// @notice vault shares are minted to receiver in this same operation
     /// @dev when a user calls this function, their deposit isn't added to deposit record as the deposit is used immediately
@@ -110,8 +174,14 @@ contract LeverageStrategy is ERC4626, BalancerUtils, AuraUtils, CurveUtils, Acce
     function depositAndInvest(uint256 assets, address receiver, uint256 _debtAmount, uint256 _bptAmountOut)
         public
         virtual
+        nonReentrant
         returns (uint256)
     {
+        if (assets == 0) {
+            revert ZeroDepositNotAllowed();
+        }
+        // calculate shares
+        uint256 currentTotalShares = totalSupply();
         // pull funds from the msg.sender
         _pullwstEth(msg.sender, assets);
         uint256 beforeBalance = IERC20(address(AURA_VAULT)).balanceOf(address(this));
@@ -120,20 +190,22 @@ contract LeverageStrategy is ERC4626, BalancerUtils, AuraUtils, CurveUtils, Acce
         // mint shares to the msg.sender
         uint256 afterbalance = IERC20(address(AURA_VAULT)).balanceOf(address(this));
         uint256 vsAssets = afterbalance - beforeBalance;
-        _mintShares(vsAssets, receiver);
+        _mintShares(vsAssets, currentTotalShares, beforeBalance, receiver);
     }
 
     // main contract functions
     // @param N Number of price bands to deposit into (to do autoliquidation-deliquidation of wsteth) if the price of the wsteth collateral goes too low
     function invest(uint256 _debtAmount, uint256 _bptAmountOut)
         external
+        nonReentrant
         // fix: why only controller can only invest, anyone should be able to invest
         // fix: we need to keep track of how much a user have invested give and out shares
         onlyRole(CONTROLLER_ROLE)
     {
         // calculate total wstETH by traversing through all the deposit records
-        (uint256 wstEthAmount, uint256 startKeyId, uint256 totalDeposits) = _computeAndRebalanceDepsoitRecords();
+        (uint256 wstEthAmount, uint256 startKeyId,) = _computeAndRebalanceDepsoitRecords();
 
+        uint256 currentShares = totalSupply();
         // get the current balance of the Aura vault shares
         // to be used to determine how many new vault shares were minted
         uint256 beforeBalance = AURA_VAULT.balanceOf(address(this));
@@ -145,17 +217,18 @@ contract LeverageStrategy is ERC4626, BalancerUtils, AuraUtils, CurveUtils, Acce
         // here assets is Aura Vault shares
         uint256 addedAssets = AURA_VAULT.balanceOf(address(this)) - beforeBalance;
 
-        // we equally mint vault shares to the receivers of each deposit record that was used
-        _mintMultipleShares(startKeyId, addedAssets / totalDeposits);
+        // we mint vault shares propotional to deposits made by receivers of each deposit record that was used
+        _mintMultipleShares(startKeyId, currentShares, beforeBalance, addedAssets * BASIS_POINTS / wstEthAmount);
     }
 
     // fix: how would wstETH end up in this contract?
     // fix: do not allow this operation, to keep track of who invested how much,
     //  we should only allow to invest directly
-    function investFromKeeper(uint256 _bptAmountOut) external onlyRole(KEEPER_ROLE) {
+    function investFromKeeper(uint256 _bptAmountOut) external nonReentrant onlyRole(KEEPER_ROLE) {
         // calculate total wstETH by traversing through all the deposit records
-        (uint256 wstEthAmount, uint256 startKeyId, uint256 totalDeposits) = _computeAndRebalanceDepsoitRecords();
+        (uint256 wstEthAmount, uint256 startKeyId,) = _computeAndRebalanceDepsoitRecords();
 
+        uint256 currentTotalShares = totalSupply();
         // get the current balance of the Aura vault shares
         // to be used to determine how many new vault shares were minted
         uint256 beforeBalance = AURA_VAULT.balanceOf(address(this));
@@ -168,36 +241,42 @@ contract LeverageStrategy is ERC4626, BalancerUtils, AuraUtils, CurveUtils, Acce
         // here assets is Aura Vault shares
         uint256 addedAssets = AURA_VAULT.balanceOf(address(this)) - beforeBalance;
         // we equally mint vault shares to the receivers of each deposit record that was used
-        _mintMultipleShares(startKeyId, addedAssets / totalDeposits);
+        _mintMultipleShares(startKeyId, currentTotalShares, beforeBalance, addedAssets * BASIS_POINTS / wstEthAmount);
     }
 
     // fix: unwind position only based on msg.sender share
     // fix: anyone should be able to unwind their position
-    function unwindPosition(uint256[] calldata amounts) external onlyRole(CONTROLLER_ROLE) {
-        _unstakeAndWithdrawAura(amounts[0]);
-
-        _exitPool(amounts[1], 1, amounts[2]);
-
-        _exchangeUSDCTocrvUSD(amounts[2]);
-
-        _repayCRVUSDLoan(crvUSD.balanceOf(address(this)));
+    function unwindPosition(uint256 auraShares) external nonReentrant onlyRole(CONTROLLER_ROLE) {
+        _unwindPosition(auraShares, BASIS_POINTS);
     }
 
     // fix: rename this to redeemRewardsToMaintainCDP()
-    function unwindPositionFromKeeper() external onlyRole(KEEPER_ROLE) {
-        _unstakeAllAndWithdrawAura();
+    function unwindPositionFromKeeper() external nonReentrant onlyRole(KEEPER_ROLE) {
+        _unwindPosition(
+            _convertToValue(AURA_VAULT.balanceOf(address(this)), FIXED_UNWIND_PERCENTAGE), FIXED_UNWIND_PERCENTAGE
+        );
+    }
+
+    function _unwindPosition(uint256 _auraShares, uint256 percentageUnwind) internal {
+        uint256 auraSharesToUnStake = _convertToValue(_auraShares, percentageUnwind);
+        _unstakeAndWithdrawAura(auraSharesToUnStake);
 
         uint256 bptAmount = _tokenToStake().balanceOf(address(this));
 
-        // TODO: Make a setter with onlyRole(CONTROLLER_ROLE) for % value instead of 30
+        uint256 beforeUsdcBalance = USDC.balanceOf(address(this));
+        _exitPool(bptAmount, 1, 1);
+        uint256 beforeCrvUSDBalance = crvUSD.balanceOf(address(this));
+        _exchangeUSDCTocrvUSD(USDC.balanceOf(address(this)) - beforeUsdcBalance);
 
-        uint256 percentOfTotalUsdc = (totalUsdcAmount * 30) / 100;
+        _repayCRVUSDLoan(crvUSD.balanceOf(address(this)) - beforeCrvUSDBalance);
+    }
 
-        _exitPool(bptAmount, 1, percentOfTotalUsdc);
+    function _convertToPercentage(uint256 value, uint256 total) internal pure returns (uint256 percent) {
+        return value * BASIS_POINTS / total;
+    }
 
-        _exchangeUSDCTocrvUSD(USDC.balanceOf(address(this)));
-
-        _repayCRVUSDLoan(crvUSD.balanceOf(address(this)));
+    function _convertToValue(uint256 total, uint256 percent) internal pure returns (uint256 value) {
+        return total * percent / BASIS_POINTS;
     }
 
     // fix: rename this to reinvestUsingRewards()
@@ -208,7 +287,7 @@ contract LeverageStrategy is ERC4626, BalancerUtils, AuraUtils, CurveUtils, Acce
         uint256 minWethAmountBal,
         uint256 minWethAmountAura,
         uint256 deadline
-    ) external onlyRole(CONTROLLER_ROLE) {
+    ) external nonReentrant onlyRole(CONTROLLER_ROLE) {
         _swapRewardBal(balAmount, minWethAmountBal, deadline);
         _swapRewardAura(auraAmount, minWethAmountAura, deadline);
     }
@@ -220,6 +299,11 @@ contract LeverageStrategy is ERC4626, BalancerUtils, AuraUtils, CurveUtils, Acce
     }
 
     function _invest(uint256 _wstETHAmount, uint256 _debtAmount, uint256 _bptAmountOut) internal {
+        // only invest if _wstETHAmount >
+        if (_wstETHAmount == 0) {
+            revert ZeroInvestmentNotAllowed();
+        }
+
         // Opens a position on crvUSD if no loan already
         // Note this address is an owner of a crvUSD CDP
         // in the usual case we already have a CDP
@@ -241,14 +325,31 @@ contract LeverageStrategy is ERC4626, BalancerUtils, AuraUtils, CurveUtils, Acce
     /// @dev if total supply is zero, 1:1 ratio is used
     /// @param assets amount of assets that was deposited, here assets is the Aura Vault Shares
     /// @param to receiver of the vault shares (Leverage Stratgey Vault Shares)
-    function _mintShares(uint256 assets, address to) internal {
+    function _mintShares(uint256 assets, uint256 currentShares, uint256 currentAssets, address to) internal {
         uint256 shares;
+        // won't cause DoS or gridlock because the token token will have no minted tokens before the creation
         if (totalSupply() == 0) {
             shares = assets; // 1:1 ratio when supply is zero
         } else {
-            shares = _convertToShares(assets, Math.Rounding.Floor);
+            shares = _convertToShares(assets, currentShares, currentAssets, Math.Rounding.Floor);
         }
         _mint(to, shares);
+    }
+
+    function _convertToAssets(uint256 newShares, uint256 currentAssets, uint256 currentShares, Math.Rounding rounding)
+        internal
+        view
+        returns (uint256 _assets)
+    {
+        return newShares.mulDiv(currentAssets + 1, currentShares + 10 ** _decimalsOffset(), rounding);
+    }
+
+    function _convertToShares(uint256 newAssets, uint256 currentShares, uint256 currentAssets, Math.Rounding rounding)
+        internal
+        view
+        returns (uint256 _shares)
+    {
+        return newAssets.mulDiv(currentShares + 10 ** _decimalsOffset(), currentAssets + 1, rounding);
     }
 
     /// @notice create and store a neww deposit record
@@ -277,6 +378,9 @@ contract LeverageStrategy is ERC4626, BalancerUtils, AuraUtils, CurveUtils, Acce
     /// @param receiver receiver of vault shares
     /// @param assets amount of wstETH to be deposited (it's different from Aura Vault Shares)
     function _deposit(address caller, address receiver, uint256 assets, uint256) internal virtual override {
+        if (assets == 0) {
+            revert ZeroDepositNotAllowed();
+        }
         // add it to deposit and generate a key
         uint256 depositKey = _recordDeposit(assets, caller, receiver);
         _pullwstEth(caller, assets);
@@ -329,12 +433,15 @@ contract LeverageStrategy is ERC4626, BalancerUtils, AuraUtils, CurveUtils, Acce
     /// @notice mint vault shares to receivers of all deposit records that was used for investment in current operation
     /// @param _startKeyId first deposit record from where the mint of vault shares will begin
     /// @param _assets amount of Aura vault shares that were minted per deposit record
-    function _mintMultipleShares(uint256 _startKeyId, uint256 _assets) internal {
+    function _mintMultipleShares(uint256 _startKeyId, uint256 currentShares, uint256 currentAssets, uint256 _assets)
+        internal
+    {
         // loop over the deposit records starting from the start deposit key ID
         for (_startKeyId; _startKeyId <= lastUsedDepositKey; _startKeyId++) {
             // only mint vault shares to deposit records whose funds have been utilised
             if (deposits[_startKeyId].state == DepositState.INVESTED) {
-                _mintShares(_assets, deposits[_startKeyId].receiver);
+                uint256 contribution = _assets * deposits[_startKeyId].amount / BASIS_POINTS;
+                _mintShares(contribution, currentShares, currentAssets, deposits[_startKeyId].receiver);
             }
         }
     }

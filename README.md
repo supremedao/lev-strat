@@ -7,19 +7,20 @@ curl -L https://foundry.paradigm.xyz | bash
 foundryup
 ```
 
-Install OZ:
+Install dependencies:
 ```
-forge install OpenZeppelin/openzeppelin-contracts
-```
-
-Remap dependencies for hardhat: 
-```
-forge remappings > remappings.txt
+forge install
 ```
 
 Test:
 ```
 forge test --fork-url https://eth-mainnet.g.alchemy.com/v2/M4H2wIh8657p_bF11PxNM2ZyaPPU6n6R -vvvvv
+
+```
+
+Coverage:
+```
+forge coverage --fork-url https://eth-mainnet.g.alchemy.com/v2/M4H2wIh8657p_bF11PxNM2ZyaPPU6n6R -vvv
 
 ```
 
