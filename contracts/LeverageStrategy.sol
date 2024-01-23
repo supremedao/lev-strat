@@ -41,7 +41,7 @@ contract LeverageStrategy is
     bytes32 public constant KEEPER_ROLE = keccak256("KEEPER_ROLE");
     bytes32 public constant CONTROLLER_ROLE = keccak256("CONTROLLER_ROLE");
     uint256 public constant FIXED_UNWIND_PERCENTAGE = 30 * 10 ** 10;
-    uint256 public constant BASIS_POINTS = 10 ** 12;
+    uint256 public constant HUNDRED_PERCENT = 10 ** 12;
 
     // TODO:
     // DAO should be able to change pool parameters and tokens
@@ -251,7 +251,7 @@ contract LeverageStrategy is
         uint256 addedAssets = AURA_VAULT.balanceOf(address(this)) - beforeBalance;
 
         // we mint vault shares propotional to deposits made by receivers of each deposit record that was used
-        _mintMultipleShares(startKeyId, currentShares, beforeBalance, addedAssets * BASIS_POINTS / wstEthAmount);
+        _mintMultipleShares(startKeyId, currentShares, beforeBalance, addedAssets * HUNDRED_PERCENT / wstEthAmount);
     }
 
     // fix: how would wstETH end up in this contract?
@@ -275,13 +275,13 @@ contract LeverageStrategy is
         // here assets is Aura Vault shares
         uint256 addedAssets = AURA_VAULT.balanceOf(address(this)) - beforeBalance;
         // we equally mint vault shares to the receivers of each deposit record that was used
-        _mintMultipleShares(startKeyId, currentTotalShares, beforeBalance, addedAssets * BASIS_POINTS / wstEthAmount);
+        _mintMultipleShares(startKeyId, currentTotalShares, beforeBalance, addedAssets * HUNDRED_PERCENT / wstEthAmount);
     }
 
     // fix: unwind position only based on msg.sender share
     // fix: anyone should be able to unwind their position
     function unwindPosition(uint256 auraShares, uint256 minAmountOut) external nonReentrant onlyRole(CONTROLLER_ROLE) {
-        _unwindPosition(auraShares, BASIS_POINTS, minAmountOut);
+        _unwindPosition(auraShares, HUNDRED_PERCENT, minAmountOut);
     }
 
     // fix: rename this to redeemRewardsToMaintainCDP()
@@ -308,11 +308,11 @@ contract LeverageStrategy is
     }
 
     function _convertToPercentage(uint256 value, uint256 total) internal pure returns (uint256 percent) {
-        return value * BASIS_POINTS / total;
+        return value * HUNDRED_PERCENT / total;
     }
 
     function _convertToValue(uint256 total, uint256 percent) internal pure returns (uint256 value) {
-        return total * percent / BASIS_POINTS;
+        return total * percent / HUNDRED_PERCENT;
     }
 
     // fix: rename this to reinvestUsingRewards()
@@ -476,7 +476,7 @@ contract LeverageStrategy is
         for (_startKeyId; _startKeyId <= lastUsedDepositKey; _startKeyId++) {
             // only mint vault shares to deposit records whose funds have been utilised
             if (deposits[_startKeyId].state == DepositState.INVESTED) {
-                uint256 contribution = _assets * deposits[_startKeyId].amount / BASIS_POINTS;
+                uint256 contribution = _assets * deposits[_startKeyId].amount / HUNDRED_PERCENT;
                 _mintShares(contribution, currentShares, currentAssets, deposits[_startKeyId].receiver);
             }
         }
