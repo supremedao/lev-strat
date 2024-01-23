@@ -40,8 +40,8 @@ contract LeverageStrategy is
 
     bytes32 public constant KEEPER_ROLE = keccak256("KEEPER_ROLE");
     bytes32 public constant CONTROLLER_ROLE = keccak256("CONTROLLER_ROLE");
-    uint256 public constant FIXED_UNWIND_PERCENTAGE = 30 * 10 ** 10;
-    uint256 public constant BASIS_POINTS = 10 ** 12;
+    uint256 public constant FIXED_UNWIND_PERCENTAGE = 30 * 10 ** 10; // @audit See later comments regarding liquidation
+    uint256 public constant BASIS_POINTS = 10 ** 12; // @audit Rename or rework to 10_000
 
     // TODO:
     // DAO should be able to change pool parameters and tokens
@@ -65,6 +65,7 @@ contract LeverageStrategy is
 
     // only DAO can initialize
     // fix: use it directly inside the constructor
+    // @audit Missing natspec
     /// @param _dao is the treasury to withdraw too
     /// @param _controller is the address of the strategy controller
     /// @param _keeper is the address of the power pool keeper
@@ -74,7 +75,7 @@ contract LeverageStrategy is
     {
         treasury = _dao;
         N = _N;
-        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender); // @audit No need to grant the `msg.sender` this role, as the `msg.sender` needs this role to call this function
         _grantRole(CONTROLLER_ROLE, _controller);
         _grantRole(KEEPER_ROLE, _keeper);
     }
@@ -91,7 +92,7 @@ contract LeverageStrategy is
     ///         depositor and sender are both same and can be used interchangebly.
     /// @dev deletes a DepositRecord and returns the tokens back to sender
     /// @param _key the key/id of the deposit record
-    function cancelDeposit(uint256 _key) external nonReentrant {
+    function cancelDeposit(uint256 _key) external nonReentrant { // @audit No need for `nonReentrant` here 
         // get the deposit record for the key
         DepositRecord memory deposit = deposits[_key];
 
@@ -113,6 +114,7 @@ contract LeverageStrategy is
         emit DepositCancelled(_key);
     }
 
+    // @audit natspec
     /// @notice withdraw funds by burning vault shares
     /// @dev Explain to a developer any extra details
     /// @param caller a parameter just like in doxygen (must be followed by parameter name)
@@ -139,13 +141,22 @@ contract LeverageStrategy is
         // if someone sends ETH to this contract, it will be utilised to withdraw
         // stranfer makes donation
         totalWithdrawableWstETH += _convertToValue(wstETH.balanceOf(address(this)), percentageToBeWithdrawn);
+        // total * percent / BASIS_POINTS;
+        // 100e18 * 1e11 / 1e12
+        // 1e31 / 1e12
+        // 1e19 ~ 10 ether
+        // Also, the `_converToPercentage` is done with shares, which does not have any correlation to the amount of wstETH in contract??
+        /*
+            This worries me, because the only way there should be extra WETH is if someone has made a deposit
+            and it hasn't been invested yet. So now we add a percentage of the WETH waiting to be invested as a withdrawable?
+        */
 
         // assets location 2 - wstETH as extra collateral (collateral not utilised to create CDP)
         // assets location 3 - wstTH used to borrow
         // funds from assets location 2 and 3 can be withdrawn using unwind and withdraw wstETH
-        uint256 auraPositionToBeClosed = convertToAssets(shares);
+        uint256 auraPositionToBeClosed = convertToAssets(shares); // @audit This function selector uses the non-overrided `_convertToAssets`
         uint256 debtBefore = crvUSDController.debt(address(this));
-        _unwindPosition(AURA_VAULT.balanceOf(address(this)), percentageToBeWithdrawn);
+        _unwindPosition(AURA_VAULT.balanceOf(address(this)), percentageToBeWithdrawn); // 
         uint256 debtAfter = crvUSDController.debt(address(this));
         totalWithdrawableWstETH += _removeCollateral(percentageToBeWithdrawn, debtBefore - debtAfter);
 
@@ -246,6 +257,7 @@ contract LeverageStrategy is
 
     // fix: unwind position only based on msg.sender share
     // fix: anyone should be able to unwind their position
+    // @audit This unwinds position for the contract, not a specific user
     function unwindPosition(uint256 auraShares) external nonReentrant onlyRole(CONTROLLER_ROLE) {
         _unwindPosition(auraShares, BASIS_POINTS);
     }
@@ -258,13 +270,14 @@ contract LeverageStrategy is
     }
 
     function _unwindPosition(uint256 _auraShares, uint256 percentageUnwind) internal {
+        // 1e11
         uint256 auraSharesToUnStake = _convertToValue(_auraShares, percentageUnwind);
         _unstakeAndWithdrawAura(auraSharesToUnStake);
 
         uint256 bptAmount = _tokenToStake().balanceOf(address(this));
 
         uint256 beforeUsdcBalance = USDC.balanceOf(address(this));
-        _exitPool(bptAmount, 1, 1);
+        _exitPool(bptAmount, 1, 1); // @audit Slippage
         uint256 beforeCrvUSDBalance = crvUSD.balanceOf(address(this));
         _exchangeUSDCTocrvUSD(USDC.balanceOf(address(this)) - beforeUsdcBalance);
 
@@ -272,6 +285,13 @@ contract LeverageStrategy is
     }
 
     function _convertToPercentage(uint256 value, uint256 total) internal pure returns (uint256 percent) {
+        // @audit ?
+        /*
+            value * 1e12 / total
+            amount * 1e12 / totalSupply
+            1e32 / 1e21
+            = 1e11
+        */
         return value * BASIS_POINTS / total;
     }
 
@@ -288,7 +308,7 @@ contract LeverageStrategy is
         uint256 minWethAmountAura,
         uint256 deadline
     ) external nonReentrant onlyRole(CONTROLLER_ROLE) {
-        _swapRewardBal(balAmount, minWethAmountBal, deadline);
+        _swapRewardBal(balAmount, minWethAmountBal, deadline); // @audit Non-reentrant modifier is unnecessary as it can only be called by trusted provider
         _swapRewardAura(auraAmount, minWethAmountAura, deadline);
     }
 
@@ -312,7 +332,7 @@ contract LeverageStrategy is
             _depositAndCreateLoan(_wstETHAmount, _debtAmount);
         } else {
             //_addCollateral(_wstETHAmount);
-            _borrowMore(_wstETHAmount, _debtAmount);
+            _borrowMore(_wstETHAmount, _debtAmount); // @audit This can fail if a withdrawal has been made between deposit and invest?
         }
         _exchangeCRVUSDtoUSDC(_debtAmount);
         // Provide liquidity to the D2D/USDC Pool on Balancer
@@ -336,6 +356,8 @@ contract LeverageStrategy is
         _mint(to, shares);
     }
 
+    // @audit Missing natspec
+    // @audit Never used
     function _convertToAssets(uint256 newShares, uint256 currentAssets, uint256 currentShares, Math.Rounding rounding)
         internal
         view
@@ -358,7 +380,7 @@ contract LeverageStrategy is
     /// @param _receiver receiver of the vault shares after wstETH is invested successfully
     function _recordDeposit(uint256 _amount, address _depositor, address _receiver)
         internal
-        returns (uint256 recordKey)
+        returns (uint256 recordKey) // @audit Declared but never used. Use `recordKey` instead of defining a new `currentKey`
     {
         uint256 currentKey = ++depositCounter;
         deposits[currentKey].depositor = _depositor;
@@ -452,7 +474,7 @@ contract LeverageStrategy is
     function _pushwstEth(address to, uint256 value) internal {
         // pull funds from the msg.sender
         bool transferSuccess = wstETH.transfer(to, value);
-        if (!transferSuccess) {
+        if (!transferSuccess) { // @audit Unreachable code, wstETH reverts on failure
             revert ERC20_TransferFailed();
         }
     }
