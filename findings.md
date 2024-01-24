@@ -31,6 +31,13 @@ In addition, this decreases the `wstETH` balance of this contract, but the `_inv
 
 This code loops through all the deposits awaiting investing and totals up the `wstETHAmount` that is expected to be present.
 
+### HIGH-3: Once `unwindPositionFromKeeper` or `unwindPosition` is called, the collateral cannot be accessed by the protocol again
+
+Once `LeverageStrategy::unwindPositionFromKeeper` is called a fixed 30% of the total staked `BPT` is unstaked and used to repay the loan from `crvUSD`. This action should ideally increase the health of the CDP by decreasing the debt. But now the protocol has excess collateral that it cannot use to generate yield again.
+
+Recommendation:  
+Unwinding is part of healthy protocol operations, but unwinding and then rebalancing to within acceptable parameters should be done to ensure maximal yield is generated. Such parameters and re-investing is not yet implemented. 
+
 ---
 
 ### MEDIUM-1: Prices may change  
@@ -132,7 +139,6 @@ Recommendation:
     }
 ```  
 
-
-### QA-7: Consider adding a variable and accompanying setter for the percentage to use with `chechCondition()`  
+### QA-7: Consider adding a variable and accompanying setter for the percentage to use with `checkCondition()`  
 
 As time progresses the team is likely to gather more data on the performance of the assets. It is good practice to have a way to adjust the check parameters in response to market conditions.
