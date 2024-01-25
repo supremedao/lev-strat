@@ -445,11 +445,11 @@ contract LeverageStrategy is
         returns (uint256 _wstEthAmount, uint256 _startKeyId, uint256 _totalDeposits)
     {
         // calculate number of deposit record which needs to be analysed
-        uint256 length = depositCounter - lastUsedDepositKey;
+        uint256 length = Math.min(depositCounter - lastUsedDepositKey, 200);
         // set the key ID of first deposit record that will be used
         _startKeyId = lastUsedDepositKey + 1;
         // update the last used deposit record key
-        lastUsedDepositKey = depositCounter;
+        lastUsedDepositKey = lastUsedDepositKey + length;
 
         // loop over deposit records
         for (uint256 i; i < length; i++) {

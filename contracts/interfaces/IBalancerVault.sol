@@ -19,6 +19,7 @@ interface IBalancerVault {
         EXACT_BPT_IN_FOR_TOKENS_OUT,
         BPT_IN_FOR_EXACT_TOKENS_OUT,
         MANAGEMENT_FEE_TOKENS_OUT // for InvestmentPool
+
     }
 
     enum SwapKind {
