@@ -46,4 +46,5 @@ abstract contract LeverageStrategyStorage {
     error ERC20_TransferFailed();
     error ZeroDepositNotAllowed();
     error ZeroInvestmentNotAllowed();
+    error UseOverLoadedRedeemFunction();
 }

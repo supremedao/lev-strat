@@ -20,10 +20,12 @@ contract BaseLeverageStrategyTest is BaseTest {
     uint256 internal vault4626Pk = 0x5432;
     uint256 internal powerPoolPk = 0x4565;
     uint256 internal controllerPk = 0x54762;
+    uint256 internal minAmountOut = 1;
 
     address internal owner = vm.addr(ownerPk);
     address internal alice = vm.addr(alicePk);
     address internal bob = vm.addr(bobPk);
+    address internal charlie = makeAddr("charlie");
     address internal dao = vm.addr(daoPk);
     address internal team = makeAddr("team");
     address internal vault4626 = vm.addr(vault4626Pk);

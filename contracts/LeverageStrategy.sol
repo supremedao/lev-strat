@@ -41,7 +41,7 @@ contract LeverageStrategy is
     bytes32 public constant KEEPER_ROLE = keccak256("KEEPER_ROLE");
     bytes32 public constant CONTROLLER_ROLE = keccak256("CONTROLLER_ROLE");
     uint256 public constant FIXED_UNWIND_PERCENTAGE = 30 * 10 ** 10;
-    uint256 public constant BASIS_POINTS = 10 ** 12;
+    uint256 public constant HUNDRED_PERCENT = 10 ** 12;
 
     // TODO:
     // DAO should be able to change pool parameters and tokens
@@ -95,14 +95,14 @@ contract LeverageStrategy is
         // get the deposit record for the key
         DepositRecord memory deposit = deposits[_key];
 
-        // ensure that the msg.sender is either the sender or receiver of the deposit
-        if (deposit.depositor != msg.sender && deposit.receiver != msg.sender) {
-            revert UnknownExecuter();
-        }
-
         // ensure that the funds deposited are still not used or already cancelled
         if (deposit.state != DepositState.DEPOSITED) {
             revert DepositCancellationNotAllowed();
+        }
+
+        // ensure that the msg.sender is either the sender or receiver of the deposit
+        if (deposit.depositor != msg.sender && deposit.receiver != msg.sender) {
+            revert UnknownExecuter();
         }
 
         // remove the deposit record
@@ -113,6 +113,34 @@ contract LeverageStrategy is
         emit DepositCancelled(_key);
     }
 
+    // renaming to ensure no confusion
+    function redeemWstEth(uint256 shares, address receiver, address owner, uint256 minAmountOut)
+        public
+        virtual
+        nonReentrant
+        returns (uint256)
+    {
+        uint256 maxShares = maxRedeem(owner);
+        if (shares > maxShares) {
+            revert ERC4626ExceededMaxRedeem(owner, shares, maxShares);
+        }
+
+        uint256 assets = previewRedeem(shares);
+        _withdraw(_msgSender(), receiver, owner, assets, shares, minAmountOut);
+
+        return assets;
+    }
+
+    function _withdraw(address caller, address receiver, address owner, uint256 assets, uint256 shares)
+        internal
+        virtual
+        override
+        nonReentrant
+    {
+        // just to ensure no one uses another withdraw function
+        revert UseOverLoadedRedeemFunction();
+    }
+
     /// @notice withdraw funds by burning vault shares
     /// @dev Explain to a developer any extra details
     /// @param caller a parameter just like in doxygen (must be followed by parameter name)
@@ -120,12 +148,14 @@ contract LeverageStrategy is
     /// @param owner a parameter just like in doxygen (must be followed by parameter name)
     /// @param assets a parameter just like in doxygen (must be followed by parameter name)
     /// @param shares a parameter just like in doxygen (must be followed by parameter name)
-    function _withdraw(address caller, address receiver, address owner, uint256 assets, uint256 shares)
-        internal
-        virtual
-        override
-        nonReentrant
-    {
+    function _withdraw(
+        address caller,
+        address receiver,
+        address owner,
+        uint256 assets,
+        uint256 shares,
+        uint256 minAmountOut
+    ) internal virtual {
         if (caller != owner) {
             _spendAllowance(owner, caller, shares);
         }
@@ -137,15 +167,17 @@ contract LeverageStrategy is
 
         // assets location 1 - wstETH in contract
         // if someone sends ETH to this contract, it will be utilised to withdraw
-        // stranfer makes donation
-        totalWithdrawableWstETH += _convertToValue(wstETH.balanceOf(address(this)), percentageToBeWithdrawn);
+        // stranger makes donation
+        // remove the line below because the wstETH in the contract might also withdraw from wstETH that have been deposited
+        // causes attacker to take more then their shares and also DoS of invest function
+        // totalWithdrawableWstETH += _convertToValue(wstETH.balanceOf(address(this)), percentageToBeWithdrawn);
 
         // assets location 2 - wstETH as extra collateral (collateral not utilised to create CDP)
         // assets location 3 - wstTH used to borrow
         // funds from assets location 2 and 3 can be withdrawn using unwind and withdraw wstETH
         uint256 auraPositionToBeClosed = convertToAssets(shares);
         uint256 debtBefore = crvUSDController.debt(address(this));
-        _unwindPosition(AURA_VAULT.balanceOf(address(this)), percentageToBeWithdrawn);
+        _unwindPosition(AURA_VAULT.balanceOf(address(this)), percentageToBeWithdrawn, minAmountOut);
         uint256 debtAfter = crvUSDController.debt(address(this));
         totalWithdrawableWstETH += _removeCollateral(percentageToBeWithdrawn, debtBefore - debtAfter);
 
@@ -169,9 +201,8 @@ contract LeverageStrategy is
     /// @dev when a user calls this function, their deposit isn't added to deposit record as the deposit is used immediately
     /// @param assets amount of wstETH to be deposited
     /// @param receiver receiver of the vault shares after the wstETH is utilized
-    /// @param _debtAmount amount of crvUSD to be borrowed
     /// @param _bptAmountOut amount of BPT token expected out once liquidity is provided
-    function depositAndInvest(uint256 assets, address receiver, uint256 _debtAmount, uint256 _bptAmountOut)
+    function depositAndInvest(uint256 assets, address receiver, uint256 _bptAmountOut)
         public
         virtual
         nonReentrant
@@ -180,6 +211,7 @@ contract LeverageStrategy is
         if (assets == 0) {
             revert ZeroDepositNotAllowed();
         }
+        uint256 _debtAmount = crvUSDController.max_borrowable(assets, N);
         // calculate shares
         uint256 currentTotalShares = totalSupply();
         // pull funds from the msg.sender
@@ -195,7 +227,7 @@ contract LeverageStrategy is
 
     // main contract functions
     // @param N Number of price bands to deposit into (to do autoliquidation-deliquidation of wsteth) if the price of the wsteth collateral goes too low
-    function invest(uint256 _debtAmount, uint256 _bptAmountOut)
+    function invest(uint256 _bptAmountOut)
         external
         nonReentrant
         // fix: why only controller can only invest, anyone should be able to invest
@@ -204,6 +236,7 @@ contract LeverageStrategy is
     {
         // calculate total wstETH by traversing through all the deposit records
         (uint256 wstEthAmount, uint256 startKeyId,) = _computeAndRebalanceDepsoitRecords();
+        uint256 _debtAmount = crvUSDController.max_borrowable(wstEthAmount, N);
 
         uint256 currentShares = totalSupply();
         // get the current balance of the Aura vault shares
@@ -218,7 +251,7 @@ contract LeverageStrategy is
         uint256 addedAssets = AURA_VAULT.balanceOf(address(this)) - beforeBalance;
 
         // we mint vault shares propotional to deposits made by receivers of each deposit record that was used
-        _mintMultipleShares(startKeyId, currentShares, beforeBalance, addedAssets * BASIS_POINTS / wstEthAmount);
+        _mintMultipleShares(startKeyId, currentShares, beforeBalance, addedAssets * HUNDRED_PERCENT / wstEthAmount);
     }
 
     // fix: how would wstETH end up in this contract?
@@ -227,6 +260,7 @@ contract LeverageStrategy is
     function investFromKeeper(uint256 _bptAmountOut) external nonReentrant onlyRole(KEEPER_ROLE) {
         // calculate total wstETH by traversing through all the deposit records
         (uint256 wstEthAmount, uint256 startKeyId,) = _computeAndRebalanceDepsoitRecords();
+        uint256 _debtAmount = crvUSDController.max_borrowable(wstEthAmount, N);
 
         uint256 currentTotalShares = totalSupply();
         // get the current balance of the Aura vault shares
@@ -241,30 +275,32 @@ contract LeverageStrategy is
         // here assets is Aura Vault shares
         uint256 addedAssets = AURA_VAULT.balanceOf(address(this)) - beforeBalance;
         // we equally mint vault shares to the receivers of each deposit record that was used
-        _mintMultipleShares(startKeyId, currentTotalShares, beforeBalance, addedAssets * BASIS_POINTS / wstEthAmount);
+        _mintMultipleShares(startKeyId, currentTotalShares, beforeBalance, addedAssets * HUNDRED_PERCENT / wstEthAmount);
     }
 
     // fix: unwind position only based on msg.sender share
     // fix: anyone should be able to unwind their position
-    function unwindPosition(uint256 auraShares) external nonReentrant onlyRole(CONTROLLER_ROLE) {
-        _unwindPosition(auraShares, BASIS_POINTS);
+    function unwindPosition(uint256 auraShares, uint256 minAmountOut) external nonReentrant onlyRole(CONTROLLER_ROLE) {
+        _unwindPosition(auraShares, HUNDRED_PERCENT, minAmountOut);
     }
 
     // fix: rename this to redeemRewardsToMaintainCDP()
-    function unwindPositionFromKeeper() external nonReentrant onlyRole(KEEPER_ROLE) {
+    function unwindPositionFromKeeper(uint256 minAmountOut) external nonReentrant onlyRole(KEEPER_ROLE) {
         _unwindPosition(
-            _convertToValue(AURA_VAULT.balanceOf(address(this)), FIXED_UNWIND_PERCENTAGE), FIXED_UNWIND_PERCENTAGE
+            _convertToValue(AURA_VAULT.balanceOf(address(this)), FIXED_UNWIND_PERCENTAGE),
+            FIXED_UNWIND_PERCENTAGE,
+            minAmountOut
         );
     }
 
-    function _unwindPosition(uint256 _auraShares, uint256 percentageUnwind) internal {
+    function _unwindPosition(uint256 _auraShares, uint256 percentageUnwind, uint256 minAmountOut) internal {
         uint256 auraSharesToUnStake = _convertToValue(_auraShares, percentageUnwind);
         _unstakeAndWithdrawAura(auraSharesToUnStake);
 
         uint256 bptAmount = _tokenToStake().balanceOf(address(this));
 
         uint256 beforeUsdcBalance = USDC.balanceOf(address(this));
-        _exitPool(bptAmount, 1, 1);
+        _exitPool(bptAmount, 1, minAmountOut);
         uint256 beforeCrvUSDBalance = crvUSD.balanceOf(address(this));
         _exchangeUSDCTocrvUSD(USDC.balanceOf(address(this)) - beforeUsdcBalance);
 
@@ -272,11 +308,11 @@ contract LeverageStrategy is
     }
 
     function _convertToPercentage(uint256 value, uint256 total) internal pure returns (uint256 percent) {
-        return value * BASIS_POINTS / total;
+        return value * HUNDRED_PERCENT / total;
     }
 
     function _convertToValue(uint256 total, uint256 percent) internal pure returns (uint256 value) {
-        return total * percent / BASIS_POINTS;
+        return total * percent / HUNDRED_PERCENT;
     }
 
     // fix: rename this to reinvestUsingRewards()
@@ -336,13 +372,13 @@ contract LeverageStrategy is
         _mint(to, shares);
     }
 
-    function _convertToAssets(uint256 newShares, uint256 currentAssets, uint256 currentShares, Math.Rounding rounding)
-        internal
-        view
-        returns (uint256 _assets)
-    {
-        return newShares.mulDiv(currentAssets + 1, currentShares + 10 ** _decimalsOffset(), rounding);
-    }
+    // function _convertToAssets(uint256 newShares, uint256 currentAssets, uint256 currentShares, Math.Rounding rounding)
+    //     internal
+    //     view
+    //     returns (uint256 _assets)
+    // {
+    //     return newShares.mulDiv(currentAssets + 1, currentShares + 10 ** _decimalsOffset(), rounding);
+    // }
 
     function _convertToShares(uint256 newAssets, uint256 currentShares, uint256 currentAssets, Math.Rounding rounding)
         internal
@@ -440,7 +476,7 @@ contract LeverageStrategy is
         for (_startKeyId; _startKeyId <= lastUsedDepositKey; _startKeyId++) {
             // only mint vault shares to deposit records whose funds have been utilised
             if (deposits[_startKeyId].state == DepositState.INVESTED) {
-                uint256 contribution = _assets * deposits[_startKeyId].amount / BASIS_POINTS;
+                uint256 contribution = _assets * deposits[_startKeyId].amount / HUNDRED_PERCENT;
                 _mintShares(contribution, currentShares, currentAssets, deposits[_startKeyId].receiver);
             }
         }

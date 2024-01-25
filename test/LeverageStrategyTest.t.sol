@@ -26,7 +26,7 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
 
         vm.prank(controller);
 
-        levStrat.invest(debtAmount, bptExpected);
+        levStrat.invest(bptExpected);
         assertGt(levStrat.balanceOf(vault4626), 0);
 
         uint256 aft = AuraLPVault.balanceOf(address(levStrat));
@@ -53,10 +53,8 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         levStrat.deposit(wstInvestAmount * 2, alice);
         vm.stopPrank();
 
-        uint256 collateralAmount = wstETH.balanceOf(address(levStrat));
-        uint256 maxDebtAmount = crvUSDController.max_borrowable(collateralAmount, investN);
         vm.prank(controller);
-        levStrat.invest(debtAmount, bptExpected);
+        levStrat.invest(bptExpected);
         assertGt(levStrat.balanceOf(vault4626), 0);
 
         uint256 aliceShares = levStrat.balanceOf(alice);
@@ -79,13 +77,23 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         vm.stopPrank();
     }
 
+    function testRevertZeroDepositWhenDepositingAndInvesting() public subtest {
+        levStrat.initialize(investN, dao, controller, powerPool);
+
+        // Make vault msg.sender
+        vm.startPrank(vault4626);
+        vm.expectRevert(LeverageStrategyStorage.ZeroDepositNotAllowed.selector);
+        levStrat.depositAndInvest(0, vault4626, 0);
+        vm.stopPrank();
+    }
+
     function testRevertZeroInvestment() public subtest {
         levStrat.initialize(investN, dao, controller, powerPool);
 
         // Make vault msg.sender
         vm.startPrank(controller);
         vm.expectRevert(LeverageStrategyStorage.ZeroInvestmentNotAllowed.selector);
-        levStrat.invest(100, bptExpected);
+        levStrat.invest(bptExpected);
         vm.stopPrank();
     }
 
@@ -104,12 +112,12 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         // Make vault msg.sender
         vm.startPrank(alice);
         wstETH.approve(address(levStrat), wstInvestAmount);
-        levStrat.depositAndInvest(wstInvestAmount, alice, debtAmount, bptExpected);
+        levStrat.depositAndInvest(wstInvestAmount, alice, bptExpected);
         vm.stopPrank();
 
         vm.startPrank(bob);
         wstETH.approve(address(levStrat), wstInvestAmount);
-        levStrat.depositAndInvest(wstInvestAmount, bob, debtAmount, bptExpected);
+        levStrat.depositAndInvest(wstInvestAmount, bob, bptExpected);
         vm.stopPrank();
 
         uint256 aft = AuraLPVault.balanceOf(address(levStrat));
@@ -143,7 +151,7 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
 
         vm.prank(controller);
 
-        levStrat.invest(debtAmount, bptExpected);
+        levStrat.invest(bptExpected);
         assertGt(levStrat.balanceOf(vault4626), 0);
 
         vm.startPrank(vault4626);
@@ -153,8 +161,83 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
 
         vm.prank(controller);
 
-        levStrat.invest(debtAmount, bptExpected);
+        levStrat.invest(bptExpected);
         assertGt(levStrat.balanceOf(vault4626), 0);
+
+        uint256 aft = AuraLPVault.balanceOf(address(levStrat));
+        console2.log("bal aft", aft);
+        assertGt(aft, 0);
+    }
+
+    function testInvestFromKeeperIfCDPAlreadyExists() public subtest {
+        uint256 before = AuraLPVault.balanceOf(address(levStrat));
+        console2.log("bal b4", before);
+
+        // Give wsteth tokens to alice's account
+        deal(address(wstETH), vault4626, wstEthToAcc);
+
+        wstETH.approve(address(levStrat), maxApprove);
+
+        levStrat.initialize(investN, dao, controller, powerPool);
+
+        // Make vault msg.sender
+        vm.startPrank(vault4626);
+        wstETH.approve(address(levStrat), wstInvestAmount);
+        levStrat.deposit(wstInvestAmount, vault4626);
+        vm.stopPrank();
+
+        vm.prank(powerPool);
+        levStrat.investFromKeeper(bptExpected);
+        assertGt(levStrat.balanceOf(vault4626), 0);
+
+        vm.startPrank(vault4626);
+        wstETH.approve(address(levStrat), wstInvestAmount);
+        levStrat.deposit(wstInvestAmount, vault4626);
+        vm.stopPrank();
+
+        vm.prank(controller);
+
+        levStrat.invest(bptExpected);
+        assertGt(levStrat.balanceOf(vault4626), 0);
+
+        uint256 aft = AuraLPVault.balanceOf(address(levStrat));
+        console2.log("bal aft", aft);
+        assertGt(aft, 0);
+    }
+
+    function testInvestFromKeeperIfCDPAlreadyExistsAndCheckHealth() public subtest {
+        uint256 before = AuraLPVault.balanceOf(address(levStrat));
+        console2.log("bal b4", before);
+
+        // Give wsteth tokens to alice's account
+        deal(address(wstETH), vault4626, wstEthToAcc);
+
+        wstETH.approve(address(levStrat), maxApprove);
+
+        levStrat.initialize(investN, dao, controller, powerPool);
+
+        // Make vault msg.sender
+        vm.startPrank(vault4626);
+        wstETH.approve(address(levStrat), wstInvestAmount);
+        levStrat.deposit(wstInvestAmount, vault4626);
+        vm.stopPrank();
+
+        vm.prank(powerPool);
+        levStrat.investFromKeeper(bptExpected);
+        assertGt(levStrat.balanceOf(vault4626), 0);
+
+        vm.startPrank(vault4626);
+        wstETH.approve(address(levStrat), wstInvestAmount);
+        levStrat.deposit(wstInvestAmount, vault4626);
+        vm.stopPrank();
+
+        vm.prank(controller);
+
+        levStrat.invest(bptExpected);
+        assertGt(levStrat.balanceOf(vault4626), 0);
+
+        int256 health = levStrat.strategyHealth();
+        assertGt(health, 0);
 
         uint256 aft = AuraLPVault.balanceOf(address(levStrat));
         console2.log("bal aft", aft);
@@ -175,7 +258,7 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
 
         vm.prank(controller);
 
-        levStrat.invest(debtAmount, bptExpected);
+        levStrat.invest(bptExpected);
         assertGt(levStrat.balanceOf(vault4626), 0);
 
         uint256 debt_before = crvUSDController.debt(address(levStrat));
@@ -184,7 +267,7 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         _pushDebtToRepay(debtToRepay);
 
         vm.prank(controller);
-        levStrat.unwindPosition(amounts[0]);
+        levStrat.unwindPosition(amounts[0], minAmountOut);
 
         uint256 debt_after = crvUSDController.debt(address(levStrat));
 
@@ -208,7 +291,7 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         vm.stopPrank();
 
         vm.prank(controller);
-        levStrat.invest(debtAmount, bptExpected);
+        levStrat.invest(bptExpected);
         assertGt(levStrat.balanceOf(vault4626), 0);
 
         uint256 debt_before = crvUSDController.debt(address(levStrat));
@@ -216,7 +299,7 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         uint256 wstEthBalBefore = wstETH.balanceOf(address(levStrat));
         uint256 ethBalanceBefore = address(levStrat).balance;
         vm.prank(powerPool);
-        levStrat.unwindPositionFromKeeper();
+        levStrat.unwindPositionFromKeeper(minAmountOut);
         uint256 wstEthBalAfterUnwind = wstETH.balanceOf(address(levStrat));
         uint256 ethBalanceAfterUnwind = address(levStrat).balance;
 
@@ -247,9 +330,195 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         deal(address(wstETH), bob, wstInvestAmount * 2);
         deal(address(wstETH), team, wstInvestAmount);
 
-        // variables
-        uint256 collateralAmount;
-        uint256 maxDebtAmount;
+        uint256 startingAliceBalance = wstETH.balanceOf(alice);
+        uint256 startingBobBalance = wstETH.balanceOf(bob);
+
+        // initialize
+        levStrat.initialize(investN, dao, controller, powerPool);
+
+        // team deposit
+        vm.startPrank(team);
+        wstETH.approve(address(levStrat), wstInvestAmount);
+        levStrat.deposit(wstInvestAmount, team);
+        vm.stopPrank();
+
+        // invest
+        vm.prank(controller);
+        levStrat.invest(bptExpected);
+
+        // user 1 deposit
+        vm.startPrank(alice);
+        wstETH.approve(address(levStrat), wstInvestAmount);
+        levStrat.deposit(wstInvestAmount, alice);
+        vm.stopPrank();
+
+        // invest
+        vm.prank(controller);
+        levStrat.invest(bptExpected);
+
+        // user 2 deposit
+        vm.startPrank(bob);
+        wstETH.approve(address(levStrat), wstInvestAmount * 2);
+        levStrat.deposit(wstInvestAmount * 2, bob);
+        vm.stopPrank();
+
+        // invest
+        vm.prank(controller);
+        levStrat.invest(bptExpected);
+
+        uint256 beforeRedeemAliceBalance = wstETH.balanceOf(alice);
+        uint256 beforeRedeemBobBalance = wstETH.balanceOf(bob);
+
+        // user 1 withdraw
+        uint256 amountOfVaultSharesToWithdraw = levStrat.balanceOf(alice);
+        vm.startPrank(alice);
+        levStrat.approve(address(levStrat), amountOfVaultSharesToWithdraw);
+        levStrat.redeemWstEth(amountOfVaultSharesToWithdraw, alice, alice, minAmountOut);
+        vm.stopPrank();
+
+        // user 2 withdraw
+        amountOfVaultSharesToWithdraw = levStrat.balanceOf(bob);
+        vm.startPrank(bob);
+        levStrat.approve(address(levStrat), amountOfVaultSharesToWithdraw);
+        levStrat.redeemWstEth(amountOfVaultSharesToWithdraw, bob, bob, minAmountOut);
+        vm.stopPrank();
+
+        uint256 afterRedeemAliceBalance = wstETH.balanceOf(alice);
+        uint256 afterRedeemBobBalance = wstETH.balanceOf(bob);
+
+        // ensure user 1 receives the funds, vault shares are burnt and no funds is wasted
+        assertLt(beforeRedeemAliceBalance, afterRedeemAliceBalance);
+        assertLt(startingAliceBalance, afterRedeemAliceBalance);
+        assertLt(beforeRedeemBobBalance, afterRedeemBobBalance);
+        assertGt(startingBobBalance, afterRedeemBobBalance);
+    }
+
+    function test_revert_RedeemOrWithdraw() public {
+        // give tokens to user 1 and user 2
+        deal(address(wstETH), alice, wstInvestAmount);
+
+        uint256 startingAliceBalance = wstETH.balanceOf(alice);
+        uint256 startingBobBalance = wstETH.balanceOf(bob);
+
+        // initialize
+        levStrat.initialize(investN, dao, controller, powerPool);
+
+        // // user 1 deposit
+        // vm.startPrank(alice);
+        // wstETH.approve(address(levStrat), wstInvestAmount);
+        // levStrat.deposit(wstInvestAmount, alice);
+        // vm.stopPrank();
+
+        // // invest
+        // vm.prank(controller);
+        // levStrat.invest(bptExpected);
+
+        // // user 2 deposit
+        // vm.startPrank(bob);
+        // wstETH.approve(address(levStrat), wstInvestAmount * 2);
+        // levStrat.deposit(wstInvestAmount * 2, bob);
+        // vm.stopPrank();
+
+        // // invest
+        // vm.prank(controller);
+        // levStrat.invest(bptExpected);
+
+        // uint256 beforeRedeemAliceBalance = wstETH.balanceOf(alice);
+        // uint256 beforeRedeemBobBalance = wstETH.balanceOf(bob);
+
+        // user 1 withdraw
+        uint256 amountOfVaultSharesToWithdraw = levStrat.balanceOf(alice);
+        vm.startPrank(alice);
+        levStrat.approve(address(levStrat), amountOfVaultSharesToWithdraw);
+        vm.expectRevert(LeverageStrategyStorage.UseOverLoadedRedeemFunction.selector);
+        levStrat.redeem(amountOfVaultSharesToWithdraw, alice, alice);
+        vm.expectRevert(LeverageStrategyStorage.UseOverLoadedRedeemFunction.selector);
+        levStrat.withdraw(amountOfVaultSharesToWithdraw, alice, alice);
+        vm.stopPrank();
+    }
+
+    function test_UserWithdrawByApprovedUser() public {
+        // give tokens to user 1 and user 2
+        deal(address(wstETH), alice, wstInvestAmount);
+        deal(address(wstETH), bob, wstInvestAmount * 2);
+        deal(address(wstETH), team, wstInvestAmount);
+
+        uint256 startingAliceBalance = wstETH.balanceOf(alice);
+        uint256 startingBobBalance = wstETH.balanceOf(bob);
+
+        // initialize
+        levStrat.initialize(investN, dao, controller, powerPool);
+
+        // set approval for tokens to charlie
+        vm.prank(alice);
+        levStrat.approve(charlie, type(uint256).max);
+        vm.prank(bob);
+        levStrat.approve(charlie, type(uint256).max);
+        vm.prank(team);
+        levStrat.approve(charlie, type(uint256).max);
+
+        // team deposit
+        vm.startPrank(team);
+        wstETH.approve(address(levStrat), wstInvestAmount);
+        levStrat.deposit(wstInvestAmount, team);
+        vm.stopPrank();
+
+        // invest
+        vm.prank(controller);
+        levStrat.invest(bptExpected);
+
+        // user 1 deposit
+        vm.startPrank(alice);
+        wstETH.approve(address(levStrat), wstInvestAmount);
+        levStrat.deposit(wstInvestAmount, alice);
+        vm.stopPrank();
+
+        // invest
+        vm.prank(controller);
+        levStrat.invest(bptExpected);
+
+        // user 2 deposit
+        vm.startPrank(bob);
+        wstETH.approve(address(levStrat), wstInvestAmount * 2);
+        levStrat.deposit(wstInvestAmount * 2, bob);
+        vm.stopPrank();
+
+        // invest
+        vm.prank(controller);
+        levStrat.invest(bptExpected);
+
+        uint256 beforeRedeemAliceBalance = wstETH.balanceOf(alice);
+        uint256 beforeRedeemBobBalance = wstETH.balanceOf(bob);
+
+        // user 1 withdraw
+        uint256 amountOfVaultSharesToWithdraw = levStrat.balanceOf(alice);
+        vm.prank(alice);
+        levStrat.approve(address(levStrat), amountOfVaultSharesToWithdraw);
+        vm.prank(charlie);
+        levStrat.redeemWstEth(amountOfVaultSharesToWithdraw, alice, alice, minAmountOut);
+
+        // user 2 withdraw
+        amountOfVaultSharesToWithdraw = levStrat.balanceOf(bob);
+        vm.prank(bob);
+        levStrat.approve(address(levStrat), amountOfVaultSharesToWithdraw);
+        vm.prank(charlie);
+        levStrat.redeemWstEth(amountOfVaultSharesToWithdraw, bob, bob, minAmountOut);
+
+        uint256 afterRedeemAliceBalance = wstETH.balanceOf(alice);
+        uint256 afterRedeemBobBalance = wstETH.balanceOf(bob);
+
+        // ensure user 1 receives the funds, vault shares are burnt and no funds is wasted
+        assertLt(beforeRedeemAliceBalance, afterRedeemAliceBalance);
+        assertLt(startingAliceBalance, afterRedeemAliceBalance);
+        assertLt(beforeRedeemBobBalance, afterRedeemBobBalance);
+        assertGt(startingBobBalance, afterRedeemBobBalance);
+    }
+
+    function test_cancelDepositAndInvestFromKeeper() public {
+        // give tokens to user 1 and user 2
+        deal(address(wstETH), alice, wstInvestAmount * 2);
+        deal(address(wstETH), bob, wstInvestAmount * 2);
+        deal(address(wstETH), team, wstInvestAmount);
 
         uint256 startingAliceBalance = wstETH.balanceOf(alice);
         uint256 startingBobBalance = wstETH.balanceOf(bob);
@@ -264,10 +533,8 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         vm.stopPrank();
 
         // invest
-        collateralAmount = wstETH.balanceOf(address(levStrat));
-        maxDebtAmount = crvUSDController.max_borrowable(collateralAmount, investN);
         vm.prank(controller);
-        levStrat.invest(maxDebtAmount, bptExpected);
+        levStrat.invest(bptExpected);
 
         // user 1 deposit
         vm.startPrank(alice);
@@ -275,48 +542,97 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         levStrat.deposit(wstInvestAmount, alice);
         vm.stopPrank();
 
-        // invest
-        collateralAmount = wstETH.balanceOf(address(levStrat));
-        maxDebtAmount = crvUSDController.max_borrowable(collateralAmount, investN);
-        vm.prank(controller);
-        levStrat.invest(maxDebtAmount, bptExpected);
-
         // user 2 deposit
         vm.startPrank(bob);
         wstETH.approve(address(levStrat), wstInvestAmount * 2);
         levStrat.deposit(wstInvestAmount * 2, bob);
         vm.stopPrank();
 
-        // invest
-        collateralAmount = wstETH.balanceOf(address(levStrat));
-        maxDebtAmount = crvUSDController.max_borrowable(collateralAmount, investN);
-        vm.prank(controller);
-        levStrat.invest(maxDebtAmount, bptExpected);
-
-        uint256 beforeRedeemAliceBalance = wstETH.balanceOf(alice);
-        uint256 beforeRedeemBobBalance = wstETH.balanceOf(bob);
-
-        // user 1 withdraw
-        uint256 amountOfVaultSharesToWithdraw = levStrat.balanceOf(alice);
+        // user 1 makes another deposit
         vm.startPrank(alice);
-        levStrat.approve(address(levStrat), amountOfVaultSharesToWithdraw);
-        levStrat.redeem(amountOfVaultSharesToWithdraw, alice, alice);
+        wstETH.approve(address(levStrat), wstInvestAmount);
+        levStrat.deposit(wstInvestAmount, alice);
+
+        // user 1 cancels the deposit
+        // the key of the deposit can be fetched used the event, as this is a test, we know the key
+        assertEq(wstETH.balanceOf(alice), 0);
+        levStrat.cancelDeposit(4);
+        assertEq(wstETH.balanceOf(alice), wstInvestAmount);
+        // cannot cancel deposit again
+        vm.expectRevert(LeverageStrategyStorage.DepositCancellationNotAllowed.selector);
+        levStrat.cancelDeposit(4);
+        assertEq(wstETH.balanceOf(alice), wstInvestAmount);
+
         vm.stopPrank();
 
-        // user 2 withdraw
-        amountOfVaultSharesToWithdraw = levStrat.balanceOf(bob);
-        vm.startPrank(bob);
-        levStrat.approve(address(levStrat), amountOfVaultSharesToWithdraw);
-        levStrat.redeem(amountOfVaultSharesToWithdraw, bob, bob);
+        // invest
+        vm.prank(controller);
+        levStrat.invest(bptExpected);
+    }
+
+    function test_revert_cancelDepositWhenAlreadyDeposited() public {
+        // give tokens to user 1 and user 2
+        deal(address(wstETH), alice, wstInvestAmount * 2);
+
+        uint256 startingAliceBalance = wstETH.balanceOf(alice);
+        uint256 startingBobBalance = wstETH.balanceOf(bob);
+
+        // initialize
+        levStrat.initialize(investN, dao, controller, powerPool);
+
+        // user 1 deposit
+        vm.startPrank(alice);
+        wstETH.approve(address(levStrat), wstInvestAmount);
+        levStrat.deposit(wstInvestAmount, alice);
         vm.stopPrank();
 
-        uint256 afterRedeemAliceBalance = wstETH.balanceOf(alice);
-        uint256 afterRedeemBobBalance = wstETH.balanceOf(bob);
+        // user 1 makes another deposit
+        vm.startPrank(alice);
+        wstETH.approve(address(levStrat), wstInvestAmount);
+        levStrat.deposit(wstInvestAmount, alice);
+        vm.stopPrank();
 
-        // ensure user 1 receives the funds, vault shares are burnt and no funds is wasted
-        assertLt(beforeRedeemAliceBalance, afterRedeemAliceBalance);
-        assertLt(startingAliceBalance, afterRedeemAliceBalance);
-        assertLt(beforeRedeemBobBalance, afterRedeemBobBalance);
-        assertGt(startingBobBalance, afterRedeemBobBalance);
+        // invest
+        vm.prank(controller);
+        levStrat.invest(bptExpected);
+
+        // cancel deposit after being invested
+        // user 1 cancels the deposit
+        // the key of the deposit can be fetched used the event, as this is a test, we know the key
+        vm.startPrank(alice);
+        vm.expectRevert(LeverageStrategyStorage.DepositCancellationNotAllowed.selector);
+        levStrat.cancelDeposit(4);
+        assertEq(wstETH.balanceOf(alice), 0);
+        vm.stopPrank();
+    }
+
+    function test_revert_CancelDepositWithUnknownExecutor() public {
+        // give tokens to user 1 and user 2
+        deal(address(wstETH), alice, wstInvestAmount * 2);
+
+        uint256 startingAliceBalance = wstETH.balanceOf(alice);
+        uint256 startingBobBalance = wstETH.balanceOf(bob);
+
+        // initialize
+        levStrat.initialize(investN, dao, controller, powerPool);
+
+        // user 1 deposit
+        vm.startPrank(alice);
+        wstETH.approve(address(levStrat), wstInvestAmount);
+        levStrat.deposit(wstInvestAmount, alice);
+        vm.stopPrank();
+
+        // user 1 makes another deposit
+        vm.startPrank(alice);
+        wstETH.approve(address(levStrat), wstInvestAmount);
+        levStrat.deposit(wstInvestAmount, alice);
+        vm.stopPrank();
+
+        // user 1 cancels the deposit
+        // the key of the deposit can be fetched used the event, as this is a test, we know the key
+        assertEq(wstETH.balanceOf(alice), 0);
+        vm.expectRevert(LeverageStrategyStorage.UnknownExecuter.selector);
+        levStrat.cancelDeposit(2);
+        assertEq(wstETH.balanceOf(alice), 0);
     }
 }
