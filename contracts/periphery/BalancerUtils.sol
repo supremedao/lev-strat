@@ -79,6 +79,22 @@ abstract contract BalancerUtils is Tokens {
         BAL_VAULT.exitPool(POOL_ID, address(this), payable(address(this)), request);
     }
 
+    function simulateExitPool(uint256 bptAmountIn, uint256 exitTokenIndex) internal returns (uint256 bptIn, uint256[] memory amountsOut) {
+        (IERC20[] memory tokens, uint256[] memory balances, uint256 lastChangeBlock) = BAL_VAULT.getPoolTokens(POOL_ID);
+        uint256[] memory minAmountsOut = new uint256[](tokens.length);
+        minAmountsOut[exitTokenIndex] = 1;
+
+        (bptIn, amountsOut) = IBalancerVault.queryExit(
+            POOL_ID,
+            address(this),
+            address(this),
+            balances,
+            lastChangeBlock,
+            10000000000000000,
+            ""
+        );
+    }
+
     function _swapRewardBal(uint256 balAmount, uint256, uint256 deadline) internal {
         IERC20(BAL).approve(address(BAL_VAULT), balAmount);
 

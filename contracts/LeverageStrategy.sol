@@ -286,10 +286,20 @@ contract LeverageStrategy is
 
     // fix: rename this to redeemRewardsToMaintainCDP()
     function unwindPositionFromKeeper(uint256 minAmountOut) external nonReentrant onlyRole(KEEPER_ROLE) {
+        unwindQueued.timestamp = uint64(block.timestamp);
+        
+
+    }
+
+    /// @notice Executes a queued unwindFromKeeper
+    /// @dev    Can only be called by Keeper
+    function executeUnwindFromKeeper() external onlyRole(KEEPER_ROLE) {
+        if (unwindQueued.timestamp == uint64(block.timestamp)) revert InvalidUnwind();
+
         _unwindPosition(
             _convertToValue(AURA_VAULT.balanceOf(address(this)), FIXED_UNWIND_PERCENTAGE),
             FIXED_UNWIND_PERCENTAGE,
-            minAmountOut
+            0
         );
     }
 

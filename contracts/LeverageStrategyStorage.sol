@@ -27,15 +27,23 @@ abstract contract LeverageStrategyStorage {
     address public treasury; // recieves a fraction of yield
 
     struct DepositRecord {
+        DepositState state;
         address depositor;
         address receiver;
         uint256 amount;
-        DepositState state;
+    }
+
+    struct QueuedUnwind {
+        uint64 timestamp;
+        uint192 minAmountOut;
     }
 
     uint256 public depositCounter;
     uint256 public lastUsedDepositKey;
     mapping(uint256 => DepositRecord) public deposits;
+
+    // The queued unwind
+    QueuedUnwind public unwindQueued;
 
     event Deposited(uint256 indexed depositKey, uint256 amount, address indexed sender, address indexed receiver);
     event DepositCancelled(uint256 indexed depositKey);
@@ -47,4 +55,6 @@ abstract contract LeverageStrategyStorage {
     error ZeroDepositNotAllowed();
     error ZeroInvestmentNotAllowed();
     error UseOverLoadedRedeemFunction();
+    // Cannot queue and execute in same block
+    error InvalidUnwind();
 }

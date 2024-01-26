@@ -1,6 +1,6 @@
 pragma solidity ^0.8.0;
 
-import {LeverageStrategy} from "./LeverageStrategy.sol";
+import {LeverageStrategy, BalancerUtils} from "./LeverageStrategy.sol";
 import {Tokens} from "./periphery/Tokens.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
@@ -10,11 +10,13 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 contract StrategyResolver is Ownable, Tokens {
     // The target strategy contract
     LeverageStrategy public leverageStrategy;
+    
+    // Threshholds
     // The minimum Strategy health acceptable. `0` by default.
     int256 public unwindThreshold;
-    // The minimum amount of WETH required to invoke `investFromKeeper`.
+    // The minimum amount of WETH required to invoke `investFromKeeper`, 1 ETH by default.
     // Note the front-running risk in using a threshold
-    uint256 public investThreshold;
+    uint256 public investThreshold = 1 ether;
 
     /// @param _leverageStrategyAddress Address of the target Strategy contract
     constructor(address _leverageStrategyAddress) Ownable(msg.sender) {
@@ -58,7 +60,16 @@ contract StrategyResolver is Ownable, Tokens {
         return (flag, cdata);
     }
 
+    /// @notice This function returns the calldata for the Keeper to execute
+    /// @dev    Only to be used by Keeper to obtain correct calldata
     function checkAndReturnCalldata() public view returns (bool flag, bytes memory cdata) {
+        // If there is an unwind waiting to be called
+        if (leverageStrategy.unwindQueued.timestamp != 0) {
+            cdata = abi.encodeWithSelector(leverageStrategy.executeUnwindFromKeeper.selector, "");
+            return (true, cdata);
+        }
+
+        // If there was no unwind queued we check the current health
         if (checkCondition()) {
             cdata = abi.encodeWithSelector(leverageStrategy.unwindPositionFromKeeper.selector);
             flag = true;

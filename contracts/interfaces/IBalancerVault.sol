@@ -46,6 +46,24 @@ interface IBalancerVault {
     }
 
     /**
+     * @dev Data for each individual swap executed by `batchSwap`. The asset in and out fields are indexes into the
+     * `assets` array passed to that function, and ETH assets are converted to WETH.
+     *
+     * If `amount` is zero, the multihop mechanism is used to determine the actual amount based on the amount in/out
+     * from the previous swap, depending on the swap kind.
+     *
+     * The `userData` field is ignored by the Vault, but forwarded to the Pool in the `onSwap` hook, and may be
+     * used to extend swap behavior.
+     */
+    struct BatchSwapStep {
+        bytes32 poolId;
+        uint256 assetInIndex;
+        uint256 assetOutIndex;
+        uint256 amount;
+        bytes userData;
+    }
+
+    /**
      * @dev All tokens in a swap are either sent from the `sender` account to the Vault, or from the Vault to the
      * `recipient` account.
      *
@@ -182,4 +200,46 @@ interface IBalancerVault {
         external
         view
         returns (IERC20[] memory tokens, uint256[] memory balances, uint256 lastChangeBlock);
+
+    /**
+     * @dev Simulates a call to `batchSwap`, returning an array of Vault asset deltas. Calls to `swap` cannot be
+     * simulated directly, but an equivalent `batchSwap` call can and will yield the exact same result.
+     *
+     * Each element in the array corresponds to the asset at the same index, and indicates the number of tokens (or ETH)
+     * the Vault would take from the sender (if positive) or send to the recipient (if negative). The arguments it
+     * receives are the same that an equivalent `batchSwap` call would receive.
+     *
+     * Unlike `batchSwap`, this function performs no checks on the sender or recipient field in the `funds` struct.
+     * This makes it suitable to be called by off-chain applications via eth_call without needing to hold tokens,
+     * approve them for the Vault, or even know a user's address.
+     *
+     * Note that this function is not 'view' (due to implementation details): the client code must explicitly execute
+     * eth_call instead of eth_sendTransaction.
+     */
+    function queryBatchSwap(
+        SwapKind kind,
+        BatchSwapStep[] memory swaps,
+        IAsset[] memory assets,
+        FundManagement memory funds
+    ) external returns (int256[] memory assetDeltas);
+
+    /**
+     * @dev Returns the amount of BPT that would be burned from `sender` if the `onExitPool` hook were called by the
+     * Vault with the same arguments, along with the number of tokens `recipient` would receive.
+     *
+     * This function is not meant to be called directly, but rather from a helper contract that fetches current Vault
+     * data, such as the protocol swap fee percentage and Pool balances.
+     *
+     * Like `IVault.queryBatchSwap`, this function is not view due to internal implementation details: the caller must
+     * explicitly use eth_call instead of eth_sendTransaction.
+     */
+    function queryExit(
+        bytes32 poolId,
+        address sender,
+        address recipient,
+        uint256[] memory balances,
+        uint256 lastChangeBlock,
+        uint256 protocolSwapFeePercentage,
+        bytes memory userData
+    ) external returns (uint256 bptIn, uint256[] memory amountsOut);
 }
