@@ -167,10 +167,29 @@ contract LeverageStrategy is
     }
 
     function _removeCollateral(uint256 _percent, uint256 _debtCleared) internal returns (uint256 _removedWstAmount) {
+        // min_collateral from controller
         uint256 minimumCollateralFreed = crvUSDController.min_collateral(_debtCleared, N);
+        // returns all the collateral
         uint256 totalCollateral = crvUSDController.user_state(address(this))[0];
+        // 
         uint256 amountOfWstEthToBeRemoved = _convertToValue(totalCollateral, _percent);
+        /*
+            Suppose totalCollateral is 1000 wsteth
+
+            So the minimal collateral required for a user to clear a specific amount of debt
+            would mean, they deposited 100 wstETH, and they could borrow 100_000 crvUSD if wstETH costs 1000 USD
+            The price goes up to 2000 crvUSD, so now the `min_collateral` would be 50 wstETH. 
+
+            As a percentage, the user is entitled to 100 wstETH, but the protocol will only give
+            them back 50 wstETH. This is a huge loss of profit to the user
+
+            In the opposite direction, if they started with 100 wstETH deposit which could have supported 100_000 crvUSD. 
+            If the price drops, then the user would get more back ito minimal collateral.
+
+            We should simply remove the amount of wstETH that has been cleared by the debt
+        */
         amountOfWstEthToBeRemoved = Math.min(minimumCollateralFreed, amountOfWstEthToBeRemoved);
+        // unwrap is false
         crvUSDController.remove_collateral(amountOfWstEthToBeRemoved, false);
         return amountOfWstEthToBeRemoved;
     }
@@ -327,7 +346,8 @@ contract LeverageStrategy is
         // Opens a position on crvUSD if no loan already
         // Note this address is an owner of a crvUSD CDP
         // in the usual case we already have a CDP
-        // But there also should be a case when we create a new one
+        // But there also should be a case when we create a new one 
+        // @audit Transfers wstETH to Controller
         if (!crvUSDController.loan_exists(address(this))) {
             _depositAndCreateLoan(_wstETHAmount, _debtAmount);
         } else {
