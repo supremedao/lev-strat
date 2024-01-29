@@ -186,7 +186,7 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         levStrat.deposit(wstInvestAmount, vault4626);
         vm.stopPrank();
 
-        vm.prank(powerPool);
+        vm.startPrank(powerPool);
         levStrat.investFromKeeper();
         uint256 currentTimestamp = block.timestamp;
         // Simulate the block passing
@@ -226,7 +226,7 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         levStrat.deposit(wstInvestAmount, vault4626);
         vm.stopPrank();
 
-        vm.prank(powerPool);
+        vm.startPrank(powerPool);
         levStrat.investFromKeeper();
         uint256 currentTimestamp = block.timestamp;
         // Simulate the block passing

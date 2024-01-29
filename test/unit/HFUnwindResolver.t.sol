@@ -111,4 +111,13 @@ contract ResolverTest is BaseTest, Tokens {
         assertEq(bytes4(cdata), LeverageStrategy.executeUnwindFromKeeper.selector);
     }
 
+    // Case: success, no unwind needed, calldata == bytes("")
+    function test_success_checkAndReturnCalldata_No_Unwind_Needed(int256 amount) public {
+        vm.assume(amount > 0);
+        leverageStrategy.setStrategyHealth(amount);
+        (bool flag, bytes memory cdata) = resolver.checkAndReturnCalldata();
+        assertFalse(flag);
+        assertEq(cdata, bytes(""));
+    }
+
 }
