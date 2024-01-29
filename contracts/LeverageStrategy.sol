@@ -262,7 +262,7 @@ contract LeverageStrategy is
         // Queue an invest from Keeper Call
         investQueued.timestamp = uint64(block.timestamp);
         // We store a simulated amount out as a control value
-        (uint256 amountOut, ) = simulateJoinPool(QUERY_CONTROL_AMOUNT);
+        (uint256 amountOut, ) = simulateJoinPool(1000e6);
         investQueued.minAmountOut = uint192(investQueued.minAmountOut);
     }
 
@@ -273,7 +273,7 @@ contract LeverageStrategy is
         // Do not allow queue and execute in same block
         if (investQueued.timestamp == block.timestamp) revert InvalidInvest();
 
-        (uint256 expectedAmountOut, ) = simulateJoinPool(QUERY_CONTROL_AMOUNT);
+        (uint256 expectedAmountOut, ) = simulateJoinPool(1000e6);
         if (investQueued.minAmountOut > (uint192(expectedAmountOut) * 99 / 100)) {
             // Slippage control out of date, reset so a new call to `investFromKeeper` can happen
             investQueued.timestamp = 0;
@@ -333,16 +333,26 @@ contract LeverageStrategy is
             // If the new minAmountOut is 1% smaller than the stored amount out then there is too much slippage
             // Note Always use a protected endpoint to submit transactions!
             // Hardcoded slippage
-            if (unwindQueued.minAmountOut > (uint192(amountsOut[1]) * 99 / 100)) revert InvalidUnwind();
+            if (
+                // If the quote amounts are the same, slippage hasn't changed
+                unwindQueued.minAmountOut == (uint192(amountsOut[1])) ||
+                // If the 99% of current quote is better than old quote, slippage is acceptable
+                unwindQueued.minAmountOut < (uint192(amountsOut[1]) * 99 / 100)
+            ) {
+                _unwindPosition(
+                    _convertToValue(AURA_VAULT.balanceOf(address(this)), FIXED_UNWIND_PERCENTAGE),
+                    FIXED_UNWIND_PERCENTAGE,
+                    0
+                );
+                unwindQueued.timestamp = 0;
 
-            _unwindPosition(
-                _convertToValue(AURA_VAULT.balanceOf(address(this)), FIXED_UNWIND_PERCENTAGE),
-                FIXED_UNWIND_PERCENTAGE,
-                0
-            );
-            unwindQueued.timestamp = 0;
-        } else { 
-            // If timestamp is equal to 0 then no unwind has been queued
+            } else {
+                // Slippage is too much
+                revert InvalidUnwind();
+            }
+
+        } else {
+            // No unwind if timestamp is `0`
             revert InvalidUnwind();
         }
     }

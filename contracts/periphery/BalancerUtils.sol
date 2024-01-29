@@ -125,14 +125,14 @@ abstract contract BalancerUtils is Tokens {
         (bptIn, amountsOut) = abi.decode(data, (uint256, uint256[]));
     }
 
-    function simulateJoinPool(uint256 usdcAmountIn) internal returns (uint256 bptIn, uint256[] memory amountsIn) {
+    function simulateJoinPool(uint256 usdcAmountIn) internal returns (uint256 bptOut, uint256[] memory amountsIn) {
         (IERC20[] memory tokens, uint256[] memory balances, uint256 lastChangeBlock) = BAL_VAULT.getPoolTokens(POOL_ID);
 
         // Construct the userData 
         // [enum Kind][bptAmountIn][bptExpected]
         uint256[] memory tokensAmounts = new uint256[](2);
         tokensAmounts[1] = usdcAmountIn;
-        bytes memory userData = abi.encode(uint256(1), tokens, uint256(1)); 
+        bytes memory userData = abi.encode(uint256(1), tokensAmounts, uint256(1)); 
 
         // The address is the first 160 bits of our target pool
         // Note this may not always be the case!
@@ -153,7 +153,7 @@ abstract contract BalancerUtils is Tokens {
         );
 
         (bool success, bytes memory data) = pool.call(calldataToSim);
-        (bptIn, amountsIn) = abi.decode(data, (uint256, uint256[]));
+        (bptOut, amountsIn) = abi.decode(data, (uint256, uint256[]));
     }
 
     function _swapRewardBal(uint256 balAmount, uint256, uint256 deadline) internal {
