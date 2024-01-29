@@ -187,7 +187,11 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         vm.stopPrank();
 
         vm.prank(powerPool);
-        levStrat.investFromKeeper(bptExpected);
+        levStrat.investFromKeeper();
+        uint256 currentTimestamp = block.timestamp;
+        // Simulate the block passing
+        vm.warp(currentTimestamp + 12);
+        levStrat.executeInvestFromKeeper(1);
         assertGt(levStrat.balanceOf(vault4626), 0);
 
         vm.startPrank(vault4626);
@@ -223,7 +227,11 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         vm.stopPrank();
 
         vm.prank(powerPool);
-        levStrat.investFromKeeper(bptExpected);
+        levStrat.investFromKeeper();
+        uint256 currentTimestamp = block.timestamp;
+        // Simulate the block passing
+        vm.warp(currentTimestamp + 12);
+        levStrat.executeInvestFromKeeper(1);
         assertGt(levStrat.balanceOf(vault4626), 0);
 
         vm.startPrank(vault4626);
@@ -298,8 +306,13 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
 
         uint256 wstEthBalBefore = wstETH.balanceOf(address(levStrat));
         uint256 ethBalanceBefore = address(levStrat).balance;
-        vm.prank(powerPool);
-        levStrat.unwindPositionFromKeeper(minAmountOut);
+        uint256 time = block.timestamp;
+        vm.startPrank(powerPool);
+        levStrat.unwindPositionFromKeeper();
+        vm.warp(time + 12);
+        levStrat.executeUnwindFromKeeper();
+        vm.stopPrank();
+
         uint256 wstEthBalAfterUnwind = wstETH.balanceOf(address(levStrat));
         uint256 ethBalanceAfterUnwind = address(levStrat).balance;
 

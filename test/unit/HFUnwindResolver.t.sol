@@ -93,12 +93,22 @@ contract ResolverTest is BaseTest, Tokens {
     // Case: success, no unwind queued, calldata == queue new unwind 
     function test_success_checkAndReturnCalldata_NoUnwindQueued(uint256 balance) public {
         vm.assume(balance > 1 ether);
-        test_success_checkBalanceAndReturnCalldata(balance);
+
+        // Now we call the Resolver and expect the resolver to return the UnwindPositionFromKeeper call
+        (bool flag, bytes memory cdata) = resolver.checkAndReturnCalldata();
+        assertEq(bytes4(cdata), LeverageStrategy.unwindPositionFromKeeper.selector);
+
     }
 
     // Case: success, unwind queued, calldata == executeUnwind
-    function test_success_checkAndReturnCalldata_UnwindQueued() public {
-        
+    function test_success_checkAndReturnCalldata_UnwindQueued(uint256 balance) public {
+        // We queue an unwind
+        uint256 time = block.timestamp;
+        leverageStrategy.unwindPositionFromKeeper();
+
+        vm.warp(time + 12);
+        (bool flag, bytes memory cdata) = resolver.checkAndReturnCalldata();
+        assertEq(bytes4(cdata), LeverageStrategy.executeUnwindFromKeeper.selector);
     }
 
 }

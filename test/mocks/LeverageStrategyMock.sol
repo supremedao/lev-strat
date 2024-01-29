@@ -30,6 +30,7 @@ contract LeverageStrategy is
     uint256 public constant HUNDRED_PERCENT = 10 ** 12;
 
     int256 internal _strategyHealth;
+
     constructor(bytes32 _poolId){}
 
     //================================================EXTERNAL FUNCTIONS===============================================//
@@ -49,11 +50,21 @@ contract LeverageStrategy is
         return IERC20(address(1));
     }
 
-    function unwindFromKeeper() external {
+    function unwindPositionFromKeeper() external {
+        unwindQueued.minAmountOut = 1 ether;
+        unwindQueued.timestamp = uint64(block.timestamp);
+    }
+
+    function investFromKeeper() external {
+        investQueued.minAmountOut = 1 ether;
+        investQueued.timestamp = uint64(block.timestamp);
+    }
+
+    function executeInvestFromKeeper(uint256 x) external {
 
     }
 
-    function investFromKeeper(uint256 amountInMin) external {
+    function executeUnwindFromKeeper() external {
 
     }
 }

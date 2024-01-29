@@ -125,6 +125,37 @@ abstract contract BalancerUtils is Tokens {
         (bptIn, amountsOut) = abi.decode(data, (uint256, uint256[]));
     }
 
+    function simulateJoinPool(uint256 usdcAmountIn) internal returns (uint256 bptIn, uint256[] memory amountsIn) {
+        (IERC20[] memory tokens, uint256[] memory balances, uint256 lastChangeBlock) = BAL_VAULT.getPoolTokens(POOL_ID);
+
+        // Construct the userData 
+        // [enum Kind][bptAmountIn][bptExpected]
+        uint256[] memory tokensAmounts = new uint256[](2);
+        tokensAmounts[1] = usdcAmountIn;
+        bytes memory userData = abi.encode(uint256(1), tokens, uint256(1)); 
+
+        // The address is the first 160 bits of our target pool
+        // Note this may not always be the case!
+        // We shift the id 64 bits to the right and cast it to address
+        address pool = address(uint160(uint256(POOL_ID >> 96)));
+        uint256 swapFeePercentage = IPool(pool).getSwapFeePercentage();
+
+        // Query the pool directly, this call reverts if called through interface
+        bytes memory calldataToSim = abi.encodeWithSelector(
+            IPool.queryJoin.selector, 
+            POOL_ID,
+            AURA,
+            address(this),
+            balances,
+            lastChangeBlock,
+            swapFeePercentage,
+            userData
+        );
+
+        (bool success, bytes memory data) = pool.call(calldataToSim);
+        (bptIn, amountsIn) = abi.decode(data, (uint256, uint256[]));
+    }
+
     function _swapRewardBal(uint256 balAmount, uint256, uint256 deadline) internal {
         IERC20(BAL).approve(address(BAL_VAULT), balAmount);
 

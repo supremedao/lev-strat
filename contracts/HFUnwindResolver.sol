@@ -49,9 +49,19 @@ contract StrategyResolver is Ownable, Tokens {
         return currentHealth <= unwindThreshold;
     }
 
+    /// @notice Used by Keeper to check if there is any balance to invest
     function checkBalanceAndReturnCalldata() public view returns (bool flag, bytes memory cdata) {
+        // If there is an invest waiting to be called
+        (uint64 timeQueued,) = leverageStrategy.unwindQueued();
+        if (timeQueued != 0) {
+            cdata = abi.encodeWithSelector(leverageStrategy.executeInvestFromKeeper.selector, 1);
+            flag = true;
+            return (flag, cdata);
+        }
+
+        // No invest queued, so queue invest
         if (wstETH.balanceOf(address(leverageStrategy)) > investThreshold) {
-            cdata = abi.encodeWithSelector(leverageStrategy.investFromKeeper.selector, 1);
+            cdata = abi.encodeWithSelector(leverageStrategy.investFromKeeper.selector);
             flag = true;
         } else {
             cdata = bytes("");
@@ -66,7 +76,7 @@ contract StrategyResolver is Ownable, Tokens {
         // If there is an unwind waiting to be called
         (uint64 timeQueued,) = leverageStrategy.unwindQueued();
         if (timeQueued != 0) {
-            cdata = abi.encodeWithSelector(leverageStrategy.executeUnwindFromKeeper.selector, "");
+            cdata = abi.encodeWithSelector(leverageStrategy.executeUnwindFromKeeper.selector);
             return (true, cdata);
         }
 

@@ -33,7 +33,7 @@ abstract contract LeverageStrategyStorage {
         uint256 amount;
     }
 
-    struct QueuedUnwind {
+    struct QueuedAction {
         uint64 timestamp;
         uint192 minAmountOut;
     }
@@ -43,7 +43,8 @@ abstract contract LeverageStrategyStorage {
     mapping(uint256 => DepositRecord) public deposits;
 
     // The queued unwind
-    QueuedUnwind public unwindQueued;
+    QueuedAction public unwindQueued;
+    QueuedAction public investQueued;
 
     event Deposited(uint256 indexed depositKey, uint256 amount, address indexed sender, address indexed receiver);
     event DepositCancelled(uint256 indexed depositKey);
@@ -57,4 +58,6 @@ abstract contract LeverageStrategyStorage {
     error UseOverLoadedRedeemFunction();
     // Cannot queue and execute in same block
     error InvalidUnwind();
+    // Cannot queue and execuite in same block
+    error InvalidInvest();
 }

@@ -258,25 +258,50 @@ contract LeverageStrategy is
     // fix: how would wstETH end up in this contract?
     // fix: do not allow this operation, to keep track of who invested how much,
     //  we should only allow to invest directly
-    function investFromKeeper(uint256 _bptAmountOut) external nonReentrant onlyRole(KEEPER_ROLE) {
-        // calculate total wstETH by traversing through all the deposit records
-        (uint256 wstEthAmount, uint256 startKeyId,) = _computeAndRebalanceDepsoitRecords();
-        uint256 _debtAmount = crvUSDController.max_borrowable(wstEthAmount, N);
+    function investFromKeeper() external nonReentrant onlyRole(KEEPER_ROLE) {
+        // Queue an invest from Keeper Call
+        investQueued.timestamp = uint64(block.timestamp);
+        // We store a simulated amount out as a control value
+        (uint256 amountOut, ) = simulateJoinPool(QUERY_CONTROL_AMOUNT);
+        investQueued.minAmountOut = uint192(investQueued.minAmountOut);
+    }
 
-        uint256 currentTotalShares = totalSupply();
-        // get the current balance of the Aura vault shares
-        // to be used to determine how many new vault shares were minted
-        uint256 beforeBalance = AURA_VAULT.balanceOf(address(this));
+    /// @notice Executes a queued invest from a Keeper
+    /// @dev Explain to a developer any extra details
+    /// @param _bptAmountOut a parameter just like in doxygen (must be followed by parameter name)
+    function executeInvestFromKeeper(uint256 _bptAmountOut) external nonReentrant onlyRole(KEEPER_ROLE) {
+        // Do not allow queue and execute in same block
+        if (investQueued.timestamp == block.timestamp) revert InvalidInvest();
 
-        uint256 maxBorrowable = crvUSDController.max_borrowable(wstEthAmount, N); //Should the keeper always borrow max or some %
+        (uint256 expectedAmountOut, ) = simulateJoinPool(QUERY_CONTROL_AMOUNT);
+        if (investQueued.minAmountOut > (uint192(expectedAmountOut) * 99 / 100)) {
+            // Slippage control out of date, reset so a new call to `investFromKeeper` can happen
+            investQueued.timestamp = 0;
+        }
 
-        _invest(wstEthAmount, maxBorrowable, _bptAmountOut);
+        if (investQueued.timestamp != 0) {
+            // calculate total wstETH by traversing through all the deposit records
+            (uint256 wstEthAmount, uint256 startKeyId,) = _computeAndRebalanceDepsoitRecords();
+            uint256 _debtAmount = crvUSDController.max_borrowable(wstEthAmount, N);
 
-        // calculate total new shares minted
-        // here assets is Aura Vault shares
-        uint256 addedAssets = AURA_VAULT.balanceOf(address(this)) - beforeBalance;
-        // we equally mint vault shares to the receivers of each deposit record that was used
-        _mintMultipleShares(startKeyId, currentTotalShares, beforeBalance, addedAssets * HUNDRED_PERCENT / wstEthAmount);
+            uint256 currentTotalShares = totalSupply();
+            // get the current balance of the Aura vault shares
+            // to be used to determine how many new vault shares were minted
+            uint256 beforeBalance = AURA_VAULT.balanceOf(address(this));
+
+            uint256 maxBorrowable = crvUSDController.max_borrowable(wstEthAmount, N); //Should the keeper always borrow max or some %
+
+            _invest(wstEthAmount, maxBorrowable, _bptAmountOut);
+
+            // calculate total new shares minted
+            // here assets is Aura Vault shares
+            uint256 addedAssets = AURA_VAULT.balanceOf(address(this)) - beforeBalance;
+            // we equally mint vault shares to the receivers of each deposit record that was used
+            _mintMultipleShares(startKeyId, currentTotalShares, beforeBalance, addedAssets * HUNDRED_PERCENT / wstEthAmount);
+        } else {
+            // If timestamp is 0 we do not have an invest queued
+            revert InvalidInvest();
+        }
     }
 
     // fix: unwind position only based on msg.sender share
@@ -286,7 +311,7 @@ contract LeverageStrategy is
     }
 
     // fix: rename this to redeemRewardsToMaintainCDP()
-    function unwindPositionFromKeeper(uint256 minAmountOut) external nonReentrant onlyRole(KEEPER_ROLE) {
+    function unwindPositionFromKeeper() external nonReentrant onlyRole(KEEPER_ROLE) {
         (,uint256[] memory minAmountsOut) = simulateExitPool(QUERY_CONTROL_AMOUNT);
         // Grab the exit token index
         unwindQueued.minAmountOut = uint192(minAmountsOut[1]);
