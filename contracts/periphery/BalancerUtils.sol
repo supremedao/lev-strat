@@ -26,8 +26,10 @@ abstract contract BalancerUtils is Tokens {
     uint256 public constant FIXED_LIMIT = 1;
     bytes public constant EMPTY_USER_DATA = "";
 
-    // Fixed control amount
+    // Fixed control amount for BPT
     uint256 public constant QUERY_CONTROL_AMOUNT = 10 ether;
+    // Finxed USDC Control Amount
+    uint256 public constant USDC_CONTROL_AMOUNT = 1000e6;
 
     // Pool tokens
     IERC20 public immutable token0;
@@ -39,7 +41,7 @@ abstract contract BalancerUtils is Tokens {
     constructor(bytes32 _poolId) {
         POOL_ID = _poolId;
         (IERC20[] memory tokens,,) = BAL_VAULT.getPoolTokens(POOL_ID);
-        token0 =tokens[0];
+        token0 = tokens[0];
         token1= tokens[1];
     }
 

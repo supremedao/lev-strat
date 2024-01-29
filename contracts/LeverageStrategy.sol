@@ -262,7 +262,7 @@ contract LeverageStrategy is
         // Queue an invest from Keeper Call
         investQueued.timestamp = uint64(block.timestamp);
         // We store a simulated amount out as a control value
-        (uint256 amountOut, ) = simulateJoinPool(1000e6);
+        (uint256 amountOut, ) = simulateJoinPool(USDC_CONTROL_AMOUNT);
         investQueued.minAmountOut = uint192(investQueued.minAmountOut);
     }
 
@@ -273,7 +273,8 @@ contract LeverageStrategy is
         // Do not allow queue and execute in same block
         if (investQueued.timestamp == block.timestamp) revert InvalidInvest();
 
-        (uint256 expectedAmountOut, ) = simulateJoinPool(1000e6);
+        (uint256 expectedAmountOut, ) = simulateJoinPool(USDC_CONTROL_AMOUNT);
+        // 1% slippage
         if (investQueued.minAmountOut > (uint192(expectedAmountOut) * 99 / 100)) {
             // Slippage control out of date, reset so a new call to `investFromKeeper` can happen
             investQueued.timestamp = 0;
