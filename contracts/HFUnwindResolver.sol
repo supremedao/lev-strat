@@ -64,7 +64,8 @@ contract StrategyResolver is Ownable, Tokens {
     /// @dev    Only to be used by Keeper to obtain correct calldata
     function checkAndReturnCalldata() public view returns (bool flag, bytes memory cdata) {
         // If there is an unwind waiting to be called
-        if (leverageStrategy.unwindQueued.timestamp != 0) {
+        (uint64 timeQueued,) = leverageStrategy.unwindQueued();
+        if (timeQueued != 0) {
             cdata = abi.encodeWithSelector(leverageStrategy.executeUnwindFromKeeper.selector, "");
             return (true, cdata);
         }

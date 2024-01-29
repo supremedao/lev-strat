@@ -18,11 +18,7 @@ import {LeverageStrategyStorage} from "../../contracts/LeverageStrategyStorage.s
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 contract LeverageStrategy is
-    ERC4626,
     ReentrancyGuard,
-    BalancerUtils,
-    AuraUtils,
-    CurveUtils,
     AccessControl,
     LeverageStrategyStorage
 {
@@ -34,11 +30,7 @@ contract LeverageStrategy is
     uint256 public constant HUNDRED_PERCENT = 10 ** 12;
 
     int256 internal _strategyHealth;
-    constructor(bytes32 _poolId)
-        BalancerUtils(_poolId)
-        ERC20("Supreme Aura D2D-USDC vault", "sAura-D2D-USD")
-        ERC4626(IERC20(address(AURA_VAULT)))
-    {}
+    constructor(bytes32 _poolId){}
 
     //================================================EXTERNAL FUNCTIONS===============================================//
 
@@ -53,7 +45,15 @@ contract LeverageStrategy is
     }
 
     // Implemented for later tests
-    function _tokenToStake() internal view override returns (IERC20) {
-        return IERC20(asset());
+    function _tokenToStake() internal view returns (IERC20) {
+        return IERC20(address(1));
+    }
+
+    function unwindFromKeeper() external {
+
+    }
+
+    function investFromKeeper(uint256 amountInMin) external {
+
     }
 }

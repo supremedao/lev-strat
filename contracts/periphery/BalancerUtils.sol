@@ -12,6 +12,7 @@ ____/ // /_/ /__  /_/ /  /   /  __/  / / / / /  __/  /_/ /_  ___ / /_/ /
 pragma solidity ^0.8.0;
 
 import "../interfaces/IBalancerVault.sol";
+import "../interfaces/IPool.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./Tokens.sol";
 
@@ -25,11 +26,21 @@ abstract contract BalancerUtils is Tokens {
     uint256 public constant FIXED_LIMIT = 1;
     bytes public constant EMPTY_USER_DATA = "";
 
+    // Fixed control amount
+    uint256 public constant QUERY_CONTROL_AMOUNT = 10 ether;
+
+    // Pool tokens
+    IERC20 public immutable token0;
+    IERC20 public immutable token1;
+
     // pool of D2D/USDC
     bytes32 public immutable POOL_ID;
 
     constructor(bytes32 _poolId) {
         POOL_ID = _poolId;
+        (IERC20[] memory tokens,,) = BAL_VAULT.getPoolTokens(POOL_ID);
+        token0 =tokens[0];
+        token1= tokens[1];
     }
 
     /// @notice Join balancer pool
@@ -79,20 +90,39 @@ abstract contract BalancerUtils is Tokens {
         BAL_VAULT.exitPool(POOL_ID, address(this), payable(address(this)), request);
     }
 
-    function simulateExitPool(uint256 bptAmountIn, uint256 exitTokenIndex) internal returns (uint256 bptIn, uint256[] memory amountsOut) {
+    /// @notice Simulates an `exitRequest`
+    /// @dev    Used to provide a baseline amountOut for subsequent transactions
+    /// @dev    Note NEVER use the value obtained in this transaction as the only `minAmountOut`
+    /// @param bptAmountIn The amount of BTP tokens to send
+    /// @return bptIn Amount of BPT used in query
+    /// @return amountsOut Array of amounts out 
+    function simulateExitPool(uint256 bptAmountIn) internal returns (uint256 bptIn, uint256[] memory amountsOut) {
         (IERC20[] memory tokens, uint256[] memory balances, uint256 lastChangeBlock) = BAL_VAULT.getPoolTokens(POOL_ID);
-        uint256[] memory minAmountsOut = new uint256[](tokens.length);
-        minAmountsOut[exitTokenIndex] = 1;
 
-        (bptIn, amountsOut) = IBalancerVault.queryExit(
+        // Construct the userData 
+        // [enum Kind][bptAmountIn][exitTokenIndex]
+        bytes memory userData = abi.encode(uint256(0), uint256(bptAmountIn), uint256(1)); 
+
+        // The address is the first 160 bits of our target pool
+        // Note this may not always be the case!
+        // We shift the id 64 bits to the right and cast it to address
+        address pool = address(uint160(uint256(POOL_ID >> 96)));
+        uint256 swapFeePercentage = IPool(pool).getSwapFeePercentage();
+
+        // Query the pool directly, this call reverts if called through interface
+        bytes memory calldataToSim = abi.encodeWithSelector(
+            IPool.queryExit.selector, 
             POOL_ID,
-            address(this),
+            AURA,
             address(this),
             balances,
             lastChangeBlock,
-            10000000000000000,
-            ""
+            swapFeePercentage,
+            userData
         );
+
+        (bool success, bytes memory data) = pool.call(calldataToSim);
+        (bptIn, amountsOut) = abi.decode(data, (uint256, uint256[]));
     }
 
     function _swapRewardBal(uint256 balAmount, uint256, uint256 deadline) internal {
