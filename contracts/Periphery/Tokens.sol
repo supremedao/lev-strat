@@ -14,13 +14,33 @@ pragma solidity ^0.8.0;
 import "../interfaces/IcrvUSD.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
+/// @title Token Addresses and Interfaces
+/// @author SupremeDAO
+/// @notice Provides constant addresses and interfaces for various tokens used in the contracts.
+/// @dev This abstract contract defines addresses and interfaces for tokens like BAL, AURA, WETH, and others.
 abstract contract Tokens {
+    /// @notice The address of the BAL token.
     address public constant BAL = 0xba100000625a3754423978a60c9317c58a424e3D;
+
+    /// @notice The address of the AURA token.
     address public constant AURA = 0xC0c293ce456fF0ED870ADd98a0828Dd4d2903DBF;
+
+    /// @notice The address of the WETH token.
     address public constant WETH = 0xdFCeA9088c8A88A76FF74892C1457C17dfeef9C1;
+
+    /// @notice The ERC20 interface for wstETH token.
     IERC20 public constant wstETH = IERC20(0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0);
+
+    /// @notice The ERC20 interface for USDC token.
     IERC20 public constant USDC = IERC20(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
+
+    /// @notice The ERC20 interface for D2D token.
     IERC20 public constant D2D = IERC20(0x43D4A3cd90ddD2F8f4f693170C9c8098163502ad);
+
+    /// @notice The ERC20 interface for D2D/USDC Balancer Pool Token (BPT).
     IERC20 public constant D2D_USDC_BPT = IERC20(0x27C9f71cC31464B906E0006d4FcBC8900F48f15f);
+
+    /// @notice The crvUSD token interface.
     IcrvUSD public constant crvUSD = IcrvUSD(0xf939E0A03FB07F59A73314E73794Be0E57ac1b4E);
 }
+

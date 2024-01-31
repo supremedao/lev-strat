@@ -17,72 +17,95 @@ import "../interfaces/IcrvUSDUSDCPool.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./Tokens.sol";
 
+/// @title Curve Utility Functions
+/// @author SupremeDAO
+/// @notice Provides utility functions for interacting with Curve Finance contracts.
+/// @dev This abstract contract includes functions for depositing, borrowing, repaying, and exchanging assets on Curve.
 abstract contract CurveUtils is Tokens {
-    // fix: address of crvUSD will not change, we can set it as immutable
+    /// @notice The controller contract for crvUSD loans.
     IcrvUSDController public constant crvUSDController = IcrvUSDController(0x100dAa78fC509Db39Ef7D04DE0c1ABD299f4C6CE);
+
+    /// @notice The Curve pool for crvUSD and USDC exchange.
     IcrvUSDUSDCPool public constant crvUSDUSDCPool = IcrvUSDUSDCPool(0x4DEcE678ceceb27446b35C672dC7d61F30bAD69E);
 
-    uint256 public totalWsthethDeposited; // Total wsteth deposited
-    uint256 public totalUsdcAmount; // Total usdc  after swapping from crvusd
-    uint256 public N; // Number of bands for the crvusd/wseth soft liquidation range
+    /// @notice Total amount of wstETH deposited.
+    uint256 public totalWsthethDeposited;
 
-    /// @notice Create a loan position for the strategy, only used if this is the first position created
-    /// @param _wstETHAmount the amount of wsteth deposited
-    /// @param _debtAmount the amount of crvusd borrowed
+    /// @notice Total amount of USDC after exchanging from crvUSD.
+    uint256 public totalUsdcAmount;
+
+    /// @notice Number of bands for the crvusd/wstETH soft liquidation range.
+    uint256 public N;
+
+    /// @notice Creates a loan position using wstETH as collateral.
+    /// @dev Used only for the initial creation of a loan position.
+    /// @param _wstETHAmount The amount of wstETH to be deposited as collateral.
+    /// @param _debtAmount The amount of crvUSD to be borrowed.
     function _depositAndCreateLoan(uint256 _wstETHAmount, uint256 _debtAmount) internal {
         require(_wstETHAmount > 0, "Amount should be greater than 0");
 
-        //require(IERC20(wsteth).transferFrom(msg.sender, address(this), _wstETHAmount), "Transfer failed");
-
+        // Approve the crvUSDController to handle wstETH
         require(wstETH.approve(address(crvUSDController), _wstETHAmount), "Approval failed");
 
         // Call create_loan on the controller
         crvUSDController.create_loan(_wstETHAmount, _debtAmount, N);
 
-        totalWsthethDeposited = totalWsthethDeposited + _wstETHAmount;
+        // Update the total wstETH deposited after creating the loan
+        totalWsthethDeposited += _wstETHAmount;
     }
 
-    /// @notice Add collateral to a loan postion if the poistion is already initialised
-    /// @param _wstETHAmount the amount of wsteth deposited
+    /// @notice Adds more collateral to an existing loan position.
+    /// @dev The wstETH is already held by the contract, so no transfer is needed.
+    /// @param _wstETHAmount The amount of wstETH to add as additional collateral.
     function _addCollateral(uint256 _wstETHAmount) internal {
         require(_wstETHAmount > 0, "Amount should be greater than 0");
 
-        require(wstETH.transferFrom(msg.sender, address(this), _wstETHAmount), "Transfer failed");
-
+        // Approve the crvUSDController to handle additional wstETH
         require(wstETH.approve(address(crvUSDController), _wstETHAmount), "Approval failed");
 
+        // Add the additional collateral to the existing loan
         crvUSDController.add_collateral(_wstETHAmount, address(this));
-        totalWsthethDeposited = totalWsthethDeposited + _wstETHAmount;
+        totalWsthethDeposited += _wstETHAmount;
     }
 
-    /// @notice Borrow more crvusd,
-    /// @param _wstETHAmount the amount of wsteth deposited
-    /// @param _debtAmount the amount of crvusd borrowed
-    /// @dev We don't need to transferFrom msg.sender anymore as now the wsteth will be directly transferred by the vault
+    /// @notice Borrows additional crvUSD against the collateral.
+    /// @param _wstETHAmount The amount of wstETH deposited as collateral for the additional borrowing.
+    /// @param _debtAmount The amount of crvUSD to borrow.
     function _borrowMore(uint256 _wstETHAmount, uint256 _debtAmount) internal {
         require(wstETH.approve(address(crvUSDController), _wstETHAmount), "Approval failed");
 
+        // Borrow more crvUSD against the additional wstETH collateral
         crvUSDController.borrow_more(_wstETHAmount, _debtAmount);
-
-        totalWsthethDeposited = totalWsthethDeposited + _wstETHAmount;
+        totalWsthethDeposited += _wstETHAmount;
     }
 
-    function _repayCRVUSDLoan(uint256 deptToRepay) internal {
-        require(crvUSD.approve(address(crvUSDController), deptToRepay), "Approval failed");
-        crvUSDController.repay(deptToRepay);
+    /// @notice Repays a specified amount of the crvUSD loan.
+    /// @param debtToRepay The amount of crvUSD to repay.
+    function _repayCRVUSDLoan(uint256 debtToRepay) internal {
+        require(crvUSD.approve(address(crvUSDController), debtToRepay), "Approval failed");
+
+        // Repay the specified amount of crvUSD loan
+        crvUSDController.repay(debtToRepay);
     }
 
+    /// @notice Exchanges crvUSD to USDC through the Curve pool.
+    /// @param _dx The amount of crvUSD to exchange.
     function _exchangeCRVUSDtoUSDC(uint256 _dx) internal {
         require(crvUSD.approve(address(crvUSDUSDCPool), _dx), "Approval failed");
 
+        // Calculate the expected USDC amount and perform the exchange
         uint256 expected = crvUSDUSDCPool.get_dy(1, 0, _dx) * 99 / 100;
         uint256 beforeUsdcBalance = USDC.balanceOf(address(this));
         crvUSDUSDCPool.exchange(1, 0, _dx, expected, address(this));
         totalUsdcAmount += USDC.balanceOf(address(this)) - beforeUsdcBalance;
     }
 
+    /// @notice Exchanges USDC to crvUSD through the Curve pool.
+    /// @param _dx The amount of USDC to exchange.
     function _exchangeUSDCTocrvUSD(uint256 _dx) internal {
         require(USDC.approve(address(crvUSDUSDCPool), _dx), "Approval failed");
+
+        // Calculate the expected crvUSD amount and perform the exchange
         uint256 expected = crvUSDUSDCPool.get_dy(0, 1, _dx) * 99 / 100;
         uint256 beforeUsdcBalance = USDC.balanceOf(address(this));
         crvUSDUSDCPool.exchange(0, 1, _dx, expected, address(this));
