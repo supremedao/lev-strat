@@ -261,6 +261,7 @@ contract LeverageStrategy is
         if (assets == 0) {
             revert ZeroDepositNotAllowed();
         }
+
         uint256 _debtAmount = crvUSDController.max_borrowable(assets, N);
         // calculate shares
         uint256 currentTotalShares = totalSupply();
@@ -350,8 +351,8 @@ contract LeverageStrategy is
                 // get the current balance of the Aura vault shares
                 // to be used to determine how many new vault shares were minted
                 uint256 beforeBalance = AURA_VAULT.balanceOf(address(this));
-
-                uint256 maxBorrowable = crvUSDController.max_borrowable(wstEthAmount, N); //Should the keeper always borrow max or some %
+                // Here the keeper is borrowing only 95% of the max borrowable amount
+                uint256 maxBorrowable = crvUSDController.max_borrowable(wstEthAmount * healthBuffer / HUNDRED_PERCENT, N); //Should the keeper always borrow max or some %
 
                 _invest(wstEthAmount, maxBorrowable, _bptAmountOut);
 
@@ -418,6 +419,14 @@ contract LeverageStrategy is
             // No unwind if timestamp is `0`
             revert InvalidUnwind();
         }
+    }
+
+    /// @notice Sets the health buffer. 
+    /// @dev    This ensures that the protocol maintains a healthy colalteral factor
+    /// @param  percentage Must be smaller than 10e12
+    function setHealthBuffer(uint256 percentage) external {
+        if (percentage > HUNDRED_PERCENT) revert InvalidInput();
+        healthBuffer = percentage;
     }
 
     /// @notice Internally handles the unwinding of a position by redeeming and converting assets
