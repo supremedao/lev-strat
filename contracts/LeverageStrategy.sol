@@ -28,6 +28,11 @@ import {CurveUtils} from "./periphery/CurveUtils.sol";
 import {LeverageStrategyStorage} from "./LeverageStrategyStorage.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
+/// @title Leverage Strategy Contract
+/// @notice This contract is the core of a leverage strategy involving borrowing tokens,
+///         creating a CDP (Collateralized Debt Position), and using the borrowed assets to invest 
+///         and stake in the Aura pool to generate yield.
+/// @dev The contract rebalances upon PowerAgent interaction
 contract LeverageStrategy is
     ERC4626,
     ReentrancyGuard,
@@ -39,9 +44,16 @@ contract LeverageStrategy is
 {
     using Math for uint256;
 
+    /// @notice Role identifier for the keeper role, responsible for protocol maintenance tasks. Role given to PowerAgent
     bytes32 public constant KEEPER_ROLE = keccak256("KEEPER_ROLE");
+
+    /// @notice Role identifier for the controller role, responsible for high-level protocol management
     bytes32 public constant CONTROLLER_ROLE = keccak256("CONTROLLER_ROLE");
+
+    /// @notice Fixed percentage (scaled by 10^12) used in unwinding positions, set to 30%
     uint256 public constant FIXED_UNWIND_PERCENTAGE = 30 * 10 ** 10;
+
+    /// @notice Constant representing 100%, used for percentage calculations, scaled by 10^12
     uint256 public constant HUNDRED_PERCENT = 10 ** 12;
 
     // TODO:
@@ -53,7 +65,10 @@ contract LeverageStrategy is
     // Events
     // Add relevant events to log important contract actions/events
 
-    /// Constructor
+    /// @notice Constructs the LeverageStrategy contract and initializes key components
+    /// @dev Grants the deployer the default admin role and initializes the contract with 
+    ///      Balancer pool ID, sets up ERC20 metadata, and establishes the base asset for ERC4626
+    /// @param _poolId The unique identifier of the Balancer pool used in the strategy
     constructor(bytes32 _poolId)
         BalancerUtils(_poolId)
         ERC20("Supreme Aura D2D-USDC vault", "sAura-D2D-USD")
@@ -62,29 +77,49 @@ contract LeverageStrategy is
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
 
+
     //================================================EXTERNAL FUNCTIONS===============================================//
 
-    // only DAO can initialize
-    // fix: use it directly inside the constructor
-    /// @param _dao is the treasury to withdraw too
-    /// @param _controller is the address of the strategy controller
-    /// @param _keeper is the address of the power pool keeper
+    /// @notice Initializes the contract with specific parameters and roles after deployment and makes it ready for investing
+    /// @dev Can only be called by an account with the DEFAULT_ADMIN_ROLE
+    ///      This function sets key contract parameters and assigns roles to specified addresses.
+    ///      It should be called immediately after contract deployment.
+    /// @param _N A numeric parameter used in the contract's logic (its specific role should be described)
+    /// @param _dao The address to be set as the treasury
+    /// @param _controller The address to be granted the CONTROLLER_ROLE
+    /// @param _keeper The address (poweragent) to be granted the KEEPER_ROLE
     function initialize(uint256 _N, address _dao, address _controller, address _keeper)
         external
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
+        //set the treasury address
         treasury = _dao;
+        //set the number of price bands to deposit into
         N = _N;
+        //grant the default admin role to the contract deployer
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        //grant the controller role to the given address
         _grantRole(CONTROLLER_ROLE, _controller);
+        //grant the keeper role to the given address (poweragent address)
         _grantRole(KEEPER_ROLE, _keeper);
     }
 
+    /// @notice Sets the index of the token to be withdrawn when exiting the pool
+    /// @dev Can only be called by an account with the DEFAULT_ADMIN_ROLE
+    ///      This function updates the TokenIndex state variable, which determines the specific token 
+    ///      to be withdrawn from a pool when executing certain strategies or operations.
+    /// @param _TokenIndex The index of the token in the pool to be set for withdrawal operations
     function setTokenIndex(uint256 _TokenIndex) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        //set the index of the token to be withdrawn exiting the pool
         TokenIndex = _TokenIndex;
     }
 
+    /// @notice Returns the health of the strategy's Collateralized Debt Position (CDP) on Curve Finance
+    /// @dev This function fetches the health metric from the Curve Finance controller
+    ///      It provides an assessment of the current state of the CDP associated with this contract.
+    /// @return The health of the CDP as an integer value
     function strategyHealth() external view returns (int256) {
+        //return the health of the strategy's CDP on Curve Finance
         return crvUSDController.health(address(this), false);
     }
 
@@ -114,7 +149,15 @@ contract LeverageStrategy is
         emit DepositCancelled(_key);
     }
 
-    // renaming to ensure no confusion
+    /// @notice Redeems a specified amount of shares for the underlying asset, closes CDP and sends wstETH to the receiver
+    /// @dev This function handles the redemption process with checks for maximum redeemable shares and minimum amount out.
+    ///      It reverts if the shares to be redeemed exceed the maximum allowed for the owner.
+    ///      It also ensures that the actual amount of assets withdrawn is not less than a specified minimum.
+    /// @param shares The number of shares to be redeemed
+    /// @param receiver The address that will receive the wstETH assets
+    /// @param owner The address that owns the shares being redeemed
+    /// @param minAmountOut The minimum amount of USDC assets to receive from the exiting the Balancer pool
+    /// @return The amount of assets that were redeemed
     function redeemWstEth(uint256 shares, address receiver, address owner, uint256 minAmountOut)
         public
         virtual
@@ -132,6 +175,8 @@ contract LeverageStrategy is
         return assets;
     }
 
+    /// @notice reverts everytime to ensure no one can use redeem and withdraw functions
+    /// @inheritdoc	ERC4626
     function _withdraw(address caller, address receiver, address owner, uint256 assets, uint256 shares)
         internal
         virtual
@@ -161,26 +206,17 @@ contract LeverageStrategy is
             _spendAllowance(owner, caller, shares);
         }
 
-        uint256 totalWithdrawableWstETH;
-
         // calculate percentage of shares to be withdrawn
         uint256 percentageToBeWithdrawn = _convertToPercentage(shares, totalSupply());
 
-        // assets location 1 - wstETH in contract
-        // if someone sends ETH to this contract, it will be utilised to withdraw
-        // stranger makes donation
-        // remove the line below because the wstETH in the contract might also withdraw from wstETH that have been deposited
-        // causes attacker to take more then their shares and also DoS of invest function
-        // totalWithdrawableWstETH += _convertToValue(wstETH.balanceOf(address(this)), percentageToBeWithdrawn);
-
-        // assets location 2 - wstETH as extra collateral (collateral not utilised to create CDP)
-        // assets location 3 - wstTH used to borrow
-        // funds from assets location 2 and 3 can be withdrawn using unwind and withdraw wstETH
+        // assets location 1 - wstETH as extra collateral (collateral not utilised to create CDP)
+        // assets location 2 - wstTH used to borrow
+        // funds from assets location 1 and 2 can be withdrawn using unwind and withdraw wstETH
         uint256 auraPositionToBeClosed = convertToAssets(shares);
         uint256 debtBefore = crvUSDController.debt(address(this));
         _unwindPosition(AURA_VAULT.balanceOf(address(this)), percentageToBeWithdrawn, minAmountOut);
         uint256 debtAfter = crvUSDController.debt(address(this));
-        totalWithdrawableWstETH += _removeCollateral(percentageToBeWithdrawn, debtBefore - debtAfter);
+        uint256 totalWithdrawableWstETH = _removeCollateral(percentageToBeWithdrawn, debtBefore - debtAfter);
 
         _burn(owner, shares);
         _pushwstEth(receiver, totalWithdrawableWstETH);
@@ -188,6 +224,10 @@ contract LeverageStrategy is
         emit Withdraw(caller, receiver, owner, assets, shares);
     }
 
+    /// @notice Removes a specified percentage of collateral from the CDP and sends the corresponding amount of wstETH to the contract
+    /// @param _percent The percentage of collateral to be removed, expressed as a scaled value (i.e. 30% = 30 * 10^12)
+    /// @param _debtCleared The total debt that has been cleared by the strategy, used to calculate the minimum collateral that can be removed
+    /// @return _removedWstAmount The amount of wstETH that was removed from the CDP
     function _removeCollateral(uint256 _percent, uint256 _debtCleared) internal returns (uint256 _removedWstAmount) {
         uint256 minimumCollateralFreed = crvUSDController.min_collateral(_debtCleared, N);
         uint256 totalCollateral = crvUSDController.user_state(address(this))[0];
@@ -228,11 +268,16 @@ contract LeverageStrategy is
 
     // main contract functions
     // @param N Number of price bands to deposit into (to do autoliquidation-deliquidation of wsteth) if the price of the wsteth collateral goes too low
+    /// @notice Invests in the strategy by creating CDP using wstETH, investing in balancer pool
+    ///         and staking BPT tokens on aura to generate yield
+    /// @dev This function is non-reentrant and can only be called by an account with the CONTROLLER_ROLE
+    ///      It computes the total wstETH to be invested by aggregating deposit records and calculates the maximum borrowable amount.
+    ///      The function then invests wstETH, and tracks the new Aura vault shares minted as a result.
+    ///      Shares of the vault are minted proportionally to the contribution of each deposit record.
+    /// @param _bptAmountOut The targeted amount of Balancer Pool Tokens (BPT) to be received from the investment
     function invest(uint256 _bptAmountOut)
         external
         nonReentrant
-        // fix: why only controller can only invest, anyone should be able to invest
-        // fix: we need to keep track of how much a user have invested give and out shares
         onlyRole(CONTROLLER_ROLE)
     {
         // calculate total wstETH by traversing through all the deposit records
@@ -255,9 +300,9 @@ contract LeverageStrategy is
         _mintMultipleShares(startKeyId, currentShares, beforeBalance, addedAssets * HUNDRED_PERCENT / wstEthAmount);
     }
 
-    // fix: how would wstETH end up in this contract?
-    // fix: do not allow this operation, to keep track of who invested how much,
-    //  we should only allow to invest directly
+    /// @notice Allows a keeper to queue invest in the strategy by creating CDP using wstETH, investing in balancer pool
+    ///         and staking BPT tokens on aura to generate yield
+    /// @dev    Checks the current bptOut for a control amount of asset. On execute this is checked again.
     function investFromKeeper() external nonReentrant onlyRole(KEEPER_ROLE) {
         // Queue an invest from Keeper Call
         investQueued.timestamp = uint64(block.timestamp);
@@ -267,7 +312,10 @@ contract LeverageStrategy is
     }
 
     /// @notice Executes a queued invest from a Keeper
-    /// @dev Explain to a developer any extra details
+    /// @dev This function is non-reentrant and can only be called by an account with the KEEPER_ROLE
+    ///      It computes the total wstETH to be invested by aggregating deposit records and calculates the maximum borrowable amount.
+    ///      The function then invests wstETH, and tracks the new Aura vault shares minted as a result.
+    ///      Shares of the vault are minted equally to the contributors of each deposit record.
     /// @param _bptAmountOut a parameter just like in doxygen (must be followed by parameter name)
     function executeInvestFromKeeper(uint256 _bptAmountOut) external nonReentrant onlyRole(KEEPER_ROLE) {
         // Do not allow queue and execute in same block
@@ -358,6 +406,14 @@ contract LeverageStrategy is
         }
     }
 
+    /// @notice Internally handles the unwinding of a position by redeeming and converting assets
+    /// @dev This function is internal and part of the unwinding logic used by public facing functions.
+    ///      It involves multiple steps: unstaking Aura shares, exiting a Balancer pool, and repaying loans.
+    ///      The function calculates the amount of Aura shares to unstake based on a percentage,
+    ///      exchanges the redeemed assets, and then repays any outstanding loans.
+    /// @param _auraShares The total amount of Aura shares involved in the unwind
+    /// @param percentageUnwind The percentage of the position to unwind, scaled by 10^12
+    /// @param minAmountOut The minimum amount of underlying assets expected to receive from the unwinding
     function _unwindPosition(uint256 _auraShares, uint256 percentageUnwind, uint256 minAmountOut) internal {
         uint256 auraSharesToUnStake = _convertToValue(_auraShares, percentageUnwind);
         _unstakeAndWithdrawAura(auraSharesToUnStake);
@@ -372,16 +428,37 @@ contract LeverageStrategy is
         _repayCRVUSDLoan(crvUSD.balanceOf(address(this)) - beforeCrvUSDBalance);
     }
 
+    /// @notice Calculates the percentage representation of a value with respect to a total amount
+    /// @dev This function is internal and pure, used for computing the percentage of a part relative to a whole.
+    ///      The calculation scales the percentage by a factor of 10^12 (HUNDRED_PERCENT).
+    /// @param value The value to be converted into a percentage
+    /// @param total The total amount relative to which the percentage is calculated
+    /// @return percent The percentage of the value with respect to the total, scaled by 10^12
     function _convertToPercentage(uint256 value, uint256 total) internal pure returns (uint256 percent) {
         return value * HUNDRED_PERCENT / total;
     }
 
+    /// @notice Calculates the absolute value corresponding to a given percentage of a total amount
+    /// @dev This internal and pure function computes the value that a specified percentage represents of a total.
+    ///      The calculation uses the HUNDRED_PERCENT constant (scaled by 10^12) to handle percentage scaling.
+    /// @param total The total amount from which the value is derived
+    /// @param percent The percentage of the total amount to be calculated, scaled by 10^12
+    /// @return value The calculated value that the percentage represents of the total amount
     function _convertToValue(uint256 total, uint256 percent) internal pure returns (uint256 value) {
         return total * percent / HUNDRED_PERCENT;
     }
 
     // fix: rename this to reinvestUsingRewards()
     // note: when reinvesting, ensure the accounting of amount invested remains same.
+    /// @notice Swaps BAL and AURA rewards for WETH, specifying minimum amounts and deadline
+    /// @dev This function is non-reentrant and can only be called by an account with the CONTROLLER_ROLE
+    ///      It internally calls separate functions to handle the swapping of BAL to WETH and AURA to WETH.
+    ///      The swaps are executed with specified minimum return amounts and a deadline to ensure slippage protection and timely execution.
+    /// @param balAmount The amount of BAL tokens to be swapped for WETH
+    /// @param auraAmount The amount of AURA tokens to be swapped for WETH
+    /// @param minWethAmountBal The minimum amount of WETH expected from swapping BAL
+    /// @param minWethAmountAura The minimum amount of WETH expected from swapping AURA
+    /// @param deadline The latest timestamp by which the swap must be completed
     function swapReward(
         uint256 balAmount,
         uint256 auraAmount,
@@ -395,10 +472,23 @@ contract LeverageStrategy is
 
     //================================================INTERNAL FUNCTIONS===============================================//
 
+    /// @notice the token to be staked in the strategy
+    /// @dev This internal view function returns the specific token that is used for staking in the strategy.
+    ///      It overrides a base class implementation and is meant to be customizable in derived contracts.
+    /// @return The IERC20 token which is to be staked, represented here by the D2D_USDC_BPT token
     function _tokenToStake() internal view virtual override returns (IERC20) {
         return D2D_USDC_BPT;
     }
 
+    /// @notice Handles the internal investment process using wstETH, debt amount, and targeted BPT amount
+    /// @dev This internal function manages the investment workflow including creating or managing loans, 
+    ///      exchanging assets, providing liquidity, and staking LP tokens.
+    ///      It opens a position on crvUSD if no loan exists or manages an existing one, exchanges crvUSD to USDC,
+    ///      and uses the USDC to provide liquidity in the D2D/USDC pool on Balancer, finally staking the LP tokens on Aura Finance.
+    ///      Reverts if the investment amount (_wstETHAmount) is zero.
+    /// @param _wstETHAmount The amount of wstETH to be used in the investment
+    /// @param _debtAmount The amount of debt to be taken on in the investment
+    /// @param _bptAmountOut The targeted amount of Balancer Pool Tokens to be received from the liquidity provision
     function _invest(uint256 _wstETHAmount, uint256 _debtAmount, uint256 _bptAmountOut) internal {
         // only invest if _wstETHAmount >
         if (_wstETHAmount == 0) {
@@ -445,6 +535,16 @@ contract LeverageStrategy is
     //     return newShares.mulDiv(currentAssets + 1, currentShares + 10 ** _decimalsOffset(), rounding);
     // }
 
+    /// @notice Converts an amount of new assets into equivalent shares based on the current state of the contract
+    /// @dev This internal view function calculates the number of shares corresponding to a given amount of new assets,
+    ///      considering the current total shares and assets in the contract.
+    ///      It uses the mulDiv function for multiplication and division, applying the specified rounding method.
+    ///      A decimals offset is added to currentShares for precision adjustments.
+    /// @param newAssets The amount of new assets to be converted into shares
+    /// @param currentShares The current total number of shares in the contract
+    /// @param currentAssets The current total assets in the contract
+    /// @param rounding The rounding direction to be used in the calculation (up or down)
+    /// @return _shares The calculated number of shares equivalent to the new assets
     function _convertToShares(uint256 newAssets, uint256 currentShares, uint256 currentAssets, Math.Rounding rounding)
         internal
         view
@@ -510,11 +610,11 @@ contract LeverageStrategy is
         returns (uint256 _wstEthAmount, uint256 _startKeyId, uint256 _totalDeposits)
     {
         // calculate number of deposit record which needs to be analysed
-        uint256 length = depositCounter - lastUsedDepositKey;
+        uint256 length = Math.min(depositCounter - lastUsedDepositKey, 200);
         // set the key ID of first deposit record that will be used
         _startKeyId = lastUsedDepositKey + 1;
         // update the last used deposit record key
-        lastUsedDepositKey = depositCounter;
+        lastUsedDepositKey = lastUsedDepositKey + length;
 
         // loop over deposit records
         for (uint256 i; i < length; i++) {

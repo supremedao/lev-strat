@@ -169,6 +169,43 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         assertGt(aft, 0);
     }
 
+    function testInvestIfCDPAlreadyExistsWith201Deposits() public subtest {
+        uint256 before = AuraLPVault.balanceOf(address(levStrat));
+        console2.log("bal b4", before);
+
+        // Give wsteth tokens to alice's account
+        deal(address(wstETH), vault4626, wstEthToAcc * 201);
+
+        wstETH.approve(address(levStrat), maxApprove);
+
+        levStrat.initialize(investN, dao, controller, powerPool);
+
+        // Make vault msg.sender
+        vm.startPrank(vault4626);
+        wstETH.approve(address(levStrat), maxApprove);
+        assertEq(levStrat.depositCounter(), 0);
+        for (uint256 i; i < 201; i++) {
+            levStrat.deposit(wstInvestAmount, vault4626);
+        }
+        assertEq(levStrat.depositCounter(), 201);
+        vm.stopPrank();
+
+        vm.prank(controller);
+
+        levStrat.invest(bptExpected);
+        assertEq(levStrat.depositCounter(), levStrat.lastUsedDepositKey() + 1);
+        assertGt(levStrat.balanceOf(vault4626), 0);
+
+        // invest again the remaining 1 deposit
+        vm.prank(controller);
+        levStrat.invest(bptExpected);
+        assertEq(levStrat.depositCounter(), levStrat.lastUsedDepositKey());
+
+        uint256 aft = AuraLPVault.balanceOf(address(levStrat));
+        console2.log("bal aft", aft);
+        assertGt(aft, 0);
+    }
+
     function testInvestFromKeeperIfCDPAlreadyExists() public subtest {
         uint256 before = AuraLPVault.balanceOf(address(levStrat));
         console2.log("bal b4", before);

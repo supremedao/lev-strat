@@ -42,7 +42,7 @@ abstract contract BalancerUtils is Tokens {
         POOL_ID = _poolId;
         (IERC20[] memory tokens,,) = BAL_VAULT.getPoolTokens(POOL_ID);
         token0 = tokens[0];
-        token1= tokens[1];
+        token1 = tokens[1];
     }
 
     /// @notice Join balancer pool
