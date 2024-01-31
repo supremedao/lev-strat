@@ -53,20 +53,25 @@ contract StrategyResolver is Ownable, Tokens {
 
     /// @notice Used by Keeper to check if there is any balance to invest
     function checkBalanceAndReturnCalldata() public view returns (bool flag, bytes memory cdata) {
-        // If there is an invest waiting to be called
         (uint64 timeQueued,) = leverageStrategy.investQueued();
+        // There is a reinvest queued
         if (timeQueued != 0 && leverageStrategy.strategyHealth() > reinvestThreshold) {
             cdata = abi.encodeWithSelector(leverageStrategy.executeInvestFromKeeper.selector, 1, true);
             flag = true;
             return (flag, cdata);
+        // No reinvest needed, but investments needed
         } else if (timeQueued != 0) {
             cdata = abi.encodeWithSelector(leverageStrategy.executeInvestFromKeeper.selector, 1, false);
             flag = true;
             return (flag, cdata);
         }
 
-        // No invest queued, so queue invest
-        if (wstETH.balanceOf(address(leverageStrategy)) > investThreshold) {
+        // If the Strategy is too healthy we need to utilise the excess collateral
+        if (leverageStrategy.strategyHealth() > reinvestThreshold) {
+            cdata = abi.encodeWithSelector(leverageStrategy.investFromKeeper.selector);
+            flag = true;
+        } else if (wstETH.balanceOf(address(leverageStrategy)) > investThreshold) {
+        // Funds in the contract awaiting invest
             cdata = abi.encodeWithSelector(leverageStrategy.investFromKeeper.selector);
             flag = true;
         } else {
@@ -108,7 +113,16 @@ contract StrategyResolver is Ownable, Tokens {
     /// @dev    Access controlled
     /// @dev    Be careful! This can be negative.
     /// @param  newThreshold Amount of wstETH that should accrue in Strategy before it will be invested automatically
-    function setUnwindthreshold(int256 newThreshold) external onlyOwner {
+    function setUnwindThreshold(int256 newThreshold) external onlyOwner {
+        unwindThreshold = newThreshold;
+    }
+
+
+    /// @notice Allows owner to set the acceptable `health` threshold before the keeper increases the debt
+    /// @dev    Access controlled
+    /// @dev    Be careful! This can be negative.
+    /// @param  newThreshold Amount of wstETH that should accrue in Strategy before it will be invested automatically
+    function setReinvestThreshold(int256 newThreshold) external onlyOwner {
         unwindThreshold = newThreshold;
     }
 }

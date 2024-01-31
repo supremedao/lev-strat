@@ -94,6 +94,8 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         vm.startPrank(controller);
         vm.expectRevert(LeverageStrategyStorage.ZeroDepositNotAllowed.selector);
         levStrat.depositAndInvest(0, address(this), 1);
+
+        vm.expectRevert("Amount should be greater than 0");
         levStrat.invest(bptExpected);
         vm.stopPrank();
     }

@@ -60,7 +60,7 @@ contract LeverageStrategy is
         investQueued.timestamp = uint64(block.timestamp);
     }
 
-    function executeInvestFromKeeper(uint256 x) external {
+    function executeInvestFromKeeper(uint256 x, bool isReinvest) external {
 
     }
 
