@@ -60,7 +60,7 @@ contract ResolverTest is BaseTest, Tokens {
 
     // Case: set new unwindThreshold, Owner
     function test_success_setUnwindThreshold(int256 threshold) public {
-        resolver.setUnwindthreshold(threshold);
+        resolver.setUnwindThreshold(threshold);
     }
 
     // Case: set new unwindThreshold, not Owner
@@ -69,7 +69,7 @@ contract ResolverTest is BaseTest, Tokens {
 
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, caller));
         vm.prank(caller);
-        resolver.setUnwindthreshold(threshold);
+        resolver.setUnwindThreshold(threshold);
     }
 
     // Case: check the Strategy balance and return the call data required to queue an invest call
