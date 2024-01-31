@@ -92,7 +92,8 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
 
         // Make vault msg.sender
         vm.startPrank(controller);
-        vm.expectRevert(LeverageStrategyStorage.ZeroInvestmentNotAllowed.selector);
+        vm.expectRevert(LeverageStrategyStorage.ZeroDepositNotAllowed.selector);
+        levStrat.depositAndInvest(0, address(this), 1);
         levStrat.invest(bptExpected);
         vm.stopPrank();
     }
@@ -191,7 +192,7 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         uint256 currentTimestamp = block.timestamp;
         // Simulate the block passing
         vm.warp(currentTimestamp + 12);
-        levStrat.executeInvestFromKeeper(1);
+        levStrat.executeInvestFromKeeper(1, false);
         assertGt(levStrat.balanceOf(vault4626), 0);
 
         vm.startPrank(vault4626);
@@ -231,7 +232,7 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         uint256 currentTimestamp = block.timestamp;
         // Simulate the block passing
         vm.warp(currentTimestamp + 12);
-        levStrat.executeInvestFromKeeper(1);
+        levStrat.executeInvestFromKeeper(1, false);
         assertGt(levStrat.balanceOf(vault4626), 0);
 
         vm.startPrank(vault4626);

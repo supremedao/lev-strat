@@ -17,6 +17,8 @@ contract StrategyResolver is Ownable, Tokens {
     // The minimum amount of WETH required to invoke `investFromKeeper`, 1 ETH by default.
     // Note the front-running risk in using a threshold
     uint256 public investThreshold = 1 ether;
+    // Health threshold at which to reinvest
+    int256 public reinvestThreshold = 1e17;
 
     /// @param _leverageStrategyAddress Address of the target Strategy contract
     constructor(address _leverageStrategyAddress) Ownable(msg.sender) {
@@ -52,9 +54,13 @@ contract StrategyResolver is Ownable, Tokens {
     /// @notice Used by Keeper to check if there is any balance to invest
     function checkBalanceAndReturnCalldata() public view returns (bool flag, bytes memory cdata) {
         // If there is an invest waiting to be called
-        (uint64 timeQueued,) = leverageStrategy.unwindQueued();
-        if (timeQueued != 0) {
-            cdata = abi.encodeWithSelector(leverageStrategy.executeInvestFromKeeper.selector, 1);
+        (uint64 timeQueued,) = leverageStrategy.investQueued();
+        if (timeQueued != 0 && leverageStrategy.strategyHealth() > reinvestThreshold) {
+            cdata = abi.encodeWithSelector(leverageStrategy.executeInvestFromKeeper.selector, 1, true);
+            flag = true;
+            return (flag, cdata);
+        } else if (timeQueued != 0) {
+            cdata = abi.encodeWithSelector(leverageStrategy.executeInvestFromKeeper.selector, 1, false);
             flag = true;
             return (flag, cdata);
         }

@@ -273,7 +273,7 @@ contract LeverageStrategy is
     /// @notice Executes a queued invest from a Keeper
     /// @dev Explain to a developer any extra details
     /// @param _bptAmountOut a parameter just like in doxygen (must be followed by parameter name)
-    function executeInvestFromKeeper(uint256 _bptAmountOut) external nonReentrant onlyRole(KEEPER_ROLE) {
+    function executeInvestFromKeeper(uint256 _bptAmountOut, bool isReinvest) external nonReentrant onlyRole(KEEPER_ROLE) {
         // Do not allow queue and execute in same block
         if (investQueued.timestamp == block.timestamp) revert InvalidInvest();
 
@@ -285,24 +285,33 @@ contract LeverageStrategy is
         }
 
         if (investQueued.timestamp != 0) {
-            // calculate total wstETH by traversing through all the deposit records
-            (uint256 wstEthAmount, uint256 startKeyId,) = _computeAndRebalanceDepsoitRecords();
-            uint256 _debtAmount = crvUSDController.max_borrowable(wstEthAmount, N);
+            if (isReinvest) {
+                uint256[4] memory debtBefore = crvUSDController.user_state(address(this));
+                uint256 maxBorrowable = crvUSDController.max_borrowable(debtBefore[0], N);
+                // We borrow without adding collateral
+                // The max amount given our current collateral - the amount we already have taken
+                _invest(0, maxBorrowable - debtBefore[2], expectedAmountOut);
+            } else {
+                // calculate total wstETH by traversing through all the deposit records
+                (uint256 wstEthAmount, uint256 startKeyId,) = _computeAndRebalanceDepsoitRecords();
+                uint256 _debtAmount = crvUSDController.max_borrowable(wstEthAmount, N);
 
-            uint256 currentTotalShares = totalSupply();
-            // get the current balance of the Aura vault shares
-            // to be used to determine how many new vault shares were minted
-            uint256 beforeBalance = AURA_VAULT.balanceOf(address(this));
+                uint256 currentTotalShares = totalSupply();
+                // get the current balance of the Aura vault shares
+                // to be used to determine how many new vault shares were minted
+                uint256 beforeBalance = AURA_VAULT.balanceOf(address(this));
 
-            uint256 maxBorrowable = crvUSDController.max_borrowable(wstEthAmount, N); //Should the keeper always borrow max or some %
+                uint256 maxBorrowable = crvUSDController.max_borrowable(wstEthAmount, N); //Should the keeper always borrow max or some %
 
-            _invest(wstEthAmount, maxBorrowable, _bptAmountOut);
+                _invest(wstEthAmount, maxBorrowable, _bptAmountOut);
 
-            // calculate total new shares minted
-            // here assets is Aura Vault shares
-            uint256 addedAssets = AURA_VAULT.balanceOf(address(this)) - beforeBalance;
-            // we equally mint vault shares to the receivers of each deposit record that was used
-            _mintMultipleShares(startKeyId, currentTotalShares, beforeBalance, addedAssets * HUNDRED_PERCENT / wstEthAmount);
+                // calculate total new shares minted
+                // here assets is Aura Vault shares
+                uint256 addedAssets = AURA_VAULT.balanceOf(address(this)) - beforeBalance;
+                // we equally mint vault shares to the receivers of each deposit record that was used
+                _mintMultipleShares(startKeyId, currentTotalShares, beforeBalance, addedAssets * HUNDRED_PERCENT / wstEthAmount);
+            }
+
         } else {
             // If timestamp is 0 we do not have an invest queued
             revert InvalidInvest();
@@ -409,11 +418,6 @@ contract LeverageStrategy is
     }
 
     function _invest(uint256 _wstETHAmount, uint256 _debtAmount, uint256 _bptAmountOut) internal {
-        // only invest if _wstETHAmount >
-        if (_wstETHAmount == 0) {
-            revert ZeroInvestmentNotAllowed();
-        }
-
         // Opens a position on crvUSD if no loan already
         // Note this address is an owner of a crvUSD CDP
         // in the usual case we already have a CDP
