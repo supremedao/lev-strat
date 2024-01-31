@@ -227,9 +227,17 @@ contract LeverageStrategy is
         // 4) Repay borrow and receive wstETH
         _unwindPosition(AURA_VAULT.balanceOf(address(this)), percentageToBeWithdrawn, minAmountOut);
         // We get the total collateral freed up
-        uint256[4] memory debtAfter = crvUSDController.user_state(address(this));
-        // At this point, the amount of debt repaid is the amount that the shares represented
-        uint256 totalWithdrawableWstETH =  (debtBefore[2] - debtAfter[2]) * 1e18 / curveAMM.price_oracle() ;
+        uint256[4] memory userState = crvUSDController.user_state(address(this));
+        /*
+         There is nuance here. The yield is expected to go up. But the health buffer means that there is 
+         some part of the assets that's not utilised.
+         So we assume that the amount of collateral that the user has claim to is equal to his percentage * collateral provided
+         This collateral amount is increased when `swapReward` is called AND the Keeper or controller has reinvested the `wstETH` 
+         obtained from the rewards.
+         Thus, we can simply take the `percentageToBeWithdrawn` and multiply it by the total collateral provided,
+         to find the amount of `totalWithdrawableWstEth 
+        */
+        uint256 totalWithdrawableWstETH =  userState[0] * percentageToBeWithdrawn / HUNDRED_PERCENT;
         // We remove this amount of collateral from the CurveController
         _removeCollateral(totalWithdrawableWstETH);
         // Now we burn the user's shares 

@@ -440,6 +440,7 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         uint256 afterRedeemBobBalance = wstETH.balanceOf(bob);
 
         // ensure user 1 receives the funds, vault shares are burnt and no funds is wasted
+        console2.log(afterRedeemAliceBalance);
         assertLt(beforeRedeemAliceBalance, afterRedeemAliceBalance);
         assertLt(beforeRedeemBobBalance, afterRedeemBobBalance);
         assertGt(startingBobBalance, afterRedeemBobBalance);
