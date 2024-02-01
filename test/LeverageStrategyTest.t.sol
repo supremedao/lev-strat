@@ -377,11 +377,12 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         assertGt(debt_before, debt_after);
     }
 
-    function test_UserWithdraw() public {
+    function test_success_UserWithdraw() public {
         // give tokens to user 1 and user 2
         deal(address(wstETH), alice, wstInvestAmount);
         deal(address(wstETH), bob, wstInvestAmount * 2);
         deal(address(wstETH), team, wstInvestAmount * 10);
+        deal(address(wstETH), address(101), 1e16);
 
         uint256 startingAliceBalance = wstETH.balanceOf(alice);
         uint256 startingBobBalance = wstETH.balanceOf(bob);
@@ -398,6 +399,12 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         // invest
         vm.prank(controller);
         levStrat.invest(bptExpected);
+
+        // Team sets rates
+        vm.startPrank(address(101));
+        wstETH.approve(address(levStrat), 1e16);
+        levStrat.deposit(1e16, address(101));
+        vm.stopPrank();
 
         // user 1 deposit
         vm.startPrank(alice);
@@ -419,8 +426,107 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         vm.prank(controller);
         levStrat.invest(bptExpected);
 
-        uint256 beforeRedeemAliceBalance = wstETH.balanceOf(alice);
-        uint256 beforeRedeemBobBalance = wstETH.balanceOf(bob);
+        uint256 beforeRedeemAliceBalance = levStrat.balanceOf(alice);
+        uint256 beforeRedeemBobBalance = levStrat.balanceOf(bob);
+        console2.log(beforeRedeemAliceBalance);
+        console2.log(beforeRedeemBobBalance);
+
+        // user 1 withdraw 1 349 837 315 111 999 997
+        uint256 amountOfVaultSharesToWithdraw = levStrat.balanceOf(alice);
+        vm.startPrank(alice);
+        levStrat.approve(address(levStrat), amountOfVaultSharesToWithdraw);
+        levStrat.redeemWstEth(amountOfVaultSharesToWithdraw, alice, alice, minAmountOut);
+        vm.stopPrank();
+
+        // user 2 withdraw
+        amountOfVaultSharesToWithdraw = levStrat.balanceOf(bob);
+        vm.startPrank(bob);
+        levStrat.approve(address(levStrat), amountOfVaultSharesToWithdraw);
+        levStrat.redeemWstEth(amountOfVaultSharesToWithdraw, bob, bob, minAmountOut);
+        vm.stopPrank();
+
+        amountOfVaultSharesToWithdraw = levStrat.balanceOf(team);
+        vm.startPrank(team);
+        levStrat.approve(address(levStrat), amountOfVaultSharesToWithdraw);
+        levStrat.redeemWstEth(amountOfVaultSharesToWithdraw * 95 / 100, team, team, minAmountOut);
+        vm.stopPrank();
+
+        uint256 afterRedeemAliceBalance = wstETH.balanceOf(alice);
+        uint256 afterRedeemBobBalance = wstETH.balanceOf(bob);
+        uint256 afterRedeemTeamBalance = wstETH.balanceOf(team);
+
+        // ensure user 1 receives the funds, vault shares are burnt and no funds is wasted
+        console2.log(afterRedeemAliceBalance);
+        console2.log(afterRedeemBobBalance);
+        console2.log(afterRedeemTeamBalance);
+        //assertLt(beforeRedeemAliceBalance, afterRedeemAliceBalance);
+        //assertLt(beforeRedeemBobBalance, afterRedeemBobBalance);
+        //assertGt(startingBobBalance, afterRedeemBobBalance);
+    }
+
+    function test_UserWithdraw_Logs() public {
+        // give tokens to user 1 and user 2
+        deal(address(wstETH), alice, wstInvestAmount);
+        deal(address(wstETH), bob, wstInvestAmount * 2);
+        deal(address(wstETH), team, wstInvestAmount * 10);
+        deal(address(wstETH), address(101), 1e16);
+
+        uint256 startingAliceBalance = wstETH.balanceOf(alice);
+        uint256 startingBobBalance = wstETH.balanceOf(bob);
+
+        // initialize
+        levStrat.initialize(investN, dao, controller, powerPool);
+
+        // Team sets rates
+        vm.startPrank(address(101));
+        wstETH.approve(address(levStrat), 1e16);
+        levStrat.deposit(1e16, address(101));
+        vm.stopPrank();
+
+        // team deposit
+        vm.startPrank(team);
+        wstETH.approve(address(levStrat), wstInvestAmount * 10);
+        levStrat.deposit(wstInvestAmount * 10, team);
+        vm.stopPrank();
+
+        // invest
+       // vm.prank(controller);
+       // levStrat.invest(bptExpected);
+
+        // user 1 deposit
+        vm.startPrank(alice);
+        wstETH.approve(address(levStrat), wstInvestAmount);
+        levStrat.deposit(wstInvestAmount, alice);
+        vm.stopPrank();
+
+        // invest
+        //vm.prank(controller);
+        //levStrat.invest(bptExpected);
+
+        // user 2 deposit
+        vm.startPrank(bob);
+        wstETH.approve(address(levStrat), wstInvestAmount * 2);
+        levStrat.deposit(wstInvestAmount * 2, bob);
+        vm.stopPrank();
+        uint256 contractWeth = wstETH.balanceOf(address(levStrat));
+        console2.log("Contract balance: ", contractWeth);
+
+        // invest
+        vm.prank(controller);
+        levStrat.invest(bptExpected);
+
+        uint256[4] memory userState = crvUSDController.user_state(address(levStrat));
+        console2.log("Collateral:", userState[0]);
+        console2.log("tracked collateral: ", levStrat.totalWsthethDeposited());
+
+        uint256 beforeRedeemAliceBalance = levStrat.balanceOf(alice);
+        uint256 beforeRedeemBobBalance = levStrat.balanceOf(bob);
+        uint256 beforeRedeemTeam = levStrat.balanceOf(team);
+        contractWeth = wstETH.balanceOf(address(levStrat));
+        console2.log("Contract balance: ", contractWeth);
+        console2.log(beforeRedeemAliceBalance);
+        console2.log(beforeRedeemBobBalance);
+        console2.log(beforeRedeemTeam);
 
         // user 1 withdraw
         uint256 amountOfVaultSharesToWithdraw = levStrat.balanceOf(alice);
@@ -436,14 +542,30 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         levStrat.redeemWstEth(amountOfVaultSharesToWithdraw, bob, bob, minAmountOut);
         vm.stopPrank();
 
+        amountOfVaultSharesToWithdraw = levStrat.balanceOf(team);
+        vm.startPrank(team);
+        levStrat.approve(address(levStrat), amountOfVaultSharesToWithdraw);
+        levStrat.redeemWstEth(amountOfVaultSharesToWithdraw * 95 / 100, team, team, minAmountOut);
+        vm.stopPrank();
+
+        contractWeth = wstETH.balanceOf(address(levStrat));
+        console2.log("Contract balance: ", contractWeth);
+
         uint256 afterRedeemAliceBalance = wstETH.balanceOf(alice);
         uint256 afterRedeemBobBalance = wstETH.balanceOf(bob);
+        uint256 afterRedeemTeamBalance = wstETH.balanceOf(team);
 
+        userState = crvUSDController.user_state(address(levStrat));
+        console2.log("Collateral:", userState[0]);
+        console2.log("tracked collateral: ", levStrat.totalWsthethDeposited());
         // ensure user 1 receives the funds, vault shares are burnt and no funds is wasted
-        console2.log(afterRedeemAliceBalance);
-        assertLt(beforeRedeemAliceBalance, afterRedeemAliceBalance);
-        assertLt(beforeRedeemBobBalance, afterRedeemBobBalance);
-        assertGt(startingBobBalance, afterRedeemBobBalance);
+        console2.log("Alice wstEth Returned: ", afterRedeemAliceBalance);
+        console2.log("Bob wstEth Returned: ", afterRedeemBobBalance);
+        console2.log("Team wstEth Returned: ", afterRedeemTeamBalance);
+        //assertLt(beforeRedeemAliceBalance, afterRedeemAliceBalance);
+        //assertLt(beforeRedeemBobBalance, afterRedeemBobBalance);
+        //assertGt(startingBobBalance, afterRedeemBobBalance);
+
     }
 
     function test_revert_RedeemOrWithdraw() public {

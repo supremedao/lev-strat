@@ -213,8 +213,8 @@ DA:433,27
 BRDA:433,9,0,-
 BRDA:433,9,1,27
 DA:434,0
-FN:443,LeverageStrategy._computeAndRebalanceDepsoitRecords
-FNDA:20,LeverageStrategy._computeAndRebalanceDepsoitRecords
+FN:443,LeverageStrategy._computeAndRebalanceDepositRecords
+FNDA:20,LeverageStrategy._computeAndRebalanceDepositRecords
 DA:448,20
 DA:450,20
 DA:452,20
