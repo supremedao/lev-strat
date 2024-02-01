@@ -271,6 +271,7 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         uint256 currentTimestamp = block.timestamp;
         // Simulate the block passing
         vm.warp(currentTimestamp + 12);
+
         levStrat.executeInvestFromKeeper(1, false);
         assertGt(levStrat.balanceOf(vault4626), 0);
 

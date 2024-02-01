@@ -309,9 +309,11 @@ contract LeverageStrategy is
         _mintMultipleShares(startKeyId, currentShares, beforeBalance, addedAssets * HUNDRED_PERCENT / wstEthAmount);
     }
 
-    // fix: how would wstETH end up in this contract?
-    // fix: do not allow this operation, to keep track of who invested how much,
-    //  we should only allow to invest directly
+    /// @notice Executes a queued invest from a Keeper
+    /// @dev This function is non-reentrant and can only be called by an account with the KEEPER_ROLE
+    ///      It computes the total wstETH to be invested by aggregating deposit records and calculates the maximum borrowable amount.
+    ///      The function then invests wstETH, and tracks the new Aura vault shares minted as a result.
+    ///      Shares of the vault are minted equally to the contributors of each deposit record
     function investFromKeeper() external nonReentrant onlyRole(KEEPER_ROLE) {
         // Queue an invest from Keeper Call
         investQueued.timestamp = uint64(block.timestamp);
@@ -361,7 +363,6 @@ contract LeverageStrategy is
                 // we equally mint vault shares to the receivers of each deposit record that was used
                 _mintMultipleShares(startKeyId, currentTotalShares, beforeBalance, addedAssets * HUNDRED_PERCENT / wstEthAmount);
             }
-
         } else {
             // If timestamp is 0 we do not have an invest queued
             revert InvalidInvest();
