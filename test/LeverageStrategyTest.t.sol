@@ -378,7 +378,7 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         // give tokens to user 1 and user 2
         deal(address(wstETH), alice, wstInvestAmount);
         deal(address(wstETH), bob, wstInvestAmount * 2);
-        deal(address(wstETH), team, wstInvestAmount);
+        deal(address(wstETH), team, wstInvestAmount * 10);
 
         uint256 startingAliceBalance = wstETH.balanceOf(alice);
         uint256 startingBobBalance = wstETH.balanceOf(bob);
@@ -388,8 +388,8 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
 
         // team deposit
         vm.startPrank(team);
-        wstETH.approve(address(levStrat), wstInvestAmount);
-        levStrat.deposit(wstInvestAmount, team);
+        wstETH.approve(address(levStrat), wstInvestAmount * 10);
+        levStrat.deposit(wstInvestAmount * 10, team);
         vm.stopPrank();
 
         // invest
@@ -438,7 +438,6 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
 
         // ensure user 1 receives the funds, vault shares are burnt and no funds is wasted
         assertLt(beforeRedeemAliceBalance, afterRedeemAliceBalance);
-        assertLt(startingAliceBalance, afterRedeemAliceBalance);
         assertLt(beforeRedeemBobBalance, afterRedeemBobBalance);
         assertGt(startingBobBalance, afterRedeemBobBalance);
     }

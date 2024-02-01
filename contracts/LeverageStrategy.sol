@@ -206,35 +206,44 @@ contract LeverageStrategy is
             _spendAllowance(owner, caller, shares);
         }
 
+
         // calculate percentage of shares to be withdrawn
+        // i.e. the percentage of all the assets that this user has claim to
         uint256 percentageToBeWithdrawn = _convertToPercentage(shares, totalSupply());
 
-        // assets location 1 - wstETH as extra collateral (collateral not utilised to create CDP)
-        // assets location 2 - wstTH used to borrow
-        // funds from assets location 1 and 2 can be withdrawn using unwind and withdraw wstETH
-        uint256 auraPositionToBeClosed = convertToAssets(shares);
-        uint256 debtBefore = crvUSDController.debt(address(this));
-        _unwindPosition(AURA_VAULT.balanceOf(address(this)), percentageToBeWithdrawn, minAmountOut);
-        uint256 debtAfter = crvUSDController.debt(address(this));
-        uint256 totalWithdrawableWstETH = _removeCollateral(percentageToBeWithdrawn, debtBefore - debtAfter);
+        // assets location 1 - wstETH in contract - deposits waiting to invest
+        // assets location 2 - wstETH as extra collateral (collateral not utilised to create CDP)
+        // assets location 3 - wstTH used to borrow
+        // funds from assets location 2 and 3 can be withdrawn using unwind and withdraw wstETH
 
+        // This converts the amount of shares to the amount of `AURA` tokens that need to be withdrawn
+        uint256 auraPositionToBeClosed = convertToAssets(shares);
+        // We calculate the current debt the strategy has
+        uint256[4] memory debtBefore = crvUSDController.user_state(address(this));
+        // This withdraws the proportion of assets
+        // 1) Withdraw BPT from Boosted AURA
+        // 2) Withdraw USDC from balancer pool (requires slippage protection)
+        // 3) Swap USDC for curveUSD
+        // 4) Repay borrow and receive wstETH
+        _unwindPosition(AURA_VAULT.balanceOf(address(this)), percentageToBeWithdrawn, minAmountOut);
+        // We get the total collateral freed up
+        uint256[4] memory debtAfter = crvUSDController.user_state(address(this));
+        // At this point, the amount of debt repaid is the amount that the shares represented
+        uint256 totalWithdrawableWstETH =  (debtBefore[2] - debtAfter[2]) * 1e18 / curveAMM.price_oracle() ;
+        // We remove this amount of collateral from the CurveController
+        _removeCollateral(totalWithdrawableWstETH);
+        // Now we burn the user's shares 
         _burn(owner, shares);
+        // Now we push the withdrawn wstETH to the user
         _pushwstEth(receiver, totalWithdrawableWstETH);
 
         emit Withdraw(caller, receiver, owner, assets, shares);
     }
 
-    /// @notice Removes a specified percentage of collateral from the CDP and sends the corresponding amount of wstETH to the contract
-    /// @param _percent The percentage of collateral to be removed, expressed as a scaled value (i.e. 30% = 30 * 10^12)
-    /// @param _debtCleared The total debt that has been cleared by the strategy, used to calculate the minimum collateral that can be removed
-    /// @return _removedWstAmount The amount of wstETH that was removed from the CDP
-    function _removeCollateral(uint256 _percent, uint256 _debtCleared) internal returns (uint256 _removedWstAmount) {
-        uint256 minimumCollateralFreed = crvUSDController.min_collateral(_debtCleared, N);
-        uint256 totalCollateral = crvUSDController.user_state(address(this))[0];
-        uint256 amountOfWstEthToBeRemoved = _convertToValue(totalCollateral, _percent);
-        amountOfWstEthToBeRemoved = Math.min(minimumCollateralFreed, amountOfWstEthToBeRemoved);
-        crvUSDController.remove_collateral(amountOfWstEthToBeRemoved, false);
-        return amountOfWstEthToBeRemoved;
+    /// @notice Removes the collateral from the controller
+    /// @param  withdrawalAmount The amount of wstETH to withdraw
+    function _removeCollateral(uint256 withdrawalAmount) internal {
+        crvUSDController.remove_collateral(withdrawalAmount, false);
     }
 
     /// @notice deposit and invest without waiting for keeper to execute it
@@ -300,9 +309,11 @@ contract LeverageStrategy is
         _mintMultipleShares(startKeyId, currentShares, beforeBalance, addedAssets * HUNDRED_PERCENT / wstEthAmount);
     }
 
-    /// @notice Allows a keeper to queue invest in the strategy by creating CDP using wstETH, investing in balancer pool
-    ///         and staking BPT tokens on aura to generate yield
-    /// @dev    Checks the current bptOut for a control amount of asset. On execute this is checked again.
+    /// @notice Executes a queued invest from a Keeper
+    /// @dev This function is non-reentrant and can only be called by an account with the KEEPER_ROLE
+    ///      It computes the total wstETH to be invested by aggregating deposit records and calculates the maximum borrowable amount.
+    ///      The function then invests wstETH, and tracks the new Aura vault shares minted as a result.
+    ///      Shares of the vault are minted equally to the contributors of each deposit record
     function investFromKeeper() external nonReentrant onlyRole(KEEPER_ROLE) {
         // Queue an invest from Keeper Call
         investQueued.timestamp = uint64(block.timestamp);
@@ -312,10 +323,7 @@ contract LeverageStrategy is
     }
 
     /// @notice Executes a queued invest from a Keeper
-    /// @dev This function is non-reentrant and can only be called by an account with the KEEPER_ROLE
-    ///      It computes the total wstETH to be invested by aggregating deposit records and calculates the maximum borrowable amount.
-    ///      The function then invests wstETH, and tracks the new Aura vault shares minted as a result.
-    ///      Shares of the vault are minted equally to the contributors of each deposit record.
+    /// @dev Explain to a developer any extra details
     /// @param _bptAmountOut a parameter just like in doxygen (must be followed by parameter name)
     function executeInvestFromKeeper(uint256 _bptAmountOut) external nonReentrant onlyRole(KEEPER_ROLE) {
         // Do not allow queue and execute in same block
@@ -415,16 +423,21 @@ contract LeverageStrategy is
     /// @param percentageUnwind The percentage of the position to unwind, scaled by 10^12
     /// @param minAmountOut The minimum amount of underlying assets expected to receive from the unwinding
     function _unwindPosition(uint256 _auraShares, uint256 percentageUnwind, uint256 minAmountOut) internal {
+        // Get the proportional amount of shares
         uint256 auraSharesToUnStake = _convertToValue(_auraShares, percentageUnwind);
+        // Withdraw in order to get BPT tokens back
         _unstakeAndWithdrawAura(auraSharesToUnStake);
 
         uint256 bptAmount = _tokenToStake().balanceOf(address(this));
 
         uint256 beforeUsdcBalance = USDC.balanceOf(address(this));
+        // Exit the balancer pool to receive USDC
         _exitPool(bptAmount, 1, minAmountOut);
+        // Get current curveUSD balance
         uint256 beforeCrvUSDBalance = crvUSD.balanceOf(address(this));
+        // Swap USDC to crvUSD
         _exchangeUSDCTocrvUSD(USDC.balanceOf(address(this)) - beforeUsdcBalance);
-
+        // Repay the loan, there should now be excess collateral
         _repayCRVUSDLoan(crvUSD.balanceOf(address(this)) - beforeCrvUSDBalance);
     }
 
