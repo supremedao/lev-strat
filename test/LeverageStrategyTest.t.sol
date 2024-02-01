@@ -431,7 +431,7 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         console2.log(beforeRedeemAliceBalance);
         console2.log(beforeRedeemBobBalance);
 
-        // user 1 withdraw 1 349 837 315 111 999 997
+        // user 1 withdraw
         uint256 amountOfVaultSharesToWithdraw = levStrat.balanceOf(alice);
         vm.startPrank(alice);
         levStrat.approve(address(levStrat), amountOfVaultSharesToWithdraw);
@@ -459,17 +459,17 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         console2.log(afterRedeemAliceBalance);
         console2.log(afterRedeemBobBalance);
         console2.log(afterRedeemTeamBalance);
-        //assertLt(beforeRedeemAliceBalance, afterRedeemAliceBalance);
-        //assertLt(beforeRedeemBobBalance, afterRedeemBobBalance);
-        //assertGt(startingBobBalance, afterRedeemBobBalance);
+        assertLt(beforeRedeemAliceBalance, afterRedeemAliceBalance);
+        assertLt(beforeRedeemBobBalance, afterRedeemBobBalance);
+        assertGt(startingBobBalance, afterRedeemBobBalance);
     }
 
-    function test_UserWithdraw_Logs() public {
+    function test_UserWithdraw_ExtraChecks() public {
         // give tokens to user 1 and user 2
         deal(address(wstETH), alice, wstInvestAmount);
         deal(address(wstETH), bob, wstInvestAmount * 2);
         deal(address(wstETH), team, wstInvestAmount * 10);
-        deal(address(wstETH), address(101), 1e16);
+        deal(address(wstETH), address(101), 1e17);
 
         uint256 startingAliceBalance = wstETH.balanceOf(alice);
         uint256 startingBobBalance = wstETH.balanceOf(bob);
@@ -479,8 +479,8 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
 
         // Team sets rates
         vm.startPrank(address(101));
-        wstETH.approve(address(levStrat), 1e16);
-        levStrat.deposit(1e16, address(101));
+        wstETH.approve(address(levStrat), 1e17);
+        levStrat.deposit(1e17, address(101));
         vm.stopPrank();
 
         // team deposit
@@ -490,18 +490,12 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         vm.stopPrank();
 
         // invest
-       // vm.prank(controller);
-       // levStrat.invest(bptExpected);
 
         // user 1 deposit
         vm.startPrank(alice);
         wstETH.approve(address(levStrat), wstInvestAmount);
         levStrat.deposit(wstInvestAmount, alice);
         vm.stopPrank();
-
-        // invest
-        //vm.prank(controller);
-        //levStrat.invest(bptExpected);
 
         // user 2 deposit
         vm.startPrank(bob);
@@ -545,7 +539,7 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         amountOfVaultSharesToWithdraw = levStrat.balanceOf(team);
         vm.startPrank(team);
         levStrat.approve(address(levStrat), amountOfVaultSharesToWithdraw);
-        levStrat.redeemWstEth(amountOfVaultSharesToWithdraw * 95 / 100, team, team, minAmountOut);
+        levStrat.redeemWstEth(amountOfVaultSharesToWithdraw, team, team, minAmountOut);
         vm.stopPrank();
 
         contractWeth = wstETH.balanceOf(address(levStrat));
@@ -562,10 +556,6 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         console2.log("Alice wstEth Returned: ", afterRedeemAliceBalance);
         console2.log("Bob wstEth Returned: ", afterRedeemBobBalance);
         console2.log("Team wstEth Returned: ", afterRedeemTeamBalance);
-        //assertLt(beforeRedeemAliceBalance, afterRedeemAliceBalance);
-        //assertLt(beforeRedeemBobBalance, afterRedeemBobBalance);
-        //assertGt(startingBobBalance, afterRedeemBobBalance);
-
     }
 
     function test_revert_RedeemOrWithdraw() public {
