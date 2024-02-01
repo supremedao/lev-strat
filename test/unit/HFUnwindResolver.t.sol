@@ -60,7 +60,7 @@ contract ResolverTest is BaseTest, Tokens {
 
     // Case: set new unwindThreshold, Owner
     function test_success_setUnwindThreshold(int256 threshold) public {
-        resolver.setUnwindthreshold(threshold);
+        resolver.setUnwindThreshold(threshold);
     }
 
     // Case: set new unwindThreshold, not Owner
@@ -69,7 +69,7 @@ contract ResolverTest is BaseTest, Tokens {
 
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, caller));
         vm.prank(caller);
-        resolver.setUnwindthreshold(threshold);
+        resolver.setUnwindThreshold(threshold);
     }
 
     // Case: check the Strategy balance and return the call data required to queue an invest call
@@ -118,6 +118,37 @@ contract ResolverTest is BaseTest, Tokens {
         (bool flag, bytes memory cdata) = resolver.checkAndReturnCalldata();
         assertFalse(flag);
         assertEq(cdata, bytes(""));
+    }
+
+    // Case: success, reinvest needed
+    function test_success_reinvest_checkBalanceAndReturnCalldata(int256 health) public {
+        leverageStrategy.setStrategyHealth(health);
+        (bool flag, bytes memory cdata) = resolver.checkBalanceAndReturnCalldata();
+
+        if (health > 1e17) {
+            assert(flag);
+            assertEq(bytes4(cdata), LeverageStrategy.investFromKeeper.selector);  
+            address(leverageStrategy).call(cdata);
+        } else {
+            assertFalse(flag);
+            assertEq(cdata, bytes(""));
+        }
+    }
+
+    function test_success_reinvest_queued_checkBalanceAndReturnCalldata(int256 health) public {
+        uint256 currentTime = block.timestamp;
+        test_success_reinvest_checkBalanceAndReturnCalldata(health);
+        vm.warp(currentTime + 12);
+
+        (bool flag, bytes memory cdata) = resolver.checkBalanceAndReturnCalldata();
+
+        if (health > 1e17) {
+            assert(flag);
+            assertEq(bytes4(cdata), LeverageStrategy.executeInvestFromKeeper.selector);  
+        } else {
+            assertFalse(flag);
+            assertEq(cdata, bytes(""));
+        }
     }
 
 }
