@@ -15,6 +15,7 @@ import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {ERC4626, Math} from "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
 import {IAuraBooster} from "./interfaces/IAuraBooster.sol";
 import {IBalancerVault} from "./interfaces/IBalancerVault.sol";
+import {IPool} from "./interfaces/IPool.sol";
 import {IcrvUSD} from "./interfaces/IcrvUSD.sol";
 import {IcrvUSDController} from "./interfaces/IcrvUSDController.sol";
 import {IcrvUSDUSDCPool} from "./interfaces/IcrvUSDUSDCPool.sol";
@@ -299,32 +300,57 @@ contract LeverageStrategy is
         _mintMultipleShares(startKeyId, currentShares, beforeBalance, addedAssets * HUNDRED_PERCENT / wstEthAmount);
     }
 
-    /// @notice Allows a keeper to invest in the strategy by creating CDP using wstETH, investing in balancer pool
+    /// @notice Allows a keeper to queue invest in the strategy by creating CDP using wstETH, investing in balancer pool
     ///         and staking BPT tokens on aura to generate yield
+    /// @dev    Checks the current bptOut for a control amount of asset. On execute this is checked again.
+    function investFromKeeper() external nonReentrant onlyRole(KEEPER_ROLE) {
+        // Queue an invest from Keeper Call
+        investQueued.timestamp = uint64(block.timestamp);
+        // We store a simulated amount out as a control value
+        (uint256 amountOut, ) = simulateJoinPool(USDC_CONTROL_AMOUNT);
+        investQueued.minAmountOut = uint192(investQueued.minAmountOut);
+    }
+
+    /// @notice Executes a queued invest from a Keeper
     /// @dev This function is non-reentrant and can only be called by an account with the KEEPER_ROLE
     ///      It computes the total wstETH to be invested by aggregating deposit records and calculates the maximum borrowable amount.
     ///      The function then invests wstETH, and tracks the new Aura vault shares minted as a result.
     ///      Shares of the vault are minted equally to the contributors of each deposit record.
-    /// @param _bptAmountOut The targeted amount of Balancer Pool Tokens (BPT) to be received from the investment
-    function investFromKeeper(uint256 _bptAmountOut) external nonReentrant onlyRole(KEEPER_ROLE) {
-        // calculate total wstETH by traversing through all the deposit records
-        (uint256 wstEthAmount, uint256 startKeyId,) = _computeAndRebalanceDepsoitRecords();
-        uint256 _debtAmount = crvUSDController.max_borrowable(wstEthAmount, N);
+    /// @param _bptAmountOut a parameter just like in doxygen (must be followed by parameter name)
+    function executeInvestFromKeeper(uint256 _bptAmountOut) external nonReentrant onlyRole(KEEPER_ROLE) {
+        // Do not allow queue and execute in same block
+        if (investQueued.timestamp == block.timestamp) revert InvalidInvest();
 
-        uint256 currentTotalShares = totalSupply();
-        // get the current balance of the Aura vault shares
-        // to be used to determine how many new vault shares were minted
-        uint256 beforeBalance = AURA_VAULT.balanceOf(address(this));
+        (uint256 expectedAmountOut, ) = simulateJoinPool(USDC_CONTROL_AMOUNT);
+        // 1% slippage
+        if (investQueued.minAmountOut > (uint192(expectedAmountOut) * 99 / 100)) {
+            // Slippage control out of date, reset so a new call to `investFromKeeper` can happen
+            investQueued.timestamp = 0;
+        }
 
-        uint256 maxBorrowable = crvUSDController.max_borrowable(wstEthAmount, N); //Should the keeper always borrow max or some %
+        if (investQueued.timestamp != 0) {
+            // calculate total wstETH by traversing through all the deposit records
+            (uint256 wstEthAmount, uint256 startKeyId,) = _computeAndRebalanceDepsoitRecords();
+            uint256 _debtAmount = crvUSDController.max_borrowable(wstEthAmount, N);
 
-        _invest(wstEthAmount, maxBorrowable, _bptAmountOut);
+            uint256 currentTotalShares = totalSupply();
+            // get the current balance of the Aura vault shares
+            // to be used to determine how many new vault shares were minted
+            uint256 beforeBalance = AURA_VAULT.balanceOf(address(this));
 
-        // calculate total new shares minted
-        // here assets is Aura Vault shares
-        uint256 addedAssets = AURA_VAULT.balanceOf(address(this)) - beforeBalance;
-        // we equally mint vault shares to the receivers of each deposit record that was used
-        _mintMultipleShares(startKeyId, currentTotalShares, beforeBalance, addedAssets * HUNDRED_PERCENT / wstEthAmount);
+            uint256 maxBorrowable = crvUSDController.max_borrowable(wstEthAmount, N); //Should the keeper always borrow max or some %
+
+            _invest(wstEthAmount, maxBorrowable, _bptAmountOut);
+
+            // calculate total new shares minted
+            // here assets is Aura Vault shares
+            uint256 addedAssets = AURA_VAULT.balanceOf(address(this)) - beforeBalance;
+            // we equally mint vault shares to the receivers of each deposit record that was used
+            _mintMultipleShares(startKeyId, currentTotalShares, beforeBalance, addedAssets * HUNDRED_PERCENT / wstEthAmount);
+        } else {
+            // If timestamp is 0 we do not have an invest queued
+            revert InvalidInvest();
+        }
     }
 
     // fix: unwind position only based on msg.sender share
@@ -334,12 +360,50 @@ contract LeverageStrategy is
     }
 
     // fix: rename this to redeemRewardsToMaintainCDP()
-    function unwindPositionFromKeeper(uint256 minAmountOut) external nonReentrant onlyRole(KEEPER_ROLE) {
-        _unwindPosition(
-            _convertToValue(AURA_VAULT.balanceOf(address(this)), FIXED_UNWIND_PERCENTAGE),
-            FIXED_UNWIND_PERCENTAGE,
-            minAmountOut
-        );
+    function unwindPositionFromKeeper() external nonReentrant onlyRole(KEEPER_ROLE) {
+        (,uint256[] memory minAmountsOut) = simulateExitPool(QUERY_CONTROL_AMOUNT);
+        // Grab the exit token index
+        unwindQueued.minAmountOut = uint192(minAmountsOut[1]);
+        unwindQueued.timestamp = uint64(block.timestamp);
+
+    }
+
+    /// @notice Executes a queued unwindFromKeeper
+    /// @dev    Can only be called by Keeper
+    function executeUnwindFromKeeper() external onlyRole(KEEPER_ROLE) {
+        // Cannot queue and execute in same block!
+        if (unwindQueued.timestamp == uint64(block.timestamp)) revert InvalidUnwind();
+
+        // Timestamp is cleared after unwind
+        if (unwindQueued.timestamp != 0) {
+            // Get current quote
+            (,uint256[] memory amountsOut) = simulateExitPool(QUERY_CONTROL_AMOUNT);
+
+            // If the new minAmountOut is 1% smaller than the stored amount out then there is too much slippage
+            // Note Always use a protected endpoint to submit transactions!
+            // Hardcoded slippage
+            if (
+                // If the quote amounts are the same, slippage hasn't changed
+                unwindQueued.minAmountOut == (uint192(amountsOut[1])) ||
+                // If the 99% of current quote is better than old quote, slippage is acceptable
+                unwindQueued.minAmountOut < (uint192(amountsOut[1]) * 99 / 100)
+            ) {
+                _unwindPosition(
+                    _convertToValue(AURA_VAULT.balanceOf(address(this)), FIXED_UNWIND_PERCENTAGE),
+                    FIXED_UNWIND_PERCENTAGE,
+                    0
+                );
+                unwindQueued.timestamp = 0;
+
+            } else {
+                // Slippage is too much
+                revert InvalidUnwind();
+            }
+
+        } else {
+            // No unwind if timestamp is `0`
+            revert InvalidUnwind();
+        }
     }
 
     /// @notice Internally handles the unwinding of a position by redeeming and converting assets

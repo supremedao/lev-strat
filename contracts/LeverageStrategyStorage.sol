@@ -45,10 +45,15 @@ abstract contract LeverageStrategyStorage {
 
     /// @dev Struct to keep track of each deposit.
     struct DepositRecord {
-        address depositor;      // Address of the depositor.
-        address receiver;       // Address of the receiver.
-        uint256 amount;         // Amount of deposit.
-        DepositState state;     // Current state of the deposit.
+        DepositState state;
+        address depositor;
+        address receiver;
+        uint256 amount;
+    }
+
+    struct QueuedAction {
+        uint64 timestamp;
+        uint192 minAmountOut;
     }
 
     /// @notice Counter for deposit records.
@@ -59,6 +64,10 @@ abstract contract LeverageStrategyStorage {
 
     /// @notice Mapping of deposit records.
     mapping(uint256 => DepositRecord) public deposits;
+
+    // The queued unwind
+    QueuedAction public unwindQueued;
+    QueuedAction public investQueued;
 
     /// @notice Emitted when a deposit is made.
     /// @param depositKey The key of the deposit in the mapping.
@@ -91,4 +100,8 @@ abstract contract LeverageStrategyStorage {
 
     /// @dev Raised when an overloaded redeem function is incorrectly used.
     error UseOverLoadedRedeemFunction();
+    // Cannot queue and execute in same block
+    error InvalidUnwind();
+    // Cannot queue and execuite in same block
+    error InvalidInvest();
 }
