@@ -9,7 +9,7 @@ ____/ // /_/ /__  /_/ /  /   /  __/  / / / / /  __/  /_/ /_  ___ / /_/ /
               /_/                                                        
 */
 
-pragma solidity ^0.8.0;
+pragma solidity 0.8.19;
 
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {ERC4626, Math} from "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
@@ -88,7 +88,13 @@ contract LeverageStrategy is
     /// @param _dao The address to be set as the treasury
     /// @param _controller The address to be granted the CONTROLLER_ROLE
     /// @param _keeper The address (poweragent) to be granted the KEEPER_ROLE
-    function initialize(uint256 _N, address _dao, address _controller, address _keeper)
+    function initialize(
+        uint256 _N,
+        address _dao,
+        address _controller,
+        address _keeper
+    
+    )
         external
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
@@ -96,8 +102,6 @@ contract LeverageStrategy is
         treasury = _dao;
         //set the number of price bands to deposit into
         N = _N;
-        //grant the default admin role to the contract deployer
-        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         //grant the controller role to the given address
         _grantRole(CONTROLLER_ROLE, _controller);
         //grant the keeper role to the given address (poweragent address)
@@ -158,7 +162,12 @@ contract LeverageStrategy is
     /// @param owner The address that owns the shares being redeemed
     /// @param minAmountOut The minimum amount of USDC assets to receive from the exiting the Balancer pool
     /// @return The amount of assets that were redeemed
-    function redeemWstEth(uint256 shares, address receiver, address owner, uint256 minAmountOut)
+    function redeemWstEth(
+        uint256 shares,
+        address receiver,
+        address owner,
+        uint256 minAmountOut
+    )
         public
         virtual
         nonReentrant
@@ -179,7 +188,13 @@ contract LeverageStrategy is
     /// @dev    The normal `_withdraw` does not allow user to specify slippage protection
     ///         Given that we are swapping this is a good idea.
     /// @inheritdoc	ERC4626
-    function _withdraw(address caller, address receiver, address owner, uint256 assets, uint256 shares)
+    function _withdraw(
+        address caller,
+        address receiver,
+        address owner,
+        uint256 assets,
+        uint256 shares
+    )
         internal
         virtual
         override
@@ -253,7 +268,11 @@ contract LeverageStrategy is
     /// @param assets amount of wstETH to be deposited
     /// @param receiver receiver of the vault shares after the wstETH is utilized
     /// @param _bptAmountOut amount of BPT token expected out once liquidity is provided
-    function depositAndInvest(uint256 assets, address receiver, uint256 _bptAmountOut)
+    function depositAndInvest(
+        uint256 assets,
+        address receiver,
+        uint256 _bptAmountOut
+    )
         public
         virtual
         nonReentrant
@@ -413,6 +432,7 @@ contract LeverageStrategy is
                     FIXED_UNWIND_PERCENTAGE,
                     0
                 );
+                // We need to set timestamp to 0 so next call can happen
                 unwindQueued.timestamp = 0;
 
             } else {
@@ -442,7 +462,11 @@ contract LeverageStrategy is
     /// @param _auraShares The total amount of Aura shares involved in the unwind
     /// @param percentageUnwind The percentage of the position to unwind, scaled by 10^12
     /// @param minAmountOut The minimum amount of underlying assets expected to receive from the unwinding
-    function _unwindPosition(uint256 _auraShares, uint256 percentageUnwind, uint256 minAmountOut) internal {
+    function _unwindPosition(
+        uint256 _auraShares,
+        uint256 percentageUnwind,
+        uint256 minAmountOut
+    ) internal {
         // Get the proportional amount of shares
         uint256 auraSharesToUnStake = _convertToValue(_auraShares, percentageUnwind);
         // Withdraw in order to get BPT tokens back
@@ -522,7 +546,11 @@ contract LeverageStrategy is
     /// @param _wstETHAmount The amount of wstETH to be used in the investment
     /// @param _debtAmount The amount of debt to be taken on in the investment
     /// @param _bptAmountOut The targeted amount of Balancer Pool Tokens to be received from the liquidity provision
-    function _invest(uint256 _wstETHAmount, uint256 _debtAmount, uint256 _bptAmountOut) internal {
+    function _invest(
+        uint256 _wstETHAmount,
+        uint256 _debtAmount,
+        uint256 _bptAmountOut
+    ) internal {
         // Opens a position on crvUSD if no loan already
         // Note this address is an owner of a crvUSD CDP
         // in the usual case we already have a CDP
@@ -544,7 +572,12 @@ contract LeverageStrategy is
     /// @dev if total supply is zero, 1:1 ratio is used
     /// @param assets amount of assets that was deposited, here assets is the Aura Vault Shares
     /// @param to receiver of the vault shares (Leverage Stratgey Vault Shares)
-    function _mintShares(uint256 assets, uint256 currentShares, uint256 currentAssets, address to) internal {
+    function _mintShares(
+        uint256 assets,
+        uint256 currentShares,
+        uint256 currentAssets,
+        address to
+    ) internal {
         uint256 shares;
         // won't cause DoS or gridlock because the token token will have no minted tokens before the creation
         if (totalSupply() == 0) {
@@ -565,7 +598,12 @@ contract LeverageStrategy is
     /// @param currentAssets The current total assets in the contract
     /// @param rounding The rounding direction to be used in the calculation (up or down)
     /// @return _shares The calculated number of shares equivalent to the new assets
-    function _convertToShares(uint256 newAssets, uint256 currentShares, uint256 currentAssets, Math.Rounding rounding)
+    function _convertToShares(
+        uint256 newAssets,
+        uint256 currentShares,
+        uint256 currentAssets,
+        Math.Rounding rounding
+    )
         internal
         view
         returns (uint256 _shares)
@@ -577,7 +615,11 @@ contract LeverageStrategy is
     /// @param _amount amount of wstETH deposited
     /// @param _depositor depositor of the wstETH
     /// @param _receiver receiver of the vault shares after wstETH is invested successfully
-    function _recordDeposit(uint256 _amount, address _depositor, address _receiver)
+    function _recordDeposit(
+        uint256 _amount,
+        address _depositor,
+        address _receiver
+    )
         internal
         returns (uint256 recordKey)
     {
@@ -598,7 +640,12 @@ contract LeverageStrategy is
     /// @param caller depositor address
     /// @param receiver receiver of vault shares
     /// @param assets amount of wstETH to be deposited (it's different from Aura Vault Shares)
-    function _deposit(address caller, address receiver, uint256 assets, uint256) internal virtual override {
+    function _deposit(
+        address caller,
+        address receiver,
+        uint256 assets,
+        uint256
+    ) internal virtual override {
         if (assets == 0) {
             revert ZeroDepositNotAllowed();
         }
@@ -654,7 +701,13 @@ contract LeverageStrategy is
     /// @notice mint vault shares to receivers of all deposit records that was used for investment in current operation
     /// @param _startKeyId first deposit record from where the mint of vault shares will begin
     /// @param _assets amount of Aura vault shares that were minted per deposit record
-    function _mintMultipleShares(uint256 _startKeyId, uint256 currentShares, uint256 currentAssets, uint256 _assets, uint256 wstEthAmount)
+    function _mintMultipleShares(
+        uint256 _startKeyId,
+        uint256 currentShares,
+        uint256 currentAssets,
+        uint256 _assets,
+        uint256 wstEthAmount
+    )
         internal
     {
         // loop over the deposit records starting from the start deposit key ID
