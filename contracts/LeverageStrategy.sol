@@ -9,7 +9,7 @@ ____/ // /_/ /__  /_/ /  /   /  __/  / / / / /  __/  /_/ /_  ___ / /_/ /
               /_/                                                        
 */
 
-pragma solidity 0.8.19;
+pragma solidity 0.8.20;
 
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {ERC4626, Math} from "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
@@ -50,8 +50,8 @@ contract LeverageStrategy is
     /// @notice Role identifier for the controller role, responsible for high-level protocol management
     bytes32 public constant CONTROLLER_ROLE = keccak256("CONTROLLER_ROLE");
 
-    /// @notice Fixed percentage (scaled by 10^12) used in unwinding positions, set to 30%
-    uint256 public constant FIXED_UNWIND_PERCENTAGE = 30 * 10 ** 10;
+    /// @notice Fixed percentage (scaled by 10^12) used in unwinding positions, default set to 30%
+    uint256 public unwindPercentage = 30 * 10 ** 10;
 
     /// @notice Constant representing 100%, used for percentage calculations, scaled by 10^12
     uint256 public constant HUNDRED_PERCENT = 10 ** 12;
@@ -189,11 +189,11 @@ contract LeverageStrategy is
     ///         Given that we are swapping this is a good idea.
     /// @inheritdoc	ERC4626
     function _withdraw(
-        address caller,
-        address receiver,
-        address owner,
-        uint256 assets,
-        uint256 shares
+        address,
+        address,
+        address,
+        uint256,
+        uint256
     )
         internal
         virtual
@@ -232,8 +232,6 @@ contract LeverageStrategy is
         // assets location 3 - wstTH used to borrow
         // funds from assets location 2 and 3 can be withdrawn using unwind and withdraw wstETH
 
-        // We calculate the current debt the strategy has
-        uint256[4] memory debtBefore = crvUSDController.user_state(address(this));
         // This withdraws the proportion of assets
         // 1) Withdraw BPT from Boosted AURA
         // 2) Withdraw USDC from balancer pool (requires slippage protection)
@@ -343,7 +341,7 @@ contract LeverageStrategy is
         investQueued.timestamp = uint64(block.timestamp);
         // We store a simulated amount out as a control value
         (uint256 amountOut, ) = simulateJoinPool(USDC_CONTROL_AMOUNT);
-        investQueued.minAmountOut = uint192(investQueued.minAmountOut);
+        investQueued.minAmountOut = uint192(amountOut);
     }
 
     /// @notice Executes a queued invest from a Keeper
@@ -355,7 +353,10 @@ contract LeverageStrategy is
 
         (uint256 expectedAmountOut, ) = simulateJoinPool(USDC_CONTROL_AMOUNT);
         // 1% slippage
-        if (investQueued.minAmountOut > (uint192(expectedAmountOut) * 99 / 100)) {
+        if (
+            investQueued.minAmountOut > (uint192(expectedAmountOut) * 99 / 100) &&
+            (investQueued.minAmountOut != expectedAmountOut)
+        ) {
             // Slippage control out of date, reset so a new call to `investFromKeeper` can happen
             investQueued.timestamp = 0;
         }
@@ -370,8 +371,6 @@ contract LeverageStrategy is
             } else {
                 // calculate total wstETH by traversing through all the deposit records
                 (uint256 wstEthAmount, uint256 startKeyId,) = _computeAndRebalanceDepositRecords();
-                uint256 _debtAmount = crvUSDController.max_borrowable(wstEthAmount, N);
-
                 uint256 currentTotalShares = totalSupply();
                 // get the current balance of the Aura vault shares
                 // to be used to determine how many new vault shares were minted
@@ -428,8 +427,8 @@ contract LeverageStrategy is
                 unwindQueued.minAmountOut < (uint192(amountsOut[1]) * 99 / 100)
             ) {
                 _unwindPosition(
-                    _convertToValue(AURA_VAULT.balanceOf(address(this)), FIXED_UNWIND_PERCENTAGE),
-                    FIXED_UNWIND_PERCENTAGE,
+                    _convertToValue(AURA_VAULT.balanceOf(address(this)), unwindPercentage),
+                    unwindPercentage,
                     0
                 );
                 // We need to set timestamp to 0 so next call can happen
@@ -525,6 +524,13 @@ contract LeverageStrategy is
     ) external nonReentrant onlyRole(CONTROLLER_ROLE) {
         _swapRewardBal(balAmount, minWethAmountBal, deadline);
         _swapRewardAura(auraAmount, minWethAmountAura, deadline);
+    }
+
+    /// @notice Allows the controller to adjust the percentage to unwind at a time
+    /// @param  newPercentage The percentage of assets to unwind at a time, normalized to 1e12
+    function setUnwindPercentage(uint256 newPercentage) external onlyRole(CONTROLLER_ROLE) {
+        if (newPercentage > HUNDRED_PERCENT) revert InvalidInput();
+        unwindPercentage = newPercentage;
     }
 
     //================================================INTERNAL FUNCTIONS===============================================//
