@@ -309,17 +309,6 @@ contract LeverageStrategy is
         _mintMultipleShares(startKeyId, currentShares, beforeBalance, addedAssets * HUNDRED_PERCENT / wstEthAmount);
     }
 
-    /// @notice Allows a keeper to queue invest in the strategy by creating CDP using wstETH, investing in balancer pool
-    ///         and staking BPT tokens on aura to generate yield
-    /// @dev    Checks the current bptOut for a control amount of asset. On execute this is checked again.
-    function investFromKeeper() external nonReentrant onlyRole(KEEPER_ROLE) {
-        // Queue an invest from Keeper Call
-        investQueued.timestamp = uint64(block.timestamp);
-        // We store a simulated amount out as a control value
-        (uint256 amountOut, ) = simulateJoinPool(USDC_CONTROL_AMOUNT);
-        investQueued.minAmountOut = uint192(investQueued.minAmountOut);
-    }
-
     /// @notice Executes a queued invest from a Keeper
     /// @dev This function is non-reentrant and can only be called by an account with the KEEPER_ROLE
     ///      It computes the total wstETH to be invested by aggregating deposit records and calculates the maximum borrowable amount.
