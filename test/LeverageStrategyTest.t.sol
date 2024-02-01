@@ -426,8 +426,8 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         vm.prank(controller);
         levStrat.invest(bptExpected);
 
-        uint256 beforeRedeemAliceBalance = levStrat.balanceOf(alice);
-        uint256 beforeRedeemBobBalance = levStrat.balanceOf(bob);
+        uint256 beforeRedeemAliceBalance = wstETH.balanceOf(alice);
+        uint256 beforeRedeemBobBalance = wstETH.balanceOf(bob);
         console2.log(beforeRedeemAliceBalance);
         console2.log(beforeRedeemBobBalance);
 
