@@ -176,6 +176,8 @@ contract LeverageStrategy is
     }
 
     /// @notice reverts everytime to ensure no one can use redeem and withdraw functions
+    /// @dev    The normal `_withdraw` does not allow user to specify slippage protection
+    ///         Given that we are swapping this is a good idea.
     /// @inheritdoc	ERC4626
     function _withdraw(address caller, address receiver, address owner, uint256 assets, uint256 shares)
         internal
@@ -208,10 +210,6 @@ contract LeverageStrategy is
 
         // calculate percentage of shares to be withdrawn
         // i.e. the percentage of all the assets that this user has claim to
-        // [10e18] * 1e12 / 100e18
-        // value * HUNDRED_PERCENT / total;
-        // 10e30 / 100e18
-        // 10e10
         uint256 percentageToBeWithdrawn = _convertToPercentage(shares, totalSupply());
 
         // assets location 1 - wstETH in contract - deposits waiting to invest
@@ -238,10 +236,6 @@ contract LeverageStrategy is
          Thus, we can simply take the `percentageToBeWithdrawn` and multiply it by the total collateral provided,
          to find the amount of `totalWithdrawableWstEth 
         */
-        // 100e18 * 1e10 / 1e12
-        // 100e28 / 1e12
-        // 100e16
-        // 1e18
         uint256 totalWithdrawableWstETH =  userState[0] * percentageToBeWithdrawn / HUNDRED_PERCENT;
         // We remove this amount of collateral from the CurveController
         _removeCollateral(totalWithdrawableWstETH);
@@ -251,12 +245,6 @@ contract LeverageStrategy is
         _pushwstEth(receiver, totalWithdrawableWstETH);
 
         emit Withdraw(caller, receiver, owner, assets, shares);
-    }
-
-    /// @notice Removes the collateral from the controller
-    /// @param  withdrawalAmount The amount of wstETH to withdraw
-    function _removeCollateral(uint256 withdrawalAmount) internal {
-        crvUSDController.remove_collateral(withdrawalAmount, false);
     }
 
     /// @notice deposit and invest without waiting for keeper to execute it
@@ -306,7 +294,6 @@ contract LeverageStrategy is
         // calculate total wstETH by traversing through all the deposit records
         (uint256 wstEthAmount, uint256 startKeyId,) = _computeAndRebalanceDepositRecords();
         uint256 _debtAmount = crvUSDController.max_borrowable(wstEthAmount, N) * healthBuffer / HUNDRED_PERCENT;
-
         uint256 currentShares = totalSupply();
         // get the current balance of the Aura vault shares
         // to be used to determine how many new vault shares were minted
@@ -323,9 +310,11 @@ contract LeverageStrategy is
         _mintMultipleShares(startKeyId, currentShares, beforeBalance, addedAssets, wstEthAmount);
     }
 
-    // fix: how would wstETH end up in this contract?
-    // fix: do not allow this operation, to keep track of who invested how much,
-    //  we should only allow to invest directly
+    /// @notice This function is called by PowerPool and queues an invest call
+    /// @dev    To provide a measure of manipulation mitigation this call takes a "snapshot"
+    ///         of a control amount of asset, this will be compared in the next call.
+    ///         This MUST be paired with a protected endpoint AND randomness with regards
+    ///         to the subsequent `executeInvestFromKeeper` call timing
     function investFromKeeper() external nonReentrant onlyRole(KEEPER_ROLE) {
         // Queue an invest from Keeper Call
         investQueued.timestamp = uint64(block.timestamp);
@@ -373,7 +362,6 @@ contract LeverageStrategy is
                 // here assets is Aura Vault shares
                 uint256 addedAssets = AURA_VAULT.balanceOf(address(this)) - beforeBalance;
                 // we equally mint vault shares to the receivers of each deposit record that was used
-                // added assets are how much percent? 
                 _mintMultipleShares(startKeyId, currentTotalShares, beforeBalance, addedAssets, wstEthAmount);
             }
 
@@ -487,9 +475,6 @@ contract LeverageStrategy is
     /// @param percent The percentage of the total amount to be calculated, scaled by 10^12
     /// @return value The calculated value that the percentage represents of the total amount
     function _convertToValue(uint256 total, uint256 percent) internal pure returns (uint256 value) {
-        // 1000e28 / 1e12
-        // 1000e14
-        // 1e17
         return total * percent / HUNDRED_PERCENT;
     }
 
@@ -567,14 +552,6 @@ contract LeverageStrategy is
         _mint(to, shares);
     }
 
-    // function _convertToAssets(uint256 newShares, uint256 currentAssets, uint256 currentShares, Math.Rounding rounding)
-    //     internal
-    //     view
-    //     returns (uint256 _assets)
-    // {
-    //     return newShares.mulDiv(currentAssets + 1, currentShares + 10 ** _decimalsOffset(), rounding);
-    // }
-
     /// @notice Converts an amount of new assets into equivalent shares based on the current state of the contract
     /// @dev This internal view function calculates the number of shares corresponding to a given amount of new assets,
     ///      considering the current total shares and assets in the contract.
@@ -590,15 +567,8 @@ contract LeverageStrategy is
         view
         returns (uint256 _shares)
     {
-        return newAssets.mulDiv(totalSupply() + 10 ** _decimalsOffset(), totalAssets() + 1, rounding);
-        //return newAssets.mulDiv(currentShares + 10 ** _decimalsOffset(), currentAssets + 1, rounding);
+        return newAssets.mulDiv(currentShares + 10 ** _decimalsOffset(), currentAssets + 1, rounding);
     }
-
-    /**
-        function _convertToShares(uint256 assets, Math.Rounding rounding) internal view virtual returns (uint256) {
-        return assets.mulDiv(totalSupply() + 10 ** _decimalsOffset(), totalAssets() + 1, rounding);
-    }
-     */
 
     /// @notice create and store a neww deposit record
     /// @param _amount amount of wstETH deposited
@@ -689,8 +659,8 @@ contract LeverageStrategy is
             // only mint vault shares to deposit records whose funds have been utilised
             if (deposits[_startKeyId].state == DepositState.INVESTED) {
                 // Is there a loss of precision issue here?
+                // We try to determine the number of shares that should be issued based on the proportion of wsteth provided
                 uint256 contribution = deposits[_startKeyId].amount * _assets / wstEthAmount;
-    //            contribution = contribution * _assets / 1e18;
                 _mintShares(contribution, currentShares, currentAssets, deposits[_startKeyId].receiver);
             }
         }
