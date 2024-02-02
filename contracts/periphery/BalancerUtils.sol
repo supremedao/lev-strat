@@ -9,7 +9,7 @@ ____/ // /_/ /__  /_/ /  /   /  __/  / / / / /  __/  /_/ /_  ___ / /_/ /
               /_/                                                        
 */
 
-pragma solidity ^0.8.0;
+pragma solidity 0.8.20;
 
 import "../interfaces/IBalancerVault.sol";
 import "../interfaces/IPool.sol";
@@ -122,13 +122,13 @@ abstract contract BalancerUtils is Tokens {
             swapFeePercentage,
             userData
         );
-
+        // This call "fails" but returns the required
         (bool success, bytes memory data) = pool.call(calldataToSim);
         (bptIn, amountsOut) = abi.decode(data, (uint256, uint256[]));
     }
 
     function simulateJoinPool(uint256 usdcAmountIn) internal returns (uint256 bptOut, uint256[] memory amountsIn) {
-        (IERC20[] memory tokens, uint256[] memory balances, uint256 lastChangeBlock) = BAL_VAULT.getPoolTokens(POOL_ID);
+        (, uint256[] memory balances, uint256 lastChangeBlock) = BAL_VAULT.getPoolTokens(POOL_ID);
 
         // Construct the userData 
         // [enum Kind][bptAmountIn][bptExpected]
@@ -153,7 +153,7 @@ abstract contract BalancerUtils is Tokens {
             swapFeePercentage,
             userData
         );
-
+        // Not checking success as this is not supposed to return true
         (bool success, bytes memory data) = pool.call(calldataToSim);
         (bptOut, amountsIn) = abi.decode(data, (uint256, uint256[]));
     }

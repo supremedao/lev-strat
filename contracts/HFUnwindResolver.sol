@@ -1,4 +1,15 @@
-pragma solidity ^0.8.0;
+// SPDX-License-Identifier: GPL-3.0-or-later
+
+/*
+________                                          ______________________ 
+__  ___/___  ____________________________ ___________  __ \__    |_  __ \
+_____ \_  / / /__  __ \_  ___/  _ \_  __ `__ \  _ \_  / / /_  /| |  / / /
+____/ // /_/ /__  /_/ /  /   /  __/  / / / / /  __/  /_/ /_  ___ / /_/ / 
+/____/ \__,_/ _  .___//_/    \___//_/ /_/ /_/\___//_____/ /_/  |_\____/  
+              /_/                                                        
+*/
+
+pragma solidity 0.8.20;
 
 import {LeverageStrategy, BalancerUtils} from "./LeverageStrategy.sol";
 import {Tokens} from "./periphery/Tokens.sol";
@@ -28,22 +39,22 @@ contract StrategyResolver is Ownable, Tokens {
     /// @notice Check used by the Power Pool to determine when to rebalance the strategy
     /// @return Returns a `bool` indicating whether the PowerPool should unwind or not
     /*
-        Scenario 1: The Strategy health is less than `threshold`
-                    In this scenario the Strategy Health has fallen below the set `threshold`
-                    Rebalancing should occur to unwind some of the debt positions.
+                Scenario 1: The Strategy health is less than `threshold`
+                            In this scenario the Strategy Health has fallen below the set `threshold`
+                            Rebalancing should occur to unwind some of the debt positions.
 
-        Why don't we store `strategyHealth` locally and check against that?
-        `controller.health()` gives us an up to date value for the strategy's health.
-        This value is true at that block. 
+                Why don't we store `strategyHealth` locally and check against that?
+                `controller.health()` gives us an up to date value for the strategy's health.
+                This value is true at that block. 
 
-        Note the assumption: the only way that `health` deteriorates is if the `wstETH` price falls
+                Note the assumption: the only way that `health` deteriorates is if the `wstETH` price falls
 
-        There should be no other way in the protocol for the user to alter the `health` of the strategy.
-        
-        If the user `withdraws`, then they can only withdraw in proportion; they clear their debt and withdraw,
-        i.e. no change in health. 
+                There should be no other way in the protocol for the user to alter the `health` of the strategy.
+                
+                If the user `withdraws`, then they can only withdraw in proportion; they clear their debt and withdraw,
+                i.e. no change in health. 
 
-        If the user `deposits`, then the shares minted are in proportion to the `wstETH` provided, with a slight buffer.
+                If the user `deposits`, then the shares minted are in proportion to the `wstETH` provided, with a slight buffer.
     */
     function checkCondition() public view returns (bool) {
         int256 currentHealth = leverageStrategy.strategyHealth();
@@ -120,7 +131,7 @@ contract StrategyResolver is Ownable, Tokens {
 
     /// @notice Allows owner to set the acceptable `health` threshold before the keeper increases the debt
     /// @dev    Access controlled
-    /// @dev    Be careful! This can be negative.
+    /// @dev    Be careful! This can be negative, although is not recommended to be.
     /// @param  newThreshold Amount of wstETH that should accrue in Strategy before it will be invested automatically
     function setReinvestThreshold(int256 newThreshold) external onlyOwner {
         unwindThreshold = newThreshold;

@@ -9,7 +9,7 @@ ____/ // /_/ /__  /_/ /  /   /  __/  / / / / /  __/  /_/ /_  ___ / /_/ /
               /_/                                                        
 */
 
-pragma solidity ^0.8.0;
+pragma solidity 0.8.20;
 
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {ERC4626, Math} from "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
@@ -50,17 +50,11 @@ contract LeverageStrategy is
     /// @notice Role identifier for the controller role, responsible for high-level protocol management
     bytes32 public constant CONTROLLER_ROLE = keccak256("CONTROLLER_ROLE");
 
-    /// @notice Fixed percentage (scaled by 10^12) used in unwinding positions, set to 30%
-    uint256 public constant FIXED_UNWIND_PERCENTAGE = 30 * 10 ** 10;
+    /// @notice Fixed percentage (scaled by 10^12) used in unwinding positions, default set to 30%
+    uint256 public unwindPercentage = 30 * 10 ** 10;
 
     /// @notice Constant representing 100%, used for percentage calculations, scaled by 10^12
     uint256 public constant HUNDRED_PERCENT = 10 ** 12;
-
-    // TODO:
-    // DAO should be able to change pool parameters and tokens
-    // NOTE: maybe we should an updateble strategy struct
-    // fix: DAO should only be able to change parameters but not tokens, because switching token will impatc existing tokens
-    // if DAO wants to use other token, then deploy a new startegy
 
     // Events
     // Add relevant events to log important contract actions/events
@@ -77,18 +71,23 @@ contract LeverageStrategy is
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
 
-
     //================================================EXTERNAL FUNCTIONS===============================================//
 
     /// @notice Initializes the contract with specific parameters and roles after deployment and makes it ready for investing
-    /// @dev Can only be called by an account with the DEFAULT_ADMIN_ROLE
-    ///      This function sets key contract parameters and assigns roles to specified addresses.
-    ///      It should be called immediately after contract deployment.
-    /// @param _N A numeric parameter used in the contract's logic (its specific role should be described)
-    /// @param _dao The address to be set as the treasury
-    /// @param _controller The address to be granted the CONTROLLER_ROLE
-    /// @param _keeper The address (poweragent) to be granted the KEEPER_ROLE
-    function initialize(uint256 _N, address _dao, address _controller, address _keeper)
+    /// @dev    Can only be called by an account with the DEFAULT_ADMIN_ROLE
+    ///         This function sets key contract parameters and assigns roles to specified addresses.
+    ///         It should be called immediately after contract deployment.
+    /// @param  _N A numeric parameter used in the contract's logic (its specific role should be described)
+    /// @param  _dao The address to be set as the treasury
+    /// @param  _controller The address to be granted the CONTROLLER_ROLE
+    /// @param  _keeper The address (poweragent) to be granted the KEEPER_ROLE
+    function initialize(
+        uint256 _N,
+        address _dao,
+        address _controller,
+        address _keeper
+    
+    )
         external
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
@@ -96,8 +95,6 @@ contract LeverageStrategy is
         treasury = _dao;
         //set the number of price bands to deposit into
         N = _N;
-        //grant the default admin role to the contract deployer
-        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         //grant the controller role to the given address
         _grantRole(CONTROLLER_ROLE, _controller);
         //grant the keeper role to the given address (poweragent address)
@@ -105,18 +102,18 @@ contract LeverageStrategy is
     }
 
     /// @notice Sets the index of the token to be withdrawn when exiting the pool
-    /// @dev Can only be called by an account with the DEFAULT_ADMIN_ROLE
-    ///      This function updates the TokenIndex state variable, which determines the specific token 
-    ///      to be withdrawn from a pool when executing certain strategies or operations.
-    /// @param _TokenIndex The index of the token in the pool to be set for withdrawal operations
+    /// @dev    Can only be called by an account with the DEFAULT_ADMIN_ROLE
+    ///         This function updates the TokenIndex state variable, which determines the specific token 
+    ///         to be withdrawn from a pool when executing certain strategies or operations.
+    /// @param  _TokenIndex The index of the token in the pool to be set for withdrawal operations
     function setTokenIndex(uint256 _TokenIndex) external onlyRole(DEFAULT_ADMIN_ROLE) {
         //set the index of the token to be withdrawn exiting the pool
         TokenIndex = _TokenIndex;
     }
 
     /// @notice Returns the health of the strategy's Collateralized Debt Position (CDP) on Curve Finance
-    /// @dev This function fetches the health metric from the Curve Finance controller
-    ///      It provides an assessment of the current state of the CDP associated with this contract.
+    /// @dev    This function fetches the health metric from the Curve Finance controller
+    ///         It provides an assessment of the current state of the CDP associated with this contract.
     /// @return The health of the CDP as an integer value
     function strategyHealth() external view returns (int256) {
         //return the health of the strategy's CDP on Curve Finance
@@ -125,8 +122,8 @@ contract LeverageStrategy is
 
     /// @notice Cancel a deposit before the amount is invested by keeper or controller
     ///         depositor and sender are both same and can be used interchangebly.
-    /// @dev deletes a DepositRecord and returns the tokens back to sender
-    /// @param _key the key/id of the deposit record
+    /// @dev    deletes a DepositRecord and returns the tokens back to sender
+    /// @param  _key the key/id of the deposit record
     function cancelDeposit(uint256 _key) external nonReentrant {
         // get the deposit record for the key
         DepositRecord memory deposit = deposits[_key];
@@ -150,15 +147,20 @@ contract LeverageStrategy is
     }
 
     /// @notice Redeems a specified amount of shares for the underlying asset, closes CDP and sends wstETH to the receiver
-    /// @dev This function handles the redemption process with checks for maximum redeemable shares and minimum amount out.
-    ///      It reverts if the shares to be redeemed exceed the maximum allowed for the owner.
-    ///      It also ensures that the actual amount of assets withdrawn is not less than a specified minimum.
-    /// @param shares The number of shares to be redeemed
-    /// @param receiver The address that will receive the wstETH assets
-    /// @param owner The address that owns the shares being redeemed
-    /// @param minAmountOut The minimum amount of USDC assets to receive from the exiting the Balancer pool
+    /// @dev    This function handles the redemption process with checks for maximum redeemable shares and minimum amount out.
+    ///         It reverts if the shares to be redeemed exceed the maximum allowed for the owner.
+    ///         It also ensures that the actual amount of assets withdrawn is not less than a specified minimum.
+    /// @param  shares The number of shares to be redeemed
+    /// @param  receiver The address that will receive the wstETH assets
+    /// @param  owner The address that owns the shares being redeemed
+    /// @param  minAmountOut The minimum amount of USDC assets to receive from the exiting the Balancer pool
     /// @return The amount of assets that were redeemed
-    function redeemWstEth(uint256 shares, address receiver, address owner, uint256 minAmountOut)
+    function redeemWstEth(
+        uint256 shares,
+        address receiver,
+        address owner,
+        uint256 minAmountOut
+    )
         public
         virtual
         nonReentrant
@@ -175,85 +177,17 @@ contract LeverageStrategy is
         return assets;
     }
 
-    /// @notice reverts everytime to ensure no one can use redeem and withdraw functions
-    /// @dev    The normal `_withdraw` does not allow user to specify slippage protection
-    ///         Given that we are swapping this is a good idea.
-    /// @inheritdoc	ERC4626
-    function _withdraw(address caller, address receiver, address owner, uint256 assets, uint256 shares)
-        internal
-        virtual
-        override
-        nonReentrant
-    {
-        // just to ensure no one uses another withdraw function
-        revert UseOverLoadedRedeemFunction();
-    }
-
-    /// @notice withdraw funds by burning vault shares
-    /// @dev Explain to a developer any extra details
-    /// @param caller a parameter just like in doxygen (must be followed by parameter name)
-    /// @param receiver a parameter just like in doxygen (must be followed by parameter name)
-    /// @param owner a parameter just like in doxygen (must be followed by parameter name)
-    /// @param assets a parameter just like in doxygen (must be followed by parameter name)
-    /// @param shares a parameter just like in doxygen (must be followed by parameter name)
-    function _withdraw(
-        address caller,
-        address receiver,
-        address owner,
+    /// @notice Deposit and invest without waiting for keeper to execute it
+    /// @notice Vault shares are minted to receiver in this same operation
+    /// @dev    When a user calls this function, their deposit isn't added to deposit record as the deposit is used immediately
+    /// @param  assets amount of wstETH to be deposited
+    /// @param  receiver receiver of the vault shares after the wstETH is utilized
+    /// @param  _bptAmountOut amount of BPT token expected out once liquidity is provided
+    function depositAndInvest(
         uint256 assets,
-        uint256 shares,
-        uint256 minAmountOut
-    ) internal virtual {
-        if (caller != owner) {
-            _spendAllowance(owner, caller, shares);
-        }
-
-        // calculate percentage of shares to be withdrawn
-        // i.e. the percentage of all the assets that this user has claim to
-        uint256 percentageToBeWithdrawn = _convertToPercentage(shares, totalSupply());
-
-        // assets location 1 - wstETH in contract - deposits waiting to invest
-        // assets location 2 - wstETH as extra collateral (collateral not utilised to create CDP)
-        // assets location 3 - wstTH used to borrow
-        // funds from assets location 2 and 3 can be withdrawn using unwind and withdraw wstETH
-
-        // We calculate the current debt the strategy has
-        uint256[4] memory debtBefore = crvUSDController.user_state(address(this));
-        // This withdraws the proportion of assets
-        // 1) Withdraw BPT from Boosted AURA
-        // 2) Withdraw USDC from balancer pool (requires slippage protection)
-        // 3) Swap USDC for curveUSD
-        // 4) Repay borrow and receive wstETH
-        _unwindPosition(AURA_VAULT.balanceOf(address(this)), percentageToBeWithdrawn, minAmountOut);
-        // We get the total collateral freed up
-        uint256[4] memory userState = crvUSDController.user_state(address(this));
-        /*
-         There is nuance here. The yield is expected to go up. But the health buffer means that there is 
-         some part of the assets that's not utilised.
-         So we assume that the amount of collateral that the user has claim to is equal to his percentage * collateral provided
-         This collateral amount is increased when `swapReward` is called AND the Keeper or controller has reinvested the `wstETH` 
-         obtained from the rewards.
-         Thus, we can simply take the `percentageToBeWithdrawn` and multiply it by the total collateral provided,
-         to find the amount of `totalWithdrawableWstEth 
-        */
-        uint256 totalWithdrawableWstETH =  userState[0] * percentageToBeWithdrawn / HUNDRED_PERCENT;
-        // We remove this amount of collateral from the CurveController
-        _removeCollateral(totalWithdrawableWstETH);
-        // Now we burn the user's shares 
-        _burn(owner, shares);
-        // Now we push the withdrawn wstETH to the user
-        _pushwstEth(receiver, totalWithdrawableWstETH);
-
-        emit Withdraw(caller, receiver, owner, assets, shares);
-    }
-
-    /// @notice deposit and invest without waiting for keeper to execute it
-    /// @notice vault shares are minted to receiver in this same operation
-    /// @dev when a user calls this function, their deposit isn't added to deposit record as the deposit is used immediately
-    /// @param assets amount of wstETH to be deposited
-    /// @param receiver receiver of the vault shares after the wstETH is utilized
-    /// @param _bptAmountOut amount of BPT token expected out once liquidity is provided
-    function depositAndInvest(uint256 assets, address receiver, uint256 _bptAmountOut)
+        address receiver,
+        uint256 _bptAmountOut
+    )
         public
         virtual
         nonReentrant
@@ -277,15 +211,13 @@ contract LeverageStrategy is
         _mintShares(vsAssets, currentTotalShares, beforeBalance, receiver);
     }
 
-    // main contract functions
-    // @param N Number of price bands to deposit into (to do autoliquidation-deliquidation of wsteth) if the price of the wsteth collateral goes too low
     /// @notice Invests in the strategy by creating CDP using wstETH, investing in balancer pool
     ///         and staking BPT tokens on aura to generate yield
-    /// @dev This function is non-reentrant and can only be called by an account with the CONTROLLER_ROLE
-    ///      It computes the total wstETH to be invested by aggregating deposit records and calculates the maximum borrowable amount.
-    ///      The function then invests wstETH, and tracks the new Aura vault shares minted as a result.
-    ///      Shares of the vault are minted proportionally to the contribution of each deposit record.
-    /// @param _bptAmountOut The targeted amount of Balancer Pool Tokens (BPT) to be received from the investment
+    /// @dev    This function is non-reentrant and can only be called by an account with the CONTROLLER_ROLE
+    ///         It computes the total wstETH to be invested by aggregating deposit records and calculates the maximum borrowable amount.
+    ///         The function then invests wstETH, and tracks the new Aura vault shares minted as a result.
+    ///         Shares of the vault are minted proportionally to the contribution of each deposit record.
+    /// @param  _bptAmountOut The targeted amount of Balancer Pool Tokens (BPT) to be received from the investment
     function invest(uint256 _bptAmountOut)
         external
         nonReentrant
@@ -324,63 +256,62 @@ contract LeverageStrategy is
         investQueued.timestamp = uint64(block.timestamp);
         // We store a simulated amount out as a control value
         (uint256 amountOut, ) = simulateJoinPool(USDC_CONTROL_AMOUNT);
-        investQueued.minAmountOut = uint192(investQueued.minAmountOut);
+        investQueued.minAmountOut = uint192(amountOut);
     }
 
     /// @notice Executes a queued invest from a Keeper
-    /// @dev Explain to a developer any extra details
-    /// @param _bptAmountOut a parameter just like in doxygen (must be followed by parameter name)
+    /// @dev    Explain to a developer any extra details
+    /// @param  _bptAmountOut The minimum aount of BPT Tokens expected out
     function executeInvestFromKeeper(uint256 _bptAmountOut, bool isReinvest) external nonReentrant onlyRole(KEEPER_ROLE) {
         // Do not allow queue and execute in same block
-        if (investQueued.timestamp == block.timestamp) revert InvalidInvest();
+        if (investQueued.timestamp == block.timestamp || investQueued.timestamp == 0) revert InvalidInvest();
 
         (uint256 expectedAmountOut, ) = simulateJoinPool(USDC_CONTROL_AMOUNT);
         // 1% slippage
-        if (investQueued.minAmountOut > (uint192(expectedAmountOut) * 99 / 100)) {
+        if (
+            investQueued.minAmountOut > (uint192(expectedAmountOut) * 99 / 100) &&
+            (investQueued.minAmountOut != expectedAmountOut)
+        ) {
             // Slippage control out of date, reset so a new call to `investFromKeeper` can happen
             investQueued.timestamp = 0;
         }
 
-        if (investQueued.timestamp != 0) {
-            if (isReinvest) {
-                uint256[4] memory debtBefore = crvUSDController.user_state(address(this));
-                uint256 maxBorrowable = crvUSDController.max_borrowable(debtBefore[0], N);
-                // We borrow without adding collateral
-                // The max amount given our current collateral - the amount we already have taken
-                _invest(0, maxBorrowable - debtBefore[2], expectedAmountOut);
-            } else {
-                // calculate total wstETH by traversing through all the deposit records
-                (uint256 wstEthAmount, uint256 startKeyId,) = _computeAndRebalanceDepositRecords();
-                uint256 _debtAmount = crvUSDController.max_borrowable(wstEthAmount, N);
-
-                uint256 currentTotalShares = totalSupply();
-                // get the current balance of the Aura vault shares
-                // to be used to determine how many new vault shares were minted
-                uint256 beforeBalance = AURA_VAULT.balanceOf(address(this));
-                // Here the keeper is borrowing only 95% of the max borrowable amount
-                uint256 maxBorrowable = crvUSDController.max_borrowable(wstEthAmount * healthBuffer / HUNDRED_PERCENT, N); //Should the keeper always borrow max or some %
-
-                _invest(wstEthAmount, maxBorrowable, _bptAmountOut);
-
-                // calculate total new shares minted
-                // here assets is Aura Vault shares
-                uint256 addedAssets = AURA_VAULT.balanceOf(address(this)) - beforeBalance;
-                // we equally mint vault shares to the receivers of each deposit record that was used
-                _mintMultipleShares(startKeyId, currentTotalShares, beforeBalance, addedAssets, wstEthAmount);
-            }
+        if (isReinvest) {
+            uint256[4] memory debtBefore = crvUSDController.user_state(address(this));
+            uint256 maxBorrowable = crvUSDController.max_borrowable(debtBefore[0], N);
+            // We borrow without adding collateral
+            // The max amount given our current collateral - the amount we already have taken
+            _invest(0, maxBorrowable - debtBefore[2], expectedAmountOut);
         } else {
-            // If timestamp is 0 we do not have an invest queued
-            revert InvalidInvest();
+            // calculate total wstETH by traversing through all the deposit records
+            (uint256 wstEthAmount, uint256 startKeyId,) = _computeAndRebalanceDepositRecords();
+            uint256 currentTotalShares = totalSupply();
+            // get the current balance of the Aura vault shares
+            // to be used to determine how many new vault shares were minted
+            uint256 beforeBalance = AURA_VAULT.balanceOf(address(this));
+            // Here the keeper is borrowing only 95% of the max borrowable amount
+            uint256 maxBorrowable = crvUSDController.max_borrowable(wstEthAmount * healthBuffer / HUNDRED_PERCENT, N); //Should the keeper always borrow max or some %
+
+            _invest(wstEthAmount, maxBorrowable, _bptAmountOut);
+
+            // calculate total new shares minted
+            // here assets is Aura Vault shares
+            uint256 addedAssets = AURA_VAULT.balanceOf(address(this)) - beforeBalance;
+            // we equally mint vault shares to the receivers of each deposit record that was used
+            _mintMultipleShares(startKeyId, currentTotalShares, beforeBalance, addedAssets, wstEthAmount);
         }
     }
 
-    // fix: unwind position only based on msg.sender share
-    // fix: anyone should be able to unwind their position
+    /// @notice Unwind call from the Controller
+    /// @dev    Used by the Controller/DAO to manually unwind a specific percentage
+    /// @param  auraShares The number of asset to unwind
+    /// @param  minAmountOut Slippage protection (w.r.t. BPTToken)
     function unwindPosition(uint256 auraShares, uint256 minAmountOut) external nonReentrant onlyRole(CONTROLLER_ROLE) {
         _unwindPosition(auraShares, HUNDRED_PERCENT, minAmountOut);
     }
 
-    // fix: rename this to redeemRewardsToMaintainCDP()
+    /// @notice Queues an unwind call from the automated keeper
+    /// @dev    First part of the two-step unwind process
     function unwindPositionFromKeeper() external nonReentrant onlyRole(KEEPER_ROLE) {
         (,uint256[] memory minAmountsOut) = simulateExitPool(QUERY_CONTROL_AMOUNT);
         // Grab the exit token index
@@ -409,10 +340,11 @@ contract LeverageStrategy is
                 unwindQueued.minAmountOut < (uint192(amountsOut[1]) * 99 / 100)
             ) {
                 _unwindPosition(
-                    _convertToValue(AURA_VAULT.balanceOf(address(this)), FIXED_UNWIND_PERCENTAGE),
-                    FIXED_UNWIND_PERCENTAGE,
+                    _convertToValue(AURA_VAULT.balanceOf(address(this)), unwindPercentage),
+                    unwindPercentage,
                     0
                 );
+                // We need to set timestamp to 0 so next call can happen
                 unwindQueued.timestamp = 0;
 
             } else {
@@ -434,15 +366,123 @@ contract LeverageStrategy is
         healthBuffer = percentage;
     }
 
+    /// @notice Swaps BAL and AURA rewards for WETH, specifying minimum amounts and deadline
+    /// @dev    This function is non-reentrant and can only be called by an account with the CONTROLLER_ROLE
+    ///         It internally calls separate functions to handle the swapping of BAL to WETH and AURA to WETH.
+    ///         The swaps are executed with specified minimum return amounts and a deadline to ensure slippage protection and timely execution.
+    /// @param  balAmount The amount of BAL tokens to be swapped for WETH
+    /// @param  auraAmount The amount of AURA tokens to be swapped for WETH
+    /// @param  minWethAmountBal The minimum amount of WETH expected from swapping BAL
+    /// @param  minWethAmountAura The minimum amount of WETH expected from swapping AURA
+    /// @param  deadline The latest timestamp by which the swap must be completed
+    function swapReward(
+        uint256 balAmount,
+        uint256 auraAmount,
+        uint256 minWethAmountBal,
+        uint256 minWethAmountAura,
+        uint256 deadline
+    ) external nonReentrant onlyRole(CONTROLLER_ROLE) {
+        _swapRewardBal(balAmount, minWethAmountBal, deadline);
+        _swapRewardAura(auraAmount, minWethAmountAura, deadline);
+    }
+
+    /// @notice Allows the controller to adjust the percentage to unwind at a time
+    /// @param  newPercentage The percentage of assets to unwind at a time, normalized to 1e12
+    function setUnwindPercentage(uint256 newPercentage) external onlyRole(CONTROLLER_ROLE) {
+        if (newPercentage > HUNDRED_PERCENT) revert InvalidInput();
+        unwindPercentage = newPercentage;
+    }
+
+    //================================================INTERNAL FUNCTIONS===============================================//
+
+    /// @notice reverts everytime to ensure no one can use redeem and withdraw functions
+    /// @dev    The normal `_withdraw` does not allow user to specify slippage protection
+    ///         Given that we are swapping this is a good idea.
+    function _withdraw(
+        address,
+        address,
+        address,
+        uint256,
+        uint256
+    )
+        internal
+        virtual
+        override
+        nonReentrant
+    {
+        // just to ensure no one uses another withdraw function
+        revert UseOverLoadedRedeemFunction();
+    }
+
+    /// @notice Withdraw funds by burning vault shares
+    /// @dev    Unwinds from AURA -> BPT -> CURVE -> sends wstETH to user
+    /// @param  caller The caller of this function call
+    /// @param  receiver The receiver of the wstETH. Receiver requires allowance.
+    /// @param  owner The user whose shares are to be burned
+    /// @param  assets The number of assets
+    /// @param  shares The number of shares to be withdrawn
+    function _withdraw(
+        address caller,
+        address receiver,
+        address owner,
+        uint256 assets,
+        uint256 shares,
+        uint256 minAmountOut
+    ) internal virtual {
+        if (caller != owner) {
+            _spendAllowance(owner, caller, shares);
+        }
+
+        // calculate percentage of shares to be withdrawn
+        // i.e. the percentage of all the assets that this user has claim to
+        uint256 percentageToBeWithdrawn = _convertToPercentage(shares, totalSupply());
+
+        // assets location 1 - wstETH in contract - deposits waiting to invest
+        // assets location 2 - wstETH as extra collateral (collateral not utilised to create CDP)
+        // assets location 3 - wstTH used to borrow
+        // funds from assets location 2 and 3 can be withdrawn using unwind and withdraw wstETH
+
+        // This withdraws the proportion of assets
+        // 1) Withdraw BPT from Boosted AURA
+        // 2) Withdraw USDC from balancer pool (requires slippage protection)
+        // 3) Swap USDC for curveUSD
+        // 4) Repay borrow and receive wstETH
+        _unwindPosition(AURA_VAULT.balanceOf(address(this)), percentageToBeWithdrawn, minAmountOut);
+        // We get the total collateral freed up
+        uint256[4] memory userState = crvUSDController.user_state(address(this));
+        /*
+         There is nuance here. The yield is expected to go up. But the health buffer means that there is 
+         some part of the assets that's not utilised.
+         So we assume that the amount of collateral that the user has claim to is equal to his percentage * collateral provided
+         This collateral amount is increased when `swapReward` is called AND the Keeper or controller has reinvested the `wstETH` 
+         obtained from the rewards.
+         Thus, we can simply take the `percentageToBeWithdrawn` and multiply it by the total collateral provided,
+         to find the amount of `totalWithdrawableWstEth 
+        */
+        uint256 totalWithdrawableWstETH =  userState[0] * percentageToBeWithdrawn / HUNDRED_PERCENT;
+        // We remove this amount of collateral from the CurveController
+        _removeCollateral(totalWithdrawableWstETH);
+        // Now we burn the user's shares 
+        _burn(owner, shares);
+        // Now we push the withdrawn wstETH to the user
+        _pushwstEth(receiver, totalWithdrawableWstETH);
+
+        emit Withdraw(caller, receiver, owner, assets, shares);
+    }
+
     /// @notice Internally handles the unwinding of a position by redeeming and converting assets
-    /// @dev This function is internal and part of the unwinding logic used by public facing functions.
-    ///      It involves multiple steps: unstaking Aura shares, exiting a Balancer pool, and repaying loans.
-    ///      The function calculates the amount of Aura shares to unstake based on a percentage,
-    ///      exchanges the redeemed assets, and then repays any outstanding loans.
-    /// @param _auraShares The total amount of Aura shares involved in the unwind
-    /// @param percentageUnwind The percentage of the position to unwind, scaled by 10^12
-    /// @param minAmountOut The minimum amount of underlying assets expected to receive from the unwinding
-    function _unwindPosition(uint256 _auraShares, uint256 percentageUnwind, uint256 minAmountOut) internal {
+    /// @dev    This function is internal and part of the unwinding logic used by public facing functions.
+    ///         It involves multiple steps: unstaking Aura shares, exiting a Balancer pool, and repaying loans.
+    ///         The function calculates the amount of Aura shares to unstake based on a percentage,
+    ///         exchanges the redeemed assets, and then repays any outstanding loans.
+    /// @param  _auraShares The total amount of Aura shares involved in the unwind
+    /// @param  percentageUnwind The percentage of the position to unwind, scaled by 10^12
+    /// @param  minAmountOut The minimum amount of underlying assets expected to receive from the unwinding
+    function _unwindPosition(
+        uint256 _auraShares,
+        uint256 percentageUnwind,
+        uint256 minAmountOut
+    ) internal {
         // Get the proportional amount of shares
         uint256 auraSharesToUnStake = _convertToValue(_auraShares, percentageUnwind);
         // Withdraw in order to get BPT tokens back
@@ -462,67 +502,47 @@ contract LeverageStrategy is
     }
 
     /// @notice Calculates the percentage representation of a value with respect to a total amount
-    /// @dev This function is internal and pure, used for computing the percentage of a part relative to a whole.
-    ///      The calculation scales the percentage by a factor of 10^12 (HUNDRED_PERCENT).
-    /// @param value The value to be converted into a percentage
-    /// @param total The total amount relative to which the percentage is calculated
+    /// @dev    This function is internal and pure, used for computing the percentage of a part relative to a whole.
+    ///         The calculation scales the percentage by a factor of 10^12 (HUNDRED_PERCENT).
+    /// @param  value The value to be converted into a percentage
+    /// @param  total The total amount relative to which the percentage is calculated
     /// @return percent The percentage of the value with respect to the total, scaled by 10^12
     function _convertToPercentage(uint256 value, uint256 total) internal pure returns (uint256 percent) {
         return value * HUNDRED_PERCENT / total;
     }
 
     /// @notice Calculates the absolute value corresponding to a given percentage of a total amount
-    /// @dev This internal and pure function computes the value that a specified percentage represents of a total.
-    ///      The calculation uses the HUNDRED_PERCENT constant (scaled by 10^12) to handle percentage scaling.
-    /// @param total The total amount from which the value is derived
-    /// @param percent The percentage of the total amount to be calculated, scaled by 10^12
+    /// @dev    This internal and pure function computes the value that a specified percentage represents of a total.
+    ///         The calculation uses the HUNDRED_PERCENT constant (scaled by 10^12) to handle percentage scaling.
+    /// @param  total The total amount from which the value is derived
+    /// @param  percent The percentage of the total amount to be calculated, scaled by 10^12
     /// @return value The calculated value that the percentage represents of the total amount
     function _convertToValue(uint256 total, uint256 percent) internal pure returns (uint256 value) {
         return total * percent / HUNDRED_PERCENT;
     }
 
-    // fix: rename this to reinvestUsingRewards()
-    // note: when reinvesting, ensure the accounting of amount invested remains same.
-    /// @notice Swaps BAL and AURA rewards for WETH, specifying minimum amounts and deadline
-    /// @dev This function is non-reentrant and can only be called by an account with the CONTROLLER_ROLE
-    ///      It internally calls separate functions to handle the swapping of BAL to WETH and AURA to WETH.
-    ///      The swaps are executed with specified minimum return amounts and a deadline to ensure slippage protection and timely execution.
-    /// @param balAmount The amount of BAL tokens to be swapped for WETH
-    /// @param auraAmount The amount of AURA tokens to be swapped for WETH
-    /// @param minWethAmountBal The minimum amount of WETH expected from swapping BAL
-    /// @param minWethAmountAura The minimum amount of WETH expected from swapping AURA
-    /// @param deadline The latest timestamp by which the swap must be completed
-    function swapReward(
-        uint256 balAmount,
-        uint256 auraAmount,
-        uint256 minWethAmountBal,
-        uint256 minWethAmountAura,
-        uint256 deadline
-    ) external nonReentrant onlyRole(CONTROLLER_ROLE) {
-        _swapRewardBal(balAmount, minWethAmountBal, deadline);
-        _swapRewardAura(auraAmount, minWethAmountAura, deadline);
-    }
-
-    //================================================INTERNAL FUNCTIONS===============================================//
-
     /// @notice the token to be staked in the strategy
-    /// @dev This internal view function returns the specific token that is used for staking in the strategy.
-    ///      It overrides a base class implementation and is meant to be customizable in derived contracts.
+    /// @dev    This internal view function returns the specific token that is used for staking in the strategy.
+    ///         It overrides a base class implementation and is meant to be customizable in derived contracts.
     /// @return The IERC20 token which is to be staked, represented here by the D2D_USDC_BPT token
     function _tokenToStake() internal view virtual override returns (IERC20) {
         return D2D_USDC_BPT;
     }
 
     /// @notice Handles the internal investment process using wstETH, debt amount, and targeted BPT amount
-    /// @dev This internal function manages the investment workflow including creating or managing loans, 
-    ///      exchanging assets, providing liquidity, and staking LP tokens.
-    ///      It opens a position on crvUSD if no loan exists or manages an existing one, exchanges crvUSD to USDC,
-    ///      and uses the USDC to provide liquidity in the D2D/USDC pool on Balancer, finally staking the LP tokens on Aura Finance.
-    ///      Reverts if the investment amount (_wstETHAmount) is zero.
+    /// @dev    This internal function manages the investment workflow including creating or managing loans, 
+    ///         exchanging assets, providing liquidity, and staking LP tokens.
+    ///         It opens a position on crvUSD if no loan exists or manages an existing one, exchanges crvUSD to USDC,
+    ///         and uses the USDC to provide liquidity in the D2D/USDC pool on Balancer, finally staking the LP tokens on Aura Finance.
+    ///         Reverts if the investment amount (_wstETHAmount) is zero.
     /// @param _wstETHAmount The amount of wstETH to be used in the investment
     /// @param _debtAmount The amount of debt to be taken on in the investment
     /// @param _bptAmountOut The targeted amount of Balancer Pool Tokens to be received from the liquidity provision
-    function _invest(uint256 _wstETHAmount, uint256 _debtAmount, uint256 _bptAmountOut) internal {
+    function _invest(
+        uint256 _wstETHAmount,
+        uint256 _debtAmount,
+        uint256 _bptAmountOut
+    ) internal {
         // Opens a position on crvUSD if no loan already
         // Note this address is an owner of a crvUSD CDP
         // in the usual case we already have a CDP
@@ -541,10 +561,15 @@ contract LeverageStrategy is
     }
 
     /// @notice mint vault shares to an address
-    /// @dev if total supply is zero, 1:1 ratio is used
-    /// @param assets amount of assets that was deposited, here assets is the Aura Vault Shares
-    /// @param to receiver of the vault shares (Leverage Stratgey Vault Shares)
-    function _mintShares(uint256 assets, uint256 currentShares, uint256 currentAssets, address to) internal {
+    /// @dev    if total supply is zero, 1:1 ratio is used
+    /// @param  assets amount of assets that was deposited, here assets is the Aura Vault Shares
+    /// @param  to receiver of the vault shares (Leverage Stratgey Vault Shares)
+    function _mintShares(
+        uint256 assets,
+        uint256 currentShares,
+        uint256 currentAssets,
+        address to
+    ) internal {
         uint256 shares;
         // won't cause DoS or gridlock because the token token will have no minted tokens before the creation
         if (totalSupply() == 0) {
@@ -556,49 +581,61 @@ contract LeverageStrategy is
     }
 
     /// @notice Converts an amount of new assets into equivalent shares based on the current state of the contract
-    /// @dev This internal view function calculates the number of shares corresponding to a given amount of new assets,
-    ///      considering the current total shares and assets in the contract.
-    ///      It uses the mulDiv function for multiplication and division, applying the specified rounding method.
-    ///      A decimals offset is added to currentShares for precision adjustments.
-    /// @param newAssets The amount of new assets to be converted into shares
-    /// @param currentShares The current total number of shares in the contract
-    /// @param currentAssets The current total assets in the contract
-    /// @param rounding The rounding direction to be used in the calculation (up or down)
-    /// @return _shares The calculated number of shares equivalent to the new assets
-    function _convertToShares(uint256 newAssets, uint256 currentShares, uint256 currentAssets, Math.Rounding rounding)
+    /// @dev    This internal view function calculates the number of shares corresponding to a given amount of new assets,
+    ///         considering the current total shares and assets in the contract.
+    ///         It uses the mulDiv function for multiplication and division, applying the specified rounding method.
+    ///         A decimals offset is added to currentShares for precision adjustments.
+    /// @param  newAssets The amount of new assets to be converted into shares
+    /// @param  currentShares The current total number of shares in the contract
+    /// @param  currentAssets The current total assets in the contract
+    /// @param  rounding The rounding direction to be used in the calculation (up or down)
+    function _convertToShares(
+        uint256 newAssets,
+        uint256 currentShares,
+        uint256 currentAssets,
+        Math.Rounding rounding
+    )
         internal
         view
-        returns (uint256 _shares)
+        returns (uint256)
     {
         return newAssets.mulDiv(currentShares + 10 ** _decimalsOffset(), currentAssets + 1, rounding);
     }
 
     /// @notice create and store a neww deposit record
-    /// @param _amount amount of wstETH deposited
-    /// @param _depositor depositor of the wstETH
-    /// @param _receiver receiver of the vault shares after wstETH is invested successfully
-    function _recordDeposit(uint256 _amount, address _depositor, address _receiver)
+    /// @param  _amount amount of wstETH deposited
+    /// @param  _depositor depositor of the wstETH
+    /// @param  _receiver receiver of the vault shares after wstETH is invested successfully
+    function _recordDeposit(
+        uint256 _amount,
+        address _depositor,
+        address _receiver
+    )
         internal
         returns (uint256 recordKey)
     {
-        uint256 currentKey = ++depositCounter;
-        deposits[currentKey].depositor = _depositor;
-        deposits[currentKey].amount = _amount;
-        deposits[currentKey].receiver = _receiver;
-        deposits[currentKey].state = DepositState.DEPOSITED;
-        return currentKey;
+        recordKey = ++depositCounter;
+        deposits[recordKey].depositor = _depositor;
+        deposits[recordKey].amount = _amount;
+        deposits[recordKey].receiver = _receiver;
+        deposits[recordKey].state = DepositState.DEPOSITED;
     }
 
-    /// @notice take wstETH and create a deposit record
-    /// @dev overrides inherited method
-    /// @notice deposit is a two step process:
-    ///       1) User deposits wstETH to the vault and a record of their deposit is stored
-    ///       2) Keeper/Controller invokes `invest` which invests the wstETH into aura.
-    ///          Upon successful invest, vault shares are minted to receivers
-    /// @param caller depositor address
-    /// @param receiver receiver of vault shares
-    /// @param assets amount of wstETH to be deposited (it's different from Aura Vault Shares)
-    function _deposit(address caller, address receiver, uint256 assets, uint256) internal virtual override {
+    /// @notice Take wstETH and create a deposit record
+    /// @dev    Overrides inherited method
+    /// @notice Deposit is a two step process:
+    ///         1) User deposits wstETH to the vault and a record of their deposit is stored
+    ///         2) Keeper/Controller invokes `invest` which invests the wstETH into aura.
+    ///         Upon successful invest, vault shares are minted to receivers
+    /// @param  caller depositor address
+    /// @param  receiver receiver of vault shares
+    /// @param  assets amount of wstETH to be deposited (it's different from Aura Vault Shares)
+    function _deposit(
+        address caller,
+        address receiver,
+        uint256 assets,
+        uint256
+    ) internal virtual override {
         if (assets == 0) {
             revert ZeroDepositNotAllowed();
         }
@@ -609,9 +646,9 @@ contract LeverageStrategy is
         emit Deposited(depositKey, assets, caller, receiver);
     }
 
-    /// @notice use transferFrom to pull wstETH from an address
-    /// @param from owner of the wstETH
-    /// @param value amount of wstETH to be transferred
+    /// @notice Use transferFrom to pull wstETH from an address
+    /// @param  from Owner of the wstETH
+    /// @param  value Amount of wstETH to be transferred
     function _pullwstEth(address from, uint256 value) internal {
         // pull funds from the msg.sender
         bool transferSuccess = wstETH.transferFrom(from, address(this), value);
@@ -620,11 +657,11 @@ contract LeverageStrategy is
         }
     }
 
-    /// @notice compute total wstETH to be utilised for investment and mark those deposits as invested
-    /// @dev vault shares are minted after the tokens are invested
-    /// @return _wstEthAmount total wstETH amount to be used
-    /// @return _startKeyId the first deposit record whose wstETH haven't been used for investment
-    /// @return _totalDeposits total number of deposit records utilised in this invest operation
+    /// @notice Compute total wstETH to be utilised for investment and mark those deposits as invested
+    /// @dev    Vault shares are minted after the tokens are invested
+    /// @return _wstEthAmount Total wstETH amount to be used
+    /// @return _startKeyId the First deposit record whose wstETH haven't been used for investment
+    /// @return _totalDeposits Total number of deposit records utilised in this invest operation
     function _computeAndRebalanceDepositRecords()
         internal
         returns (uint256 _wstEthAmount, uint256 _startKeyId, uint256 _totalDeposits)
@@ -651,10 +688,16 @@ contract LeverageStrategy is
         return (_wstEthAmount, _startKeyId, _totalDeposits);
     }
 
-    /// @notice mint vault shares to receivers of all deposit records that was used for investment in current operation
-    /// @param _startKeyId first deposit record from where the mint of vault shares will begin
-    /// @param _assets amount of Aura vault shares that were minted per deposit record
-    function _mintMultipleShares(uint256 _startKeyId, uint256 currentShares, uint256 currentAssets, uint256 _assets, uint256 wstEthAmount)
+    /// @notice Mint vault shares to receivers of all deposit records that was used for investment in current operation
+    /// @param _startKeyId First deposit record from where the mint of vault shares will begin
+    /// @param _assets Amount of Aura vault shares that were minted per deposit record
+    function _mintMultipleShares(
+        uint256 _startKeyId,
+        uint256 currentShares,
+        uint256 currentAssets,
+        uint256 _assets,
+        uint256 wstEthAmount
+    )
         internal
     {
         // loop over the deposit records starting from the start deposit key ID
@@ -669,9 +712,9 @@ contract LeverageStrategy is
         }
     }
 
-    /// @notice transfer wstETH to an address
-    /// @param to receiver of wstETH
-    /// @param value amount of wstETH to be transferred
+    /// @notice Transfer wstETH to an address
+    /// @param  to Receiver of wstETH
+    /// @param  value Amount of wstETH to be transferred
     function _pushwstEth(address to, uint256 value) internal {
         // pull funds from the msg.sender
         bool transferSuccess = wstETH.transfer(to, value);
