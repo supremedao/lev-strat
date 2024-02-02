@@ -176,6 +176,8 @@ contract LeverageStrategy is
     }
 
     /// @notice reverts everytime to ensure no one can use redeem and withdraw functions
+    /// @dev    The normal `_withdraw` does not allow user to specify slippage protection
+    ///         Given that we are swapping this is a good idea.
     /// @inheritdoc	ERC4626
     function _withdraw(address caller, address receiver, address owner, uint256 assets, uint256 shares)
         internal
@@ -206,7 +208,6 @@ contract LeverageStrategy is
             _spendAllowance(owner, caller, shares);
         }
 
-
         // calculate percentage of shares to be withdrawn
         // i.e. the percentage of all the assets that this user has claim to
         uint256 percentageToBeWithdrawn = _convertToPercentage(shares, totalSupply());
@@ -216,8 +217,6 @@ contract LeverageStrategy is
         // assets location 3 - wstTH used to borrow
         // funds from assets location 2 and 3 can be withdrawn using unwind and withdraw wstETH
 
-        // This converts the amount of shares to the amount of `AURA` tokens that need to be withdrawn
-        uint256 auraPositionToBeClosed = convertToAssets(shares);
         // We calculate the current debt the strategy has
         uint256[4] memory debtBefore = crvUSDController.user_state(address(this));
         // This withdraws the proportion of assets
@@ -227,9 +226,17 @@ contract LeverageStrategy is
         // 4) Repay borrow and receive wstETH
         _unwindPosition(AURA_VAULT.balanceOf(address(this)), percentageToBeWithdrawn, minAmountOut);
         // We get the total collateral freed up
-        uint256[4] memory debtAfter = crvUSDController.user_state(address(this));
-        // At this point, the amount of debt repaid is the amount that the shares represented
-        uint256 totalWithdrawableWstETH =  (debtBefore[2] - debtAfter[2]) * 1e18 / curveAMM.price_oracle() ;
+        uint256[4] memory userState = crvUSDController.user_state(address(this));
+        /*
+         There is nuance here. The yield is expected to go up. But the health buffer means that there is 
+         some part of the assets that's not utilised.
+         So we assume that the amount of collateral that the user has claim to is equal to his percentage * collateral provided
+         This collateral amount is increased when `swapReward` is called AND the Keeper or controller has reinvested the `wstETH` 
+         obtained from the rewards.
+         Thus, we can simply take the `percentageToBeWithdrawn` and multiply it by the total collateral provided,
+         to find the amount of `totalWithdrawableWstEth 
+        */
+        uint256 totalWithdrawableWstETH =  userState[0] * percentageToBeWithdrawn / HUNDRED_PERCENT;
         // We remove this amount of collateral from the CurveController
         _removeCollateral(totalWithdrawableWstETH);
         // Now we burn the user's shares 
@@ -238,12 +245,6 @@ contract LeverageStrategy is
         _pushwstEth(receiver, totalWithdrawableWstETH);
 
         emit Withdraw(caller, receiver, owner, assets, shares);
-    }
-
-    /// @notice Removes the collateral from the controller
-    /// @param  withdrawalAmount The amount of wstETH to withdraw
-    function _removeCollateral(uint256 withdrawalAmount) internal {
-        crvUSDController.remove_collateral(withdrawalAmount, false);
     }
 
     /// @notice deposit and invest without waiting for keeper to execute it
@@ -261,12 +262,13 @@ contract LeverageStrategy is
         if (assets == 0) {
             revert ZeroDepositNotAllowed();
         }
-        uint256 _debtAmount = crvUSDController.max_borrowable(assets, N);
+
+        uint256 _debtAmount = crvUSDController.max_borrowable(assets, N) * healthBuffer / HUNDRED_PERCENT;
         // calculate shares
         uint256 currentTotalShares = totalSupply();
         // pull funds from the msg.sender
         _pullwstEth(msg.sender, assets);
-        uint256 beforeBalance = IERC20(address(AURA_VAULT)).balanceOf(address(this));
+        uint256 beforeBalance = AURA_VAULT.balanceOf(address(this));
         // invest
         _invest(assets, _debtAmount, _bptAmountOut);
         // mint shares to the msg.sender
@@ -290,9 +292,8 @@ contract LeverageStrategy is
         onlyRole(CONTROLLER_ROLE)
     {
         // calculate total wstETH by traversing through all the deposit records
-        (uint256 wstEthAmount, uint256 startKeyId,) = _computeAndRebalanceDepsoitRecords();
-        uint256 _debtAmount = crvUSDController.max_borrowable(wstEthAmount, N);
-
+        (uint256 wstEthAmount, uint256 startKeyId,) = _computeAndRebalanceDepositRecords();
+        uint256 _debtAmount = crvUSDController.max_borrowable(wstEthAmount, N) * healthBuffer / HUNDRED_PERCENT;
         uint256 currentShares = totalSupply();
         // get the current balance of the Aura vault shares
         // to be used to determine how many new vault shares were minted
@@ -306,14 +307,18 @@ contract LeverageStrategy is
         uint256 addedAssets = AURA_VAULT.balanceOf(address(this)) - beforeBalance;
 
         // we mint vault shares propotional to deposits made by receivers of each deposit record that was used
-        _mintMultipleShares(startKeyId, currentShares, beforeBalance, addedAssets * HUNDRED_PERCENT / wstEthAmount);
+        _mintMultipleShares(startKeyId, currentShares, beforeBalance, addedAssets, wstEthAmount);
     }
 
-    /// @notice Executes a queued invest from a Keeper
-    /// @dev This function is non-reentrant and can only be called by an account with the KEEPER_ROLE
-    ///      It computes the total wstETH to be invested by aggregating deposit records and calculates the maximum borrowable amount.
-    ///      The function then invests wstETH, and tracks the new Aura vault shares minted as a result.
-    ///      Shares of the vault are minted equally to the contributors of each deposit record
+    /// @notice This function is called by PowerPool and queues an invest call
+    /// @dev    To provide a measure of manipulation mitigation this call takes a "snapshot"
+    ///         of a control amount of asset, this will be compared in the next call.
+    ///         This MUST be paired with a protected endpoint AND randomness with regards
+    ///         to the subsequent `executeInvestFromKeeper` call timing
+    ///         This function is non-reentrant and can only be called by an account with the KEEPER_ROLE
+    ///         It computes the total wstETH to be invested by aggregating deposit records and calculates the maximum borrowable amount.
+    ///         The function then invests wstETH, and tracks the new Aura vault shares minted as a result.
+    ///         Shares of the vault are minted equally to the contributors of each deposit record
     function investFromKeeper() external nonReentrant onlyRole(KEEPER_ROLE) {
         // Queue an invest from Keeper Call
         investQueued.timestamp = uint64(block.timestamp);
@@ -345,15 +350,15 @@ contract LeverageStrategy is
                 _invest(0, maxBorrowable - debtBefore[2], expectedAmountOut);
             } else {
                 // calculate total wstETH by traversing through all the deposit records
-                (uint256 wstEthAmount, uint256 startKeyId,) = _computeAndRebalanceDepsoitRecords();
+                (uint256 wstEthAmount, uint256 startKeyId,) = _computeAndRebalanceDepositRecords();
                 uint256 _debtAmount = crvUSDController.max_borrowable(wstEthAmount, N);
 
                 uint256 currentTotalShares = totalSupply();
                 // get the current balance of the Aura vault shares
                 // to be used to determine how many new vault shares were minted
                 uint256 beforeBalance = AURA_VAULT.balanceOf(address(this));
-
-                uint256 maxBorrowable = crvUSDController.max_borrowable(wstEthAmount, N); //Should the keeper always borrow max or some %
+                // Here the keeper is borrowing only 95% of the max borrowable amount
+                uint256 maxBorrowable = crvUSDController.max_borrowable(wstEthAmount * healthBuffer / HUNDRED_PERCENT, N); //Should the keeper always borrow max or some %
 
                 _invest(wstEthAmount, maxBorrowable, _bptAmountOut);
 
@@ -361,7 +366,7 @@ contract LeverageStrategy is
                 // here assets is Aura Vault shares
                 uint256 addedAssets = AURA_VAULT.balanceOf(address(this)) - beforeBalance;
                 // we equally mint vault shares to the receivers of each deposit record that was used
-                _mintMultipleShares(startKeyId, currentTotalShares, beforeBalance, addedAssets * HUNDRED_PERCENT / wstEthAmount);
+                _mintMultipleShares(startKeyId, currentTotalShares, beforeBalance, addedAssets, wstEthAmount);
             }
         } else {
             // If timestamp is 0 we do not have an invest queued
@@ -419,6 +424,14 @@ contract LeverageStrategy is
             // No unwind if timestamp is `0`
             revert InvalidUnwind();
         }
+    }
+
+    /// @notice Sets the health buffer. 
+    /// @dev    This ensures that the protocol maintains a healthy colalteral factor
+    /// @param  percentage Must be smaller than 10e12
+    function setHealthBuffer(uint256 percentage) external {
+        if (percentage > HUNDRED_PERCENT) revert InvalidInput();
+        healthBuffer = percentage;
     }
 
     /// @notice Internally handles the unwinding of a position by redeeming and converting assets
@@ -542,14 +555,6 @@ contract LeverageStrategy is
         _mint(to, shares);
     }
 
-    // function _convertToAssets(uint256 newShares, uint256 currentAssets, uint256 currentShares, Math.Rounding rounding)
-    //     internal
-    //     view
-    //     returns (uint256 _assets)
-    // {
-    //     return newShares.mulDiv(currentAssets + 1, currentShares + 10 ** _decimalsOffset(), rounding);
-    // }
-
     /// @notice Converts an amount of new assets into equivalent shares based on the current state of the contract
     /// @dev This internal view function calculates the number of shares corresponding to a given amount of new assets,
     ///      considering the current total shares and assets in the contract.
@@ -620,7 +625,7 @@ contract LeverageStrategy is
     /// @return _wstEthAmount total wstETH amount to be used
     /// @return _startKeyId the first deposit record whose wstETH haven't been used for investment
     /// @return _totalDeposits total number of deposit records utilised in this invest operation
-    function _computeAndRebalanceDepsoitRecords()
+    function _computeAndRebalanceDepositRecords()
         internal
         returns (uint256 _wstEthAmount, uint256 _startKeyId, uint256 _totalDeposits)
     {
@@ -649,14 +654,16 @@ contract LeverageStrategy is
     /// @notice mint vault shares to receivers of all deposit records that was used for investment in current operation
     /// @param _startKeyId first deposit record from where the mint of vault shares will begin
     /// @param _assets amount of Aura vault shares that were minted per deposit record
-    function _mintMultipleShares(uint256 _startKeyId, uint256 currentShares, uint256 currentAssets, uint256 _assets)
+    function _mintMultipleShares(uint256 _startKeyId, uint256 currentShares, uint256 currentAssets, uint256 _assets, uint256 wstEthAmount)
         internal
     {
         // loop over the deposit records starting from the start deposit key ID
         for (_startKeyId; _startKeyId <= lastUsedDepositKey; _startKeyId++) {
             // only mint vault shares to deposit records whose funds have been utilised
             if (deposits[_startKeyId].state == DepositState.INVESTED) {
-                uint256 contribution = _assets * deposits[_startKeyId].amount / HUNDRED_PERCENT;
+                // Is there a loss of precision issue here?
+                // We try to determine the number of shares that should be issued based on the proportion of wsteth provided
+                uint256 contribution = deposits[_startKeyId].amount * _assets / wstEthAmount;
                 _mintShares(contribution, currentShares, currentAssets, deposits[_startKeyId].receiver);
             }
         }

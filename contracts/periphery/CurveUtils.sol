@@ -70,6 +70,13 @@ abstract contract CurveUtils is Tokens {
         totalWsthethDeposited += _wstETHAmount;
     }
 
+    /// @notice Removes the collateral from the controller
+    /// @param  withdrawalAmount The amount of wstETH to withdraw
+    function _removeCollateral(uint256 withdrawalAmount) internal {
+        crvUSDController.remove_collateral(withdrawalAmount, false);
+        totalWsthethDeposited -= withdrawalAmount;
+    }
+
     /// @notice Borrows additional crvUSD against the collateral.
     /// @param _wstETHAmount The amount of wstETH deposited as collateral for the additional borrowing.
     /// @param _debtAmount The amount of crvUSD to borrow.

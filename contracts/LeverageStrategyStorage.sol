@@ -43,6 +43,9 @@ abstract contract LeverageStrategyStorage {
     /// @notice Address that receives a fraction of the yield.
     address public treasury;
 
+    /// @notice Percentage buffer to use, default 5%
+    uint256 public healthBuffer = 5e10;
+
     /// @dev Struct to keep track of each deposit.
     struct DepositRecord {
         DepositState state;
@@ -104,4 +107,7 @@ abstract contract LeverageStrategyStorage {
     error InvalidUnwind();
     // Cannot queue and execuite in same block
     error InvalidInvest();
+
+    /// @dev Raised when the percentage is larger than 100%
+    error InvalidInput();
 }
