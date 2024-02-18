@@ -83,31 +83,4 @@ abstract contract LeverageStrategyStorage {
     /// @param depositKey The key of the cancelled deposit in the mapping.
     event DepositCancelled(uint256 indexed depositKey);
 
-    /// @dev Raised when an unknown executer attempts an action.
-    error UnknownExecuter();
-
-    /// @dev Raised when cancellation of a deposit is not allowed.
-    error DepositCancellationNotAllowed();
-
-    /// @dev Raised when ERC20 token transferFrom fails.
-    error ERC20_TransferFromFailed();
-
-    /// @dev Raised when ERC20 token transfer fails.
-    error ERC20_TransferFailed();
-
-    /// @dev Raised when a zero deposit is attempted.
-    error ZeroDepositNotAllowed();
-
-    /// @dev Raised when a zero investment is attempted.
-    error ZeroInvestmentNotAllowed();
-
-    /// @dev Raised when an overloaded redeem function is incorrectly used.
-    error UseOverLoadedRedeemFunction();
-    // Cannot queue and execute in same block
-    error InvalidUnwind();
-    // Cannot queue and execuite in same block
-    error InvalidInvest();
-
-    /// @dev Raised when the percentage is larger than 100%
-    error InvalidInput();
 }

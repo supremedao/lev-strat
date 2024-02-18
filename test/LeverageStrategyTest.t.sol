@@ -4,6 +4,7 @@ import {BaseLeverageStrategyTest} from "./utils/BaseLeverageStrategyTest.sol";
 import {console2} from "forge-std/console2.sol";
 import {IBasicRewards} from "../contracts/interfaces/IBasicRewards.sol";
 import {LeverageStrategyStorage} from "../contracts/LeverageStrategyStorage.sol";
+import {Constants} from "../contracts/periphery/Constants.sol";
 
 contract LeverageStrategyTest is BaseLeverageStrategyTest {
     function setUp() public {
@@ -72,7 +73,7 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
 
         // Make vault msg.sender
         vm.startPrank(vault4626);
-        vm.expectRevert(LeverageStrategyStorage.ZeroDepositNotAllowed.selector);
+        vm.expectRevert(Constants.ZeroDepositNotAllowed.selector);
         levStrat.deposit(0, vault4626);
         vm.stopPrank();
     }
@@ -82,7 +83,7 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
 
         // Make vault msg.sender
         vm.startPrank(vault4626);
-        vm.expectRevert(LeverageStrategyStorage.ZeroDepositNotAllowed.selector);
+        vm.expectRevert(Constants.ZeroDepositNotAllowed.selector);
         levStrat.depositAndInvest(0, vault4626, 0);
         vm.stopPrank();
     }
@@ -92,10 +93,10 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
 
         // Make vault msg.sender
         vm.startPrank(controller);
-        vm.expectRevert(LeverageStrategyStorage.ZeroDepositNotAllowed.selector);
+        vm.expectRevert(Constants.ZeroDepositNotAllowed.selector);
         levStrat.depositAndInvest(0, address(this), 1);
 
-        vm.expectRevert("Amount should be greater than 0");
+        vm.expectRevert(Constants.ZeroDepositNotAllowed.selector);
         levStrat.invest(bptExpected);
         vm.stopPrank();
     }
@@ -596,9 +597,9 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         uint256 amountOfVaultSharesToWithdraw = levStrat.balanceOf(alice);
         vm.startPrank(alice);
         levStrat.approve(address(levStrat), amountOfVaultSharesToWithdraw);
-        vm.expectRevert(LeverageStrategyStorage.UseOverLoadedRedeemFunction.selector);
+        vm.expectRevert(Constants.UseOverLoadedRedeemFunction.selector);
         levStrat.redeem(amountOfVaultSharesToWithdraw, alice, alice);
-        vm.expectRevert(LeverageStrategyStorage.UseOverLoadedRedeemFunction.selector);
+        vm.expectRevert(Constants.UseOverLoadedRedeemFunction.selector);
         levStrat.withdraw(amountOfVaultSharesToWithdraw, alice, alice);
         vm.stopPrank();
     }
@@ -725,7 +726,7 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         levStrat.cancelDeposit(4);
         assertEq(wstETH.balanceOf(alice), wstInvestAmount);
         // cannot cancel deposit again
-        vm.expectRevert(LeverageStrategyStorage.DepositCancellationNotAllowed.selector);
+        vm.expectRevert(Constants.DepositCancellationNotAllowed.selector);
         levStrat.cancelDeposit(4);
         assertEq(wstETH.balanceOf(alice), wstInvestAmount);
 
@@ -766,7 +767,7 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         // user 1 cancels the deposit
         // the key of the deposit can be fetched used the event, as this is a test, we know the key
         vm.startPrank(alice);
-        vm.expectRevert(LeverageStrategyStorage.DepositCancellationNotAllowed.selector);
+        vm.expectRevert(Constants.DepositCancellationNotAllowed.selector);
         levStrat.cancelDeposit(4);
         assertEq(wstETH.balanceOf(alice), 0);
         vm.stopPrank();
@@ -797,7 +798,7 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         // user 1 cancels the deposit
         // the key of the deposit can be fetched used the event, as this is a test, we know the key
         assertEq(wstETH.balanceOf(alice), 0);
-        vm.expectRevert(LeverageStrategyStorage.UnknownExecuter.selector);
+        vm.expectRevert(Constants.UnknownExecuter.selector);
         levStrat.cancelDeposit(2);
         assertEq(wstETH.balanceOf(alice), 0);
     }

@@ -14,9 +14,9 @@ pragma solidity 0.8.20;
 import "../interfaces/IBalancerVault.sol";
 import "../interfaces/IPool.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "./Tokens.sol";
+import "./Constants.sol";
 
-abstract contract BalancerUtils is Tokens {
+abstract contract BalancerUtils is Constants {
     // address of balancer vault
     // fix: balancer vault is fixed across chains, we can set it as immutable
     IBalancerVault public constant BAL_VAULT = IBalancerVault(0xBA12222222228d8Ba445958a75a0704d566BF2C8);
@@ -48,6 +48,8 @@ abstract contract BalancerUtils is Tokens {
     /// @notice Join balancer pool
     /// @dev Single side join with usdc
     /// @param usdcAmount the amount of usdc to deposit
+    /// @param d2dAmount the amount of d2d to deposit
+    /// @param minBptAmountOut the minimal amount of bpt to receive
     function _joinPool(uint256 usdcAmount, uint256 d2dAmount, uint256 minBptAmountOut) internal {
         (IERC20[] memory tokens,,) = BAL_VAULT.getPoolTokens(POOL_ID);
         uint256[] memory maxAmountsIn = new uint256[](tokens.length);
@@ -57,8 +59,12 @@ abstract contract BalancerUtils is Tokens {
         maxAmountsIn[1] = usdcAmount; // USDC token amount
 
         // Approve the Balancer Vault to withdraw the respective tokens
-        require(IERC20(tokens[0]).approve(address(BAL_VAULT), d2dAmount), "D2D Approval failed");
-        require(IERC20(tokens[1]).approve(address(BAL_VAULT), usdcAmount), "USDC Approval failed");
+        if(!IERC20(tokens[0]).approve(address(BAL_VAULT), d2dAmount)){
+            revert ERC20_ApprovalFailed();
+        }
+        if(!IERC20(tokens[1]).approve(address(BAL_VAULT), usdcAmount)){
+            revert ERC20_ApprovalFailed();
+        }
 
         uint256 joinKind = uint256(IBalancerVault.JoinKind.EXACT_TOKENS_IN_FOR_BPT_OUT);
         bytes memory userData = abi.encode(joinKind, maxAmountsIn, minBptAmountOut);
@@ -105,7 +111,7 @@ abstract contract BalancerUtils is Tokens {
         // [enum Kind][bptAmountIn][exitTokenIndex]
         bytes memory userData = abi.encode(uint256(0), uint256(bptAmountIn), uint256(1)); 
 
-        // The address is the first 160 bits of our target pool
+        // The address is the first 160 b_exitPoolits of our target pool
         // Note this may not always be the case!
         // We shift the id 64 bits to the right and cast it to address
         address pool = address(uint160(uint256(POOL_ID >> 96)));
