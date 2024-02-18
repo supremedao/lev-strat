@@ -28,9 +28,6 @@ abstract contract LeverageStrategyStorage {
         CANCELLED    // Deposit has been cancelled.
     }
 
-    /// @notice Index of the token to be withdrawn when exiting the pool.
-    uint256 internal TokenIndex;
-
     /// @notice Total amount of crvUSD borrowed.
     uint256 public crvUSDBorrowed;
 

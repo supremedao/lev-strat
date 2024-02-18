@@ -49,35 +49,6 @@ abstract contract AuraUtils is Constants {
         }
     }
 
-    /// @notice Deposits a specific amount of tokens into the Aura Booster.
-    /// @dev Approves and then deposits a specified amount of tokens into Aura.
-    /// @param amount The amount of tokens to deposit.
-    function _depositAura(uint256 amount) internal {
-        // Approve the Aura Booster to spend the token
-        if (!_tokenToStake().approve(address(AURA_BOOSTER), amount)) {
-            revert ERC20_ApprovalFailed();
-        }
-        // Deposit specified amount of tokens to Aura
-        if (!AURA_BOOSTER.deposit(AURA_PID, amount, true)) {
-            revert AURA_DepositFailed();
-        }
-    }
-
-    /// @notice Withdraws all tokens from the Aura Booster.
-    /// @dev Withdraws all staked tokens from Aura.
-    function _withdrawAllAura() internal {
-        // Withdraw all staked tokens from Aura
-        AURA_BOOSTER.withdrawAll(AURA_PID);
-    }
-
-    /// @notice Withdraws a specific amount of tokens from the Aura Booster.
-    /// @dev Withdraws a specified amount of staked tokens from Aura.
-    /// @param amount The amount of tokens to withdraw.
-    function _withdrawAura(uint256 amount) internal {
-        // Withdraw specified amount of staked tokens from Aura
-        AURA_BOOSTER.withdraw(AURA_PID, amount);
-    }
-
     /// @notice Unstakes and withdraws a specific amount of tokens from the Aura Vault.
     /// @dev Unstakes and withdraws a specified amount of tokens from Aura, including accrued rewards.
     /// @param amount The amount of tokens to unstake and withdraw.
@@ -86,10 +57,4 @@ abstract contract AuraUtils is Constants {
         AURA_VAULT.withdrawAndUnwrap(amount, true);
     }
 
-    /// @notice Unstakes and withdraws all tokens from the Aura Vault.
-    /// @dev Unstakes and withdraws all tokens from Aura, including accrued rewards.
-    function _unstakeAllAndWithdrawAura() internal {
-        // Unstake all tokens and withdraw from Aura Vault
-        AURA_VAULT.withdrawAllAndUnwrap(true);
-    }
 }

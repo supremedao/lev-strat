@@ -101,16 +101,6 @@ contract LeverageStrategy is
         _grantRole(KEEPER_ROLE, _keeper);
     }
 
-    /// @notice Sets the index of the token to be withdrawn when exiting the pool
-    /// @dev    Can only be called by an account with the DEFAULT_ADMIN_ROLE
-    ///         This function updates the TokenIndex state variable, which determines the specific token 
-    ///         to be withdrawn from a pool when executing certain strategies or operations.
-    /// @param  _TokenIndex The index of the token in the pool to be set for withdrawal operations
-    function setTokenIndex(uint256 _TokenIndex) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        //set the index of the token to be withdrawn exiting the pool
-        TokenIndex = _TokenIndex;
-    }
-
     /// @notice Returns the health of the strategy's Collateralized Debt Position (CDP) on Curve Finance
     /// @dev    This function fetches the health metric from the Curve Finance controller
     ///         It provides an assessment of the current state of the CDP associated with this contract.
@@ -162,7 +152,7 @@ contract LeverageStrategy is
         uint256 minAmountOut
     )
         public
-        virtual
+
         nonReentrant
         returns (uint256)
     {
@@ -189,7 +179,7 @@ contract LeverageStrategy is
         uint256 _bptAmountOut
     )
         public
-        virtual
+
         nonReentrant
         returns (uint256)
     {
@@ -255,7 +245,7 @@ contract LeverageStrategy is
         // Queue an invest from Keeper Call
         investQueued.timestamp = uint64(block.timestamp);
         // We store a simulated amount out as a control value
-        (uint256 amountOut, ) = simulateJoinPool(USDC_CONTROL_AMOUNT);
+        (uint256 amountOut, ) = _simulateJoinPool(USDC_CONTROL_AMOUNT);
         investQueued.minAmountOut = uint192(amountOut);
     }
 
@@ -266,7 +256,7 @@ contract LeverageStrategy is
         // Do not allow queue and execute in same block
         if (investQueued.timestamp == block.timestamp || investQueued.timestamp == 0) revert InvalidInvest();
 
-        (uint256 expectedAmountOut, ) = simulateJoinPool(USDC_CONTROL_AMOUNT);
+        (uint256 expectedAmountOut, ) = _simulateJoinPool(USDC_CONTROL_AMOUNT);
         // 1% slippage
         if (
             investQueued.minAmountOut > (uint192(expectedAmountOut) * 99 / 100) &&
@@ -313,7 +303,7 @@ contract LeverageStrategy is
     /// @notice Queues an unwind call from the automated keeper
     /// @dev    First part of the two-step unwind process
     function unwindPositionFromKeeper() external nonReentrant onlyRole(KEEPER_ROLE) {
-        (,uint256[] memory minAmountsOut) = simulateExitPool(QUERY_CONTROL_AMOUNT);
+        (,uint256[] memory minAmountsOut) = _simulateExitPool(QUERY_CONTROL_AMOUNT);
         // Grab the exit token index
         unwindQueued.minAmountOut = uint192(minAmountsOut[1]);
         unwindQueued.timestamp = uint64(block.timestamp);
@@ -328,7 +318,7 @@ contract LeverageStrategy is
         // Timestamp is cleared after unwind
         if (unwindQueued.timestamp != 0) {
             // Get current quote
-            (,uint256[] memory amountsOut) = simulateExitPool(QUERY_CONTROL_AMOUNT);
+            (,uint256[] memory amountsOut) = _simulateExitPool(QUERY_CONTROL_AMOUNT);
 
             // If the new minAmountOut is 1% smaller than the stored amount out then there is too much slippage
             // Note Always use a protected endpoint to submit transactions!
@@ -388,6 +378,7 @@ contract LeverageStrategy is
 
     /// @notice Allows the controller to adjust the percentage to unwind at a time
     /// @param  newPercentage The percentage of assets to unwind at a time, normalized to 1e12
+    /// @param  newPercentage The percentage of assets to unwind at a time, normalized to 1e12
     function setUnwindPercentage(uint256 newPercentage) external onlyRole(CONTROLLER_ROLE) {
         if (newPercentage > HUNDRED_PERCENT) revert InvalidInput();
         unwindPercentage = newPercentage;
@@ -406,7 +397,6 @@ contract LeverageStrategy is
         uint256
     )
         internal
-        virtual
         override
         nonReentrant
     {
@@ -428,7 +418,7 @@ contract LeverageStrategy is
         uint256 assets,
         uint256 shares,
         uint256 minAmountOut
-    ) internal virtual {
+    ) internal {
         if (caller != owner) {
             _spendAllowance(owner, caller, shares);
         }
@@ -525,7 +515,7 @@ contract LeverageStrategy is
     /// @dev    This internal view function returns the specific token that is used for staking in the strategy.
     ///         It overrides a base class implementation and is meant to be customizable in derived contracts.
     /// @return The IERC20 token which is to be staked, represented here by the D2D_USDC_BPT token
-    function _tokenToStake() internal view virtual override returns (IERC20) {
+    function _tokenToStake() internal view override returns (IERC20) {
         return D2D_USDC_BPT;
     }
 
@@ -635,7 +625,7 @@ contract LeverageStrategy is
         address receiver,
         uint256 assets,
         uint256
-    ) internal virtual override {
+    ) internal override {
         if (assets == 0) {
             revert ZeroDepositNotAllowed();
         }

@@ -104,7 +104,7 @@ abstract contract BalancerUtils is Constants {
     /// @param bptAmountIn The amount of BTP tokens to send
     /// @return bptIn Amount of BPT used in query
     /// @return amountsOut Array of amounts out 
-    function simulateExitPool(uint256 bptAmountIn) internal returns (uint256 bptIn, uint256[] memory amountsOut) {
+    function _simulateExitPool(uint256 bptAmountIn) internal returns (uint256 bptIn, uint256[] memory amountsOut) {
         (IERC20[] memory tokens, uint256[] memory balances, uint256 lastChangeBlock) = BAL_VAULT.getPoolTokens(POOL_ID);
 
         // Construct the userData 
@@ -133,7 +133,7 @@ abstract contract BalancerUtils is Constants {
         (bptIn, amountsOut) = abi.decode(data, (uint256, uint256[]));
     }
 
-    function simulateJoinPool(uint256 usdcAmountIn) internal returns (uint256 bptOut, uint256[] memory amountsIn) {
+    function _simulateJoinPool(uint256 usdcAmountIn) internal returns (uint256 bptOut, uint256[] memory amountsIn) {
         (, uint256[] memory balances, uint256 lastChangeBlock) = BAL_VAULT.getPoolTokens(POOL_ID);
 
         // Construct the userData 
