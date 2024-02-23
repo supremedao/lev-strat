@@ -13,15 +13,8 @@ pragma solidity 0.8.20;
 
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {ERC4626, Math} from "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
-import {IAuraBooster} from "./interfaces/IAuraBooster.sol";
-import {IBalancerVault} from "./interfaces/IBalancerVault.sol";
-import {IPool} from "./interfaces/IPool.sol";
-import {IcrvUSD} from "./interfaces/IcrvUSD.sol";
-import {IcrvUSDController} from "./interfaces/IcrvUSDController.sol";
-import {IcrvUSDUSDCPool} from "./interfaces/IcrvUSDUSDCPool.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {IBasicRewards} from "./interfaces/IBasicRewards.sol";
 import {BalancerUtils} from "./periphery/BalancerUtils.sol";
 import {AuraUtils} from "./periphery/AuraUtils.sol";
 import {CurveUtils} from "./periphery/CurveUtils.sol";
@@ -356,11 +349,12 @@ contract LeverageStrategy is
         healthBuffer = percentage;
     }
 
-    /// @notice Swaps BAL and AURA rewards for WETH, specifying minimum amounts and deadline
+    /// @notice Swaps BAL and AURA rewards for WstETH, specifying minimum amounts and deadline
     /// @dev    This function is non-reentrant and can only be called by an account with the CONTROLLER_ROLE
     ///         It internally calls separate functions to handle the swapping of BAL to WETH and AURA to WETH.
+    ///         Afterwards it calls a function to swap WETH to WstEth.
     ///         The swaps are executed with specified minimum return amounts and a deadline to ensure slippage protection and timely execution.
-    /// @param  balAmount The amount of BAL tokens to be swapped for WETH
+    /// @param  balAmount The amount of BAL tokens to be swapped for WstETH
     /// @param  auraAmount The amount of AURA tokens to be swapped for WETH
     /// @param  minWethAmountBal The minimum amount of WETH expected from swapping BAL
     /// @param  minWethAmountAura The minimum amount of WETH expected from swapping AURA
@@ -374,6 +368,12 @@ contract LeverageStrategy is
     ) external nonReentrant onlyRole(CONTROLLER_ROLE) {
         _swapRewardBal(balAmount, minWethAmountBal, deadline);
         _swapRewardAura(auraAmount, minWethAmountAura, deadline);
+        uint256 wstEthBefore = wstETH.balanceOf(address(this));
+        _swapRewardToWstEth(minWethAmountBal + minWethAmountAura, deadline);
+        uint256 wstEthAmount = wstETH.balanceOf(address(this)) - wstEthBefore;
+        (uint256 amountOut, ) = _simulateJoinPool(USDC_CONTROL_AMOUNT);
+        uint256 maxBorrowable = crvUSDController.max_borrowable(wstEthAmount * healthBuffer / HUNDRED_PERCENT, N); //Should the keeper always borrow max or some %
+        _invest(wstEthAmount, maxBorrowable, amountOut);
     }
 
     /// @notice Allows the controller to adjust the percentage to unwind at a time
@@ -429,7 +429,7 @@ contract LeverageStrategy is
 
         // assets location 1 - wstETH in contract - deposits waiting to invest
         // assets location 2 - wstETH as extra collateral (collateral not utilised to create CDP)
-        // assets location 3 - wstTH used to borrow
+        // assets location 3 - wstETH used to borrow
         // funds from assets location 2 and 3 can be withdrawn using unwind and withdraw wstETH
 
         // This withdraws the proportion of assets
@@ -540,7 +540,6 @@ contract LeverageStrategy is
         if (!crvUSDController.loan_exists(address(this))) {
             _depositAndCreateLoan(_wstETHAmount, _debtAmount);
         } else {
-            //_addCollateral(_wstETHAmount);
             _borrowMore(_wstETHAmount, _debtAmount);
         }
         _exchangeCRVUSDtoUSDC(_debtAmount);

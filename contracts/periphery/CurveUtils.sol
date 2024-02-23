@@ -14,7 +14,6 @@ pragma solidity 0.8.20;
 import "../interfaces/IcrvUSD.sol";
 import "../interfaces/IcrvUSDController.sol";
 import "../interfaces/IcrvUSDUSDCPool.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./Constants.sol";
 
 /// @title Curve Utility Functions
@@ -30,9 +29,6 @@ abstract contract CurveUtils is Constants {
 
     /// @notice Total amount of wstETH deposited.
     uint256 public totalWsthethDeposited;
-
-    /// @notice Total amount of USDC after exchanging from crvUSD.
-    uint256 public totalUsdcAmount;
 
     /// @notice Number of bands for the crvusd/wstETH soft liquidation range.
     uint256 public N;
@@ -55,25 +51,6 @@ abstract contract CurveUtils is Constants {
         crvUSDController.create_loan(_wstETHAmount, _debtAmount, N);
 
         // Update the total wstETH deposited after creating the loan
-        totalWsthethDeposited += _wstETHAmount;
-    }
-
-    /// @notice Adds more collateral to an existing loan position.
-    /// @dev The wstETH is already held by the contract, so no transfer is needed.
-    /// @param _wstETHAmount The amount of wstETH to add as additional collateral.
-    function _addCollateral(uint256 _wstETHAmount) internal {
-
-        if (_wstETHAmount == 0) {
-            revert ZeroDepositNotAllowed();
-        }
-
-        // Approve the crvUSDController to handle additional wstETH
-        if (!wstETH.approve(address(crvUSDController), _wstETHAmount)) {
-            revert ERC20_ApprovalFailed();
-        }
-
-        // Add the additional collateral to the existing loan
-        crvUSDController.add_collateral(_wstETHAmount, address(this));
         totalWsthethDeposited += _wstETHAmount;
     }
 
@@ -118,9 +95,7 @@ abstract contract CurveUtils is Constants {
 
         // Calculate the expected USDC amount and perform the exchange
         uint256 expected = crvUSDUSDCPool.get_dy(1, 0, _dx) * 99 / 100;
-        uint256 beforeUsdcBalance = USDC.balanceOf(address(this));
         crvUSDUSDCPool.exchange(1, 0, _dx, expected, address(this));
-        totalUsdcAmount += USDC.balanceOf(address(this)) - beforeUsdcBalance;
     }
 
     /// @notice Exchanges USDC to crvUSD through the Curve pool.
@@ -132,8 +107,6 @@ abstract contract CurveUtils is Constants {
 
         // Calculate the expected crvUSD amount and perform the exchange
         uint256 expected = crvUSDUSDCPool.get_dy(0, 1, _dx) * 99 / 100;
-        uint256 beforeUsdcBalance = USDC.balanceOf(address(this));
         crvUSDUSDCPool.exchange(0, 1, _dx, expected, address(this));
-        totalUsdcAmount -= beforeUsdcBalance - USDC.balanceOf(address(this));
     }
 }
