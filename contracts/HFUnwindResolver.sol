@@ -12,13 +12,13 @@ ____/ // /_/ /__  /_/ /  /   /  __/  / / / / /  __/  /_/ /_  ___ / /_/ /
 pragma solidity 0.8.20;
 
 import {LeverageStrategy, BalancerUtils} from "./LeverageStrategy.sol";
-import {Tokens} from "./periphery/Tokens.sol";
+import {Constants} from "./periphery/Constants.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 /// @title  StrategyResolver
 /// @notice Used by PowerPool to check and manage protocol health
 /// @dev    Allows the PowerPool to check and receive the appropriate calldata for automated function calls
-contract StrategyResolver is Ownable, Tokens {
+contract StrategyResolver is Ownable, Constants {
     // The target strategy contract
     LeverageStrategy public leverageStrategy;
     

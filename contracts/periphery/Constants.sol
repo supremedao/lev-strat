@@ -14,11 +14,11 @@ pragma solidity 0.8.20;
 import "../interfaces/IcrvUSD.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-/// @title Token Addresses and Interfaces
+/// @title Token Addresses, Interfaces and Errors
 /// @author SupremeDAO
 /// @notice Provides constant addresses and interfaces for various tokens used in the contracts.
 /// @dev This abstract contract defines addresses and interfaces for tokens like BAL, AURA, WETH, and others.
-abstract contract Tokens {
+abstract contract Constants {
     /// @notice The address of the BAL token.
     address public constant BAL = 0xba100000625a3754423978a60c9317c58a424e3D;
 
@@ -42,5 +42,40 @@ abstract contract Tokens {
 
     /// @notice The crvUSD token interface.
     IcrvUSD public constant crvUSD = IcrvUSD(0xf939E0A03FB07F59A73314E73794Be0E57ac1b4E);
+
+    /// @dev Raised when an unknown executer attempts an action.
+    error UnknownExecuter();
+
+    /// @dev Raised when cancellation of a deposit is not allowed.
+    error DepositCancellationNotAllowed();
+
+
+    /// @dev Raised when ERC20 token transfer fails.
+    error AURA_DepositFailed();
+
+    /// @dev Raised when ERC20 token transferFrom fails.
+    error ERC20_TransferFromFailed();
+
+    /// @dev Raised when ERC20 token transfer fails.
+    error ERC20_TransferFailed();
+
+    // @dev Raised when approval execution is failed
+    error ERC20_ApprovalFailed();
+
+    /// @dev Raised when a zero deposit is attempted.
+    error ZeroDepositNotAllowed();
+
+    /// @dev Raised when a zero investment is attempted.
+    error ZeroInvestmentNotAllowed();
+
+    /// @dev Raised when an overloaded redeem function is incorrectly used.
+    error UseOverLoadedRedeemFunction();
+    // Cannot queue and execute in same block
+    error InvalidUnwind();
+    // Cannot queue and execuite in same block
+    error InvalidInvest();
+
+    /// @dev Raised when the percentage is larger than 100%
+    error InvalidInput();
 }
 

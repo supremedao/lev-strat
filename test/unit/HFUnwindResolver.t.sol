@@ -2,12 +2,12 @@ pragma solidity ^0.8.10;
 
 import "../utils/BaseTest.sol";
 import "forge-std/console.sol";
-import {StrategyResolver, Tokens} from "../../contracts/HFUnwindResolver.sol";
+import {StrategyResolver, Constants} from "../../contracts/HFUnwindResolver.sol";
 import "../mocks/LeverageStrategyMock.sol";
 import "../mocks/wstETHMock.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
-contract ResolverTest is BaseTest, Tokens {
+contract ResolverTest is BaseTest, Constants {
 
     LeverageStrategy public leverageStrategy;
     StrategyResolver public resolver;

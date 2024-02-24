@@ -66,7 +66,6 @@ contract BaseLeverageStrategyTest is BaseTest {
     function _deployContracts() internal {
         levStrat = new LeverageStrategy(0x27c9f71cc31464b906e0006d4fcbc8900f48f15f00020000000000000000010f);
 
-        levStrat.setTokenIndex(1);
 
         wstETH = IERC20(0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0);
         usdc = IERC20(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);

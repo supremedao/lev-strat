@@ -13,15 +13,8 @@ pragma solidity 0.8.20;
 
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {ERC4626, Math} from "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
-import {IAuraBooster} from "./interfaces/IAuraBooster.sol";
-import {IBalancerVault} from "./interfaces/IBalancerVault.sol";
-import {IPool} from "./interfaces/IPool.sol";
-import {IcrvUSD} from "./interfaces/IcrvUSD.sol";
-import {IcrvUSDController} from "./interfaces/IcrvUSDController.sol";
-import {IcrvUSDUSDCPool} from "./interfaces/IcrvUSDUSDCPool.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {IBasicRewards} from "./interfaces/IBasicRewards.sol";
 import {BalancerUtils} from "./periphery/BalancerUtils.sol";
 import {AuraUtils} from "./periphery/AuraUtils.sol";
 import {CurveUtils} from "./periphery/CurveUtils.sol";
@@ -101,16 +94,6 @@ contract LeverageStrategy is
         _grantRole(KEEPER_ROLE, _keeper);
     }
 
-    /// @notice Sets the index of the token to be withdrawn when exiting the pool
-    /// @dev    Can only be called by an account with the DEFAULT_ADMIN_ROLE
-    ///         This function updates the TokenIndex state variable, which determines the specific token 
-    ///         to be withdrawn from a pool when executing certain strategies or operations.
-    /// @param  _TokenIndex The index of the token in the pool to be set for withdrawal operations
-    function setTokenIndex(uint256 _TokenIndex) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        //set the index of the token to be withdrawn exiting the pool
-        TokenIndex = _TokenIndex;
-    }
-
     /// @notice Returns the health of the strategy's Collateralized Debt Position (CDP) on Curve Finance
     /// @dev    This function fetches the health metric from the Curve Finance controller
     ///         It provides an assessment of the current state of the CDP associated with this contract.
@@ -129,7 +112,7 @@ contract LeverageStrategy is
         DepositRecord memory deposit = deposits[_key];
 
         // ensure that the funds deposited are still not used or already cancelled
-        if (deposit.state != DepositState.DEPOSITED) {
+        if (deposit.state != DepositState.DEPOSITED || deposit.depositor == address(0)) {
             revert DepositCancellationNotAllowed();
         }
 
@@ -162,7 +145,7 @@ contract LeverageStrategy is
         uint256 minAmountOut
     )
         public
-        virtual
+
         nonReentrant
         returns (uint256)
     {
@@ -172,7 +155,7 @@ contract LeverageStrategy is
         }
 
         uint256 assets = previewRedeem(shares);
-        _withdraw(_msgSender(), receiver, owner, assets, shares, minAmountOut);
+        _withdraw(msg.sender, receiver, owner, assets, shares, minAmountOut);
 
         return assets;
     }
@@ -189,9 +172,7 @@ contract LeverageStrategy is
         uint256 _bptAmountOut
     )
         public
-        virtual
         nonReentrant
-        returns (uint256)
     {
         if (assets == 0) {
             revert ZeroDepositNotAllowed();
@@ -255,7 +236,7 @@ contract LeverageStrategy is
         // Queue an invest from Keeper Call
         investQueued.timestamp = uint64(block.timestamp);
         // We store a simulated amount out as a control value
-        (uint256 amountOut, ) = simulateJoinPool(USDC_CONTROL_AMOUNT);
+        (uint256 amountOut, ) = _simulateJoinPool(USDC_CONTROL_AMOUNT);
         investQueued.minAmountOut = uint192(amountOut);
     }
 
@@ -266,7 +247,7 @@ contract LeverageStrategy is
         // Do not allow queue and execute in same block
         if (investQueued.timestamp == block.timestamp || investQueued.timestamp == 0) revert InvalidInvest();
 
-        (uint256 expectedAmountOut, ) = simulateJoinPool(USDC_CONTROL_AMOUNT);
+        (uint256 expectedAmountOut, ) = _simulateJoinPool(USDC_CONTROL_AMOUNT);
         // 1% slippage
         if (
             investQueued.minAmountOut > (uint192(expectedAmountOut) * 99 / 100) &&
@@ -313,7 +294,7 @@ contract LeverageStrategy is
     /// @notice Queues an unwind call from the automated keeper
     /// @dev    First part of the two-step unwind process
     function unwindPositionFromKeeper() external nonReentrant onlyRole(KEEPER_ROLE) {
-        (,uint256[] memory minAmountsOut) = simulateExitPool(QUERY_CONTROL_AMOUNT);
+        (,uint256[] memory minAmountsOut) = _simulateExitPool(QUERY_CONTROL_AMOUNT);
         // Grab the exit token index
         unwindQueued.minAmountOut = uint192(minAmountsOut[1]);
         unwindQueued.timestamp = uint64(block.timestamp);
@@ -328,7 +309,7 @@ contract LeverageStrategy is
         // Timestamp is cleared after unwind
         if (unwindQueued.timestamp != 0) {
             // Get current quote
-            (,uint256[] memory amountsOut) = simulateExitPool(QUERY_CONTROL_AMOUNT);
+            (,uint256[] memory amountsOut) = _simulateExitPool(QUERY_CONTROL_AMOUNT);
 
             // If the new minAmountOut is 1% smaller than the stored amount out then there is too much slippage
             // Note Always use a protected endpoint to submit transactions!
@@ -366,11 +347,12 @@ contract LeverageStrategy is
         healthBuffer = percentage;
     }
 
-    /// @notice Swaps BAL and AURA rewards for WETH, specifying minimum amounts and deadline
+    /// @notice Swaps BAL and AURA rewards for WstETH, specifying minimum amounts and deadline
     /// @dev    This function is non-reentrant and can only be called by an account with the CONTROLLER_ROLE
     ///         It internally calls separate functions to handle the swapping of BAL to WETH and AURA to WETH.
+    ///         Afterwards it calls a function to swap WETH to WstEth.
     ///         The swaps are executed with specified minimum return amounts and a deadline to ensure slippage protection and timely execution.
-    /// @param  balAmount The amount of BAL tokens to be swapped for WETH
+    /// @param  balAmount The amount of BAL tokens to be swapped for WstETH
     /// @param  auraAmount The amount of AURA tokens to be swapped for WETH
     /// @param  minWethAmountBal The minimum amount of WETH expected from swapping BAL
     /// @param  minWethAmountAura The minimum amount of WETH expected from swapping AURA
@@ -384,9 +366,16 @@ contract LeverageStrategy is
     ) external nonReentrant onlyRole(CONTROLLER_ROLE) {
         _swapRewardBal(balAmount, minWethAmountBal, deadline);
         _swapRewardAura(auraAmount, minWethAmountAura, deadline);
+        uint256 wstEthBefore = wstETH.balanceOf(address(this));
+        _swapRewardToWstEth(minWethAmountBal + minWethAmountAura, deadline);
+        uint256 wstEthAmount = wstETH.balanceOf(address(this)) - wstEthBefore;
+        (uint256 amountOut, ) = _simulateJoinPool(USDC_CONTROL_AMOUNT);
+        uint256 maxBorrowable = crvUSDController.max_borrowable(wstEthAmount * healthBuffer / HUNDRED_PERCENT, N); //Should the keeper always borrow max or some %
+        _invest(wstEthAmount, maxBorrowable, amountOut);
     }
 
     /// @notice Allows the controller to adjust the percentage to unwind at a time
+    /// @param  newPercentage The percentage of assets to unwind at a time, normalized to 1e12
     /// @param  newPercentage The percentage of assets to unwind at a time, normalized to 1e12
     function setUnwindPercentage(uint256 newPercentage) external onlyRole(CONTROLLER_ROLE) {
         if (newPercentage > HUNDRED_PERCENT) revert InvalidInput();
@@ -406,7 +395,6 @@ contract LeverageStrategy is
         uint256
     )
         internal
-        virtual
         override
         nonReentrant
     {
@@ -428,7 +416,7 @@ contract LeverageStrategy is
         uint256 assets,
         uint256 shares,
         uint256 minAmountOut
-    ) internal virtual {
+    ) internal {
         if (caller != owner) {
             _spendAllowance(owner, caller, shares);
         }
@@ -439,7 +427,7 @@ contract LeverageStrategy is
 
         // assets location 1 - wstETH in contract - deposits waiting to invest
         // assets location 2 - wstETH as extra collateral (collateral not utilised to create CDP)
-        // assets location 3 - wstTH used to borrow
+        // assets location 3 - wstETH used to borrow
         // funds from assets location 2 and 3 can be withdrawn using unwind and withdraw wstETH
 
         // This withdraws the proportion of assets
@@ -525,7 +513,7 @@ contract LeverageStrategy is
     /// @dev    This internal view function returns the specific token that is used for staking in the strategy.
     ///         It overrides a base class implementation and is meant to be customizable in derived contracts.
     /// @return The IERC20 token which is to be staked, represented here by the D2D_USDC_BPT token
-    function _tokenToStake() internal view virtual override returns (IERC20) {
+    function _tokenToStake() internal view override returns (IERC20) {
         return D2D_USDC_BPT;
     }
 
@@ -550,7 +538,6 @@ contract LeverageStrategy is
         if (!crvUSDController.loan_exists(address(this))) {
             _depositAndCreateLoan(_wstETHAmount, _debtAmount);
         } else {
-            //_addCollateral(_wstETHAmount);
             _borrowMore(_wstETHAmount, _debtAmount);
         }
         _exchangeCRVUSDtoUSDC(_debtAmount);
@@ -635,7 +622,7 @@ contract LeverageStrategy is
         address receiver,
         uint256 assets,
         uint256
-    ) internal virtual override {
+    ) internal override {
         if (assets == 0) {
             revert ZeroDepositNotAllowed();
         }
@@ -676,7 +663,8 @@ contract LeverageStrategy is
         // loop over deposit records
         for (uint256 i; i < length; i++) {
             // only use the deposit record if the deposit is not cancelled
-            if (deposits[_startKeyId + i].state == DepositState.DEPOSITED) {
+            if (deposits[_startKeyId + i].state == DepositState.DEPOSITED
+                    && deposits[_startKeyId + i].depositor != address(0) ) {
                 // increase the count of total genuine deposits to be used
                 _totalDeposits++;
                 // add the amount of depsoit to total wstETH to be used
@@ -708,6 +696,7 @@ contract LeverageStrategy is
                 // We try to determine the number of shares that should be issued based on the proportion of wsteth provided
                 uint256 contribution = deposits[_startKeyId].amount * _assets / wstEthAmount;
                 _mintShares(contribution, currentShares, currentAssets, deposits[_startKeyId].receiver);
+                delete deposits[_startKeyId];
             }
         }
     }

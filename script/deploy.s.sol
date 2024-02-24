@@ -14,7 +14,6 @@ contract Deploy is Script {
 
         vm.startBroadcast();
         LeverageStrategy levStrat = new LeverageStrategy(poolId);
-        levStrat.setTokenIndex(1);
         vm.stopBroadcast();
     }
 }
