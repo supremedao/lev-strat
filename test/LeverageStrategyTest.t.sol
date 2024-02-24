@@ -768,7 +768,7 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         // the key of the deposit can be fetched used the event, as this is a test, we know the key
         vm.startPrank(alice);
         vm.expectRevert(Constants.DepositCancellationNotAllowed.selector);
-        levStrat.cancelDeposit(4);
+        levStrat.cancelDeposit(2);
         assertEq(wstETH.balanceOf(alice), 0);
         vm.stopPrank();
     }

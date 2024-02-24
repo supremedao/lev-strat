@@ -112,7 +112,7 @@ contract LeverageStrategy is
         DepositRecord memory deposit = deposits[_key];
 
         // ensure that the funds deposited are still not used or already cancelled
-        if (deposit.state != DepositState.DEPOSITED) {
+        if (deposit.state != DepositState.DEPOSITED || deposit.depositor == address(0)) {
             revert DepositCancellationNotAllowed();
         }
 
@@ -663,7 +663,8 @@ contract LeverageStrategy is
         // loop over deposit records
         for (uint256 i; i < length; i++) {
             // only use the deposit record if the deposit is not cancelled
-            if (deposits[_startKeyId + i].state == DepositState.DEPOSITED) {
+            if (deposits[_startKeyId + i].state == DepositState.DEPOSITED
+                    && deposits[_startKeyId + i].depositor != address(0) ) {
                 // increase the count of total genuine deposits to be used
                 _totalDeposits++;
                 // add the amount of depsoit to total wstETH to be used
@@ -695,6 +696,7 @@ contract LeverageStrategy is
                 // We try to determine the number of shares that should be issued based on the proportion of wsteth provided
                 uint256 contribution = deposits[_startKeyId].amount * _assets / wstEthAmount;
                 _mintShares(contribution, currentShares, currentAssets, deposits[_startKeyId].receiver);
+                delete deposits[_startKeyId];
             }
         }
     }

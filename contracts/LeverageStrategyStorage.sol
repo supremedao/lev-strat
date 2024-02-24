@@ -22,10 +22,8 @@ abstract contract LeverageStrategyStorage {
 
     /// @dev Represents the various states a deposit can be in.
     enum DepositState {
-        NO_DEPOSIT,  // No deposit made.
         DEPOSITED,   // Deposit has been made.
-        INVESTED,    // Deposit has been invested.
-        CANCELLED    // Deposit has been cancelled.
+        INVESTED    // Deposit has been invested.
     }
 
     /// @notice Address that receives a fraction of the yield.
