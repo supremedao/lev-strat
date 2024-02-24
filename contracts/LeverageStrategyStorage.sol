@@ -28,15 +28,6 @@ abstract contract LeverageStrategyStorage {
         CANCELLED    // Deposit has been cancelled.
     }
 
-    /// @notice Total amount of crvUSD borrowed.
-    uint256 public crvUSDBorrowed;
-
-    /// @notice Total Balancer LP tokens held by the contract.
-    uint256 public totalBalancerLPTokens;
-
-    /// @notice Total Balancer LP tokens staked in Aura Finance by the user.
-    uint256 public totalStakedInAura;
-
     /// @notice Address that receives a fraction of the yield.
     address public treasury;
 
@@ -64,6 +55,7 @@ abstract contract LeverageStrategyStorage {
 
     /// @notice Mapping of deposit records.
     mapping(uint256 => DepositRecord) public deposits;
+
 
     // The queued unwind
     QueuedAction public unwindQueued;

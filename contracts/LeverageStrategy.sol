@@ -155,7 +155,7 @@ contract LeverageStrategy is
         }
 
         uint256 assets = previewRedeem(shares);
-        _withdraw(_msgSender(), receiver, owner, assets, shares, minAmountOut);
+        _withdraw(msg.sender, receiver, owner, assets, shares, minAmountOut);
 
         return assets;
     }
@@ -172,9 +172,7 @@ contract LeverageStrategy is
         uint256 _bptAmountOut
     )
         public
-
         nonReentrant
-        returns (uint256)
     {
         if (assets == 0) {
             revert ZeroDepositNotAllowed();
