@@ -191,6 +191,19 @@
   },
   {
     "type": "function",
+    "name": "reinvestThreshold",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "int256",
+        "internalType": "int256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "renounceOwnership",
     "inputs": [],
     "outputs": [],
@@ -211,7 +224,20 @@
   },
   {
     "type": "function",
-    "name": "setUnwindthreshold",
+    "name": "setReinvestThreshold",
+    "inputs": [
+      {
+        "name": "newThreshold",
+        "type": "int256",
+        "internalType": "int256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "setUnwindThreshold",
     "inputs": [
       {
         "name": "newThreshold",
@@ -282,6 +308,46 @@
   },
   {
     "type": "error",
+    "name": "AURA_DepositFailed",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "DepositCancellationNotAllowed",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ERC20_ApprovalFailed",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ERC20_TransferFailed",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ERC20_TransferFromFailed",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidInput",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidInvest",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidUnwind",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "OwnableInvalidOwner",
     "inputs": [
       {
@@ -301,5 +367,25 @@
         "internalType": "address"
       }
     ]
+  },
+  {
+    "type": "error",
+    "name": "UnknownExecuter",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "UseOverLoadedRedeemFunction",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ZeroDepositNotAllowed",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ZeroInvestmentNotAllowed",
+    "inputs": []
   }
 ]
