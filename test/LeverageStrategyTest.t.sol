@@ -802,4 +802,33 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         levStrat.cancelDeposit(2);
         assertEq(wstETH.balanceOf(alice), 0);
     }
+
+    function test_setFee() public {
+        // give tokens to user 1 and user 2
+        deal(address(wstETH), alice, wstInvestAmount);
+
+        uint256 startingAliceBalance = wstETH.balanceOf(alice);
+        uint256 startingBobBalance = wstETH.balanceOf(bob);
+
+        // initialize
+        levStrat.initialize(investN, dao, controller, powerPool);
+
+        uint256 HUNDRED = levStrat.HUNDRED_PERCENT();
+        // Fail 1: wrong user
+        vm.expectRevert();
+        levStrat.setFee(HUNDRED / 100 * 10);
+
+        // Fail 2: too big fee percentage
+        vm.startPrank(controller);
+        vm.expectRevert(Constants.InvalidFee.selector);
+        levStrat.setFee(HUNDRED / 100 * 90);
+
+        assert(levStrat.fee() == HUNDRED / 100 * 60);
+
+        // Fee is being set up correctly
+        vm.startPrank(controller);
+        levStrat.setFee(HUNDRED / 100 * 10);
+
+        assert(levStrat.fee() == HUNDRED / 100 * 10);
+    }
 }

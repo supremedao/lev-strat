@@ -77,5 +77,8 @@ abstract contract Constants {
 
     /// @dev Raised when the percentage is larger than 100%
     error InvalidInput();
+
+    /// @dev Raised when the fee percentage is larger than 70%
+    error InvalidFee();
 }
 

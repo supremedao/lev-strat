@@ -37,17 +37,7 @@ contract LeverageStrategy is
 {
     using Math for uint256;
 
-    /// @notice Role identifier for the keeper role, responsible for protocol maintenance tasks. Role given to PowerAgent
-    bytes32 public constant KEEPER_ROLE = keccak256("KEEPER_ROLE");
 
-    /// @notice Role identifier for the controller role, responsible for high-level protocol management
-    bytes32 public constant CONTROLLER_ROLE = keccak256("CONTROLLER_ROLE");
-
-    /// @notice Fixed percentage (scaled by 10^12) used in unwinding positions, default set to 30%
-    uint256 public unwindPercentage = 30 * 10 ** 10;
-
-    /// @notice Constant representing 100%, used for percentage calculations, scaled by 10^12
-    uint256 public constant HUNDRED_PERCENT = 10 ** 12;
 
     // Events
     // Add relevant events to log important contract actions/events
@@ -85,13 +75,20 @@ contract LeverageStrategy is
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
         //set the treasury address
-        treasury = _dao;
+        controller = _dao;
         //set the number of price bands to deposit into
         N = _N;
         //grant the controller role to the given address
         _grantRole(CONTROLLER_ROLE, _controller);
         //grant the keeper role to the given address (poweragent address)
         _grantRole(KEEPER_ROLE, _keeper);
+    }
+
+    function setFee(uint256 _fee) external onlyRole(CONTROLLER_ROLE){
+        if (_fee > MAX_DAO_FEE) {
+            revert InvalidFee();
+        }
+        fee = _fee;
     }
 
     /// @notice Returns the health of the strategy's Collateralized Debt Position (CDP) on Curve Finance
@@ -354,7 +351,7 @@ contract LeverageStrategy is
     ///         The swaps are executed with specified minimum return amounts and a deadline to ensure slippage protection and timely execution.
     /// @param  balAmount The amount of BAL tokens to be swapped for WstETH
     /// @param  auraAmount The amount of AURA tokens to be swapped for WETH
-    /// @param  minWethAmountBal The minimum amount of WETH expected from swapping BAL
+    /// @param  minWethAmountBal The minimum amount of WETH expected from swapping BALCONTROLLERCONTROLLER
     /// @param  minWethAmountAura The minimum amount of WETH expected from swapping AURA
     /// @param  deadline The latest timestamp by which the swap must be completed
     function swapReward(
@@ -364,13 +361,22 @@ contract LeverageStrategy is
         uint256 minWethAmountAura,
         uint256 deadline
     ) external nonReentrant onlyRole(CONTROLLER_ROLE) {
+        // swaps tokens to WETH
         _swapRewardBal(balAmount, minWethAmountBal, deadline);
         _swapRewardAura(auraAmount, minWethAmountAura, deadline);
+
+        // swaps WETH to wstETH
         uint256 wstEthBefore = wstETH.balanceOf(address(this));
         _swapRewardToWstEth(minWethAmountBal + minWethAmountAura, deadline);
+
+        // transfers fee to DAO and reinvests remaining fees
         uint256 wstEthAmount = wstETH.balanceOf(address(this)) - wstEthBefore;
+        uint256 DAOwstEth = wstEthAmount * fee / HUNDRED_PERCENT;
+        wstEthAmount = wstEthAmount - DAOwstEth;
+        wstETH.transfer(controller, DAOwstEth);
+
         (uint256 amountOut, ) = _simulateJoinPool(USDC_CONTROL_AMOUNT);
-        uint256 maxBorrowable = crvUSDController.max_borrowable(wstEthAmount * healthBuffer / HUNDRED_PERCENT, N); //Should the keeper always borrow max or some %
+        uint256 maxBorrowable = crvUSDController.max_borrowable(wstEthAmount * healthBuffer / HUNDRED_PERCENT, N);
         _invest(wstEthAmount, maxBorrowable, amountOut);
     }
 

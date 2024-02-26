@@ -20,6 +20,21 @@ pragma solidity 0.8.20;
 ///      It doesn't contain logic for strategy execution but is inherited by contracts that do.
 abstract contract LeverageStrategyStorage {
 
+    /// @notice Role identifier for the keeper role, responsible for protocol maintenance tasks. Role given to PowerAgent
+    bytes32 public constant KEEPER_ROLE = keccak256("KEEPER_ROLE");
+
+    /// @notice Role identifier for the controller role, responsible for high-level protocol management
+    bytes32 public constant CONTROLLER_ROLE = keccak256("CONTROLLER_ROLE");
+
+    /// @notice Fixed percentage (scaled by 10^12) used in unwinding positions, default set to 30%
+    uint256 public unwindPercentage = 30 * 10 ** 10;
+
+    /// @notice Constant representing 100%, used for percentage calculations, scaled by 10^12
+    uint256 public constant HUNDRED_PERCENT = 10 ** 12;
+
+    /// @notice Max percentage of fees on leverage transferred to DAO
+    uint256 public MAX_DAO_FEE = 70 * HUNDRED_PERCENT / 100;
+
     /// @dev Represents the various states a deposit can be in.
     enum DepositState {
         DEPOSITED,   // Deposit has been made.
@@ -27,10 +42,13 @@ abstract contract LeverageStrategyStorage {
     }
 
     /// @notice Address that receives a fraction of the yield.
-    address public treasury;
+    address public controller;
 
     /// @notice Percentage buffer to use, default 5%
     uint256 public healthBuffer = 5e10;
+
+    /// @notice Percentage of funds, transferred to DAO
+    uint256 public fee = 60 * HUNDRED_PERCENT / 100;
 
     /// @dev Struct to keep track of each deposit.
     struct DepositRecord {

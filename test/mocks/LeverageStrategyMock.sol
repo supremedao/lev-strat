@@ -24,11 +24,6 @@ contract LeverageStrategy is
 {
     using Math for uint256;
 
-    bytes32 public constant KEEPER_ROLE = keccak256("KEEPER_ROLE");
-    bytes32 public constant CONTROLLER_ROLE = keccak256("CONTROLLER_ROLE");
-    uint256 public constant unwindPercentage = 30 * 10 ** 10;
-    uint256 public constant HUNDRED_PERCENT = 10 ** 12;
-
     int256 internal _strategyHealth;
 
     constructor(bytes32 _poolId){}
