@@ -61,12 +61,10 @@ contract LeverageStrategy is
     ///         This function sets key contract parameters and assigns roles to specified addresses.
     ///         It should be called immediately after contract deployment.
     /// @param  _N A numeric parameter used in the contract's logic (its specific role should be described)
-    /// @param  _dao The address to be set as the treasury
-    /// @param  _controller The address to be granted the CONTROLLER_ROLE
+    /// @param  _controller The address to be granted the CONTROLLER_ROLE (DAO)
     /// @param  _keeper The address (poweragent) to be granted the KEEPER_ROLE
     function initialize(
         uint256 _N,
-        address _dao,
         address _controller,
         address _keeper
     
@@ -75,7 +73,7 @@ contract LeverageStrategy is
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
         //set the treasury address
-        controller = _dao;
+        controller = _controller;
         //set the number of price bands to deposit into
         N = _N;
         //grant the controller role to the given address
@@ -95,7 +93,7 @@ contract LeverageStrategy is
     /// @dev    This function fetches the health metric from the Curve Finance controller
     ///         It provides an assessment of the current state of the CDP associated with this contract.
     /// @return The health of the CDP as an integer value
-    function strategyHealth() external view returns (int256) {
+    function strategyHealth() public view returns (int256) {
         //return the health of the strategy's CDP on Curve Finance
         return crvUSDController.health(address(this), false);
     }
@@ -286,6 +284,9 @@ contract LeverageStrategy is
     /// @param  minAmountOut Slippage protection (w.r.t. BPTToken)
     function unwindPosition(uint256 auraShares, uint256 minAmountOut) external nonReentrant onlyRole(CONTROLLER_ROLE) {
         _unwindPosition(auraShares, HUNDRED_PERCENT, minAmountOut);
+        if (strategyHealth() >= MAX_MANUAL_HEALTH) {
+            revert UnwindMaxReached();
+        }
     }
 
     /// @notice Queues an unwind call from the automated keeper
@@ -322,6 +323,9 @@ contract LeverageStrategy is
                     unwindPercentage,
                     0
                 );
+                if (strategyHealth() >= MAX_MANUAL_HEALTH) {
+                    revert UnwindMaxReached();
+                }
                 // We need to set timestamp to 0 so next call can happen
                 unwindQueued.timestamp = 0;
 
@@ -441,7 +445,10 @@ contract LeverageStrategy is
         // 2) Withdraw USDC from balancer pool (requires slippage protection)
         // 3) Swap USDC for curveUSD
         // 4) Repay borrow and receive wstETH
-        _unwindPosition(AURA_VAULT.balanceOf(address(this)), percentageToBeWithdrawn, minAmountOut);
+        uint256 auraBalance = AURA_VAULT.balanceOf(address(this));
+        if(auraBalance > 0) {
+            _unwindPosition(auraBalance, percentageToBeWithdrawn, minAmountOut);
+        }
         // We get the total collateral freed up
         uint256[4] memory userState = crvUSDController.user_state(address(this));
         /*

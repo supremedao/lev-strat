@@ -35,6 +35,10 @@ abstract contract LeverageStrategyStorage {
     /// @notice Max percentage of fees on leverage transferred to DAO
     uint256 public MAX_DAO_FEE = 70 * HUNDRED_PERCENT / 100;
 
+
+    /// @notice Constant representing 30% of curve health (in crvUSDController 100% health corresponds to 10**18 )
+    int256 public constant MAX_MANUAL_HEALTH = 30 * 10 ** 16;
+
     /// @dev Represents the various states a deposit can be in.
     enum DepositState {
         DEPOSITED,   // Deposit has been made.
