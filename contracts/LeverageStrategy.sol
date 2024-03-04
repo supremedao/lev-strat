@@ -349,7 +349,7 @@ contract LeverageStrategy is
     ///         The swaps are executed with specified minimum return amounts and a deadline to ensure slippage protection and timely execution.
     /// @param  balAmount The amount of BAL tokens to be swapped for WstETH
     /// @param  auraAmount The amount of AURA tokens to be swapped for WETH
-    /// @param  minWethAmountBal The minimum amount of WETH expected from swapping BALCONTROLLERCONTROLLER
+    /// @param  minWethAmountBal The minimum amount of WETH expected from swapping BALCONTROLLER
     /// @param  minWethAmountAura The minimum amount of WETH expected from swapping AURA
     /// @param  deadline The latest timestamp by which the swap must be completed
     function swapReward(
@@ -359,9 +359,19 @@ contract LeverageStrategy is
         uint256 minWethAmountAura,
         uint256 deadline
     ) external nonReentrant onlyRole(CONTROLLER_ROLE) {
+        // Preparing fee transfer to the DAO
+        uint256 balFees = balAmount * fee / HUNDRED_PERCENT;
+        uint256 auraFees = auraAmount * fee / HUNDRED_PERCENT;
+        // And reward transfer to reinvest(it will be possible to withdraw it for the investors)
+        uint256 balReward = balAmount - balFees;
+        uint256 auraReward = auraAmount - auraFees;
+
+        // Transfers of the fees to the DAO
+        IERC20(BAL).transfer(controller, balFees);
+        IERC20(AURA).transfer(controller, balFees);
         // swaps tokens to WETH
-        _swapRewardBal(balAmount, minWethAmountBal, deadline);
-        _swapRewardAura(auraAmount, minWethAmountAura, deadline);
+        _swapRewardBal(balReward, minWethAmountBal, deadline);
+        _swapRewardAura(auraReward, minWethAmountAura, deadline);
 
         // swaps WETH to wstETH
         uint256 wstEthBefore = wstETH.balanceOf(address(this));
@@ -369,9 +379,6 @@ contract LeverageStrategy is
 
         // transfers fee to DAO and reinvests remaining fees
         uint256 wstEthAmount = wstETH.balanceOf(address(this)) - wstEthBefore;
-        uint256 DAOwstEth = wstEthAmount * fee / HUNDRED_PERCENT;
-        wstEthAmount = wstEthAmount - DAOwstEth;
-        wstETH.transfer(controller, DAOwstEth);
 
         (uint256 amountOut, ) = _simulateJoinPool(USDC_CONTROL_AMOUNT);
         uint256 maxBorrowable = crvUSDController.max_borrowable(wstEthAmount * healthBuffer / HUNDRED_PERCENT, N);
