@@ -284,9 +284,6 @@ contract LeverageStrategy is
     /// @param  minAmountOut Slippage protection (w.r.t. BPTToken)
     function unwindPosition(uint256 auraShares, uint256 minAmountOut) external nonReentrant onlyRole(CONTROLLER_ROLE) {
         _unwindPosition(auraShares, HUNDRED_PERCENT, minAmountOut);
-        if (strategyHealth() >= MAX_MANUAL_HEALTH) {
-            revert UnwindMaxReached();
-        }
     }
 
     /// @notice Queues an unwind call from the automated keeper
@@ -323,9 +320,6 @@ contract LeverageStrategy is
                     unwindPercentage,
                     0
                 );
-                if (strategyHealth() >= MAX_MANUAL_HEALTH) {
-                    revert UnwindMaxReached();
-                }
                 // We need to set timestamp to 0 so next call can happen
                 unwindQueued.timestamp = 0;
 
@@ -461,12 +455,22 @@ contract LeverageStrategy is
          to find the amount of `totalWithdrawableWstEth 
         */
         uint256 totalWithdrawableWstETH =  userState[0] * percentageToBeWithdrawn / HUNDRED_PERCENT;
+
+        // Now we check if there are any funds in the contract, which were withdrawn to the leverage strategy
+        uint256 stratBalance = wstETH.balanceOf(address(this));
+        uint256 additionalSum = 0;
+        // If there are some additional funds in the strategy, they should be also withdrawn
+        if (stratBalance > deposited) {
+            additionalSum = (stratBalance - deposited) * percentageToBeWithdrawn / HUNDRED_PERCENT;
+        }
+
         // We remove this amount of collateral from the CurveController
         _removeCollateral(totalWithdrawableWstETH);
         // Now we burn the user's shares 
         _burn(owner, shares);
+
         // Now we push the withdrawn wstETH to the user
-        _pushwstEth(receiver, totalWithdrawableWstETH);
+        _pushwstEth(receiver, totalWithdrawableWstETH + additionalSum);
 
         emit Withdraw(caller, receiver, owner, assets, shares);
     }
@@ -636,6 +640,7 @@ contract LeverageStrategy is
         uint256 assets,
         uint256
     ) internal override {
+        deposited += assets;
         if (assets == 0) {
             revert ZeroDepositNotAllowed();
         }
@@ -686,6 +691,7 @@ contract LeverageStrategy is
                 deposits[_startKeyId + i].state = DepositState.INVESTED;
             }
         }
+        deposited -= _wstEthAmount;
         return (_wstEthAmount, _startKeyId, _totalDeposits);
     }
 
