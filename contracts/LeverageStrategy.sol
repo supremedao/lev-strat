@@ -82,11 +82,25 @@ contract LeverageStrategy is
         _grantRole(KEEPER_ROLE, _keeper);
     }
 
+
+    /// @notice Sets the fee for rewards, determining the profit that gets withdrawn to the DAO
+    /// @param  _fee the new value of the fee
     function setFee(uint256 _fee) external onlyRole(CONTROLLER_ROLE){
         if (_fee > MAX_DAO_FEE) {
             revert InvalidFee();
         }
         fee = _fee;
+    }
+
+
+    /// @notice Sets the maximal amount of funds that can be deposited into LeverageStrategy
+    /// @param  _maxInvestment the new limit for the deposits
+    function setMaxInvestment(uint256 _maxInvestment) public onlyRole(CONTROLLER_ROLE){
+        if(_maxInvestment < currentDeposits){
+            maxInvestment = currentDeposits;
+        } else {
+            maxInvestment = _maxInvestment;
+        }
     }
 
     /// @notice Returns the health of the strategy's Collateralized Debt Position (CDP) on Curve Finance
@@ -149,6 +163,8 @@ contract LeverageStrategy is
             revert ERC4626ExceededMaxRedeem(owner, shares, maxShares);
         }
 
+        currentDeposits -= currentDeposits * shares / this.totalSupply();
+
         uint256 assets = previewRedeem(shares);
         _withdraw(msg.sender, receiver, owner, assets, shares, minAmountOut);
 
@@ -172,6 +188,10 @@ contract LeverageStrategy is
         if (assets == 0) {
             revert ZeroDepositNotAllowed();
         }
+        if (currentDeposits + assets > maxInvestment) {
+            revert InvestmentsOverflow();
+        }
+        currentDeposits += assets;
 
         uint256 _debtAmount = crvUSDController.max_borrowable(assets, N) * healthBuffer / HUNDRED_PERCENT;
         // calculate shares
@@ -647,6 +667,11 @@ contract LeverageStrategy is
         uint256 assets,
         uint256
     ) internal override {
+        if (currentDeposits + assets > maxInvestment) {
+            revert InvestmentsOverflow();
+        }
+        currentDeposits += assets;
+
         deposited += assets;
         if (assets == 0) {
             revert ZeroDepositNotAllowed();

@@ -80,5 +80,8 @@ abstract contract Constants {
 
     /// @dev Raised when the fee percentage is larger than 70%
     error InvalidFee();
+
+    /// @dev Raised when the amount of investments > maxInvestments amount
+    error InvestmentsOverflow();
 }
 

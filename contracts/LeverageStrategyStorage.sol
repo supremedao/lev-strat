@@ -26,6 +26,8 @@ abstract contract LeverageStrategyStorage {
     /// @notice Role identifier for the controller role, responsible for high-level protocol management
     bytes32 public constant CONTROLLER_ROLE = keccak256("CONTROLLER_ROLE");
 
+
+
     /// @notice Fixed percentage (scaled by 10^12) used in unwinding positions, default set to 30%
     uint256 public unwindPercentage = 30 * 10 ** 10;
 
@@ -38,6 +40,12 @@ abstract contract LeverageStrategyStorage {
 
     /// @notice Amount of wstEth in the contract, that was deposited but is not yet invested
     uint256 public deposited = 0;
+
+    /// @notice The maximal amount of investments processed by the strategy
+    uint256 public maxInvestment = 100 ether;
+
+    /// @notice The amount of current investments in the contract
+    uint256 public currentDeposits = 0;
 
     /// @dev Represents the various states a deposit can be in.
     enum DepositState {

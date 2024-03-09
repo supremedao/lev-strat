@@ -184,6 +184,9 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
 
         levStrat.initialize(investN, controller, powerPool);
 
+        vm.prank(controller);
+        levStrat.setMaxInvestment(1000 ether);
+
         // Make vault msg.sender
         vm.startPrank(vault4626);
         wstETH.approve(address(levStrat), maxApprove);
