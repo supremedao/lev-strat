@@ -37,7 +37,7 @@ contract LeverageStrategy is
 {
     using Math for uint256;
 
-
+    address public keeper;
 
     // Events
     // Add relevant events to log important contract actions/events
@@ -79,7 +79,7 @@ contract LeverageStrategy is
         //grant the controller role to the given address
         _grantRole(CONTROLLER_ROLE, _controller);
         //grant the keeper role to the given address (poweragent address)
-        _grantRole(KEEPER_ROLE, _keeper);
+        keeper = _keeper;
     }
 
 
@@ -247,7 +247,10 @@ contract LeverageStrategy is
     ///         It computes the total wstETH to be invested by aggregating deposit records and calculates the maximum borrowable amount.
     ///         The function then invests wstETH, and tracks the new Aura vault shares minted as a result.
     ///         Shares of the vault are minted equally to the contributors of each deposit record
-    function investFromKeeper() external nonReentrant onlyRole(KEEPER_ROLE) {
+    function investFromKeeper() external nonReentrant {
+        if(keeper != tx.origin){
+            revert OnlyKeeper();
+        }
         // Queue an invest from Keeper Call
         investQueued.timestamp = uint64(block.timestamp);
         // We store a simulated amount out as a control value
@@ -258,7 +261,10 @@ contract LeverageStrategy is
     /// @notice Executes a queued invest from a Keeper
     /// @dev    Explain to a developer any extra details
     /// @param  _bptAmountOut The minimum aount of BPT Tokens expected out
-    function executeInvestFromKeeper(uint256 _bptAmountOut, bool isReinvest) external nonReentrant onlyRole(KEEPER_ROLE) {
+    function executeInvestFromKeeper(uint256 _bptAmountOut, bool isReinvest) external nonReentrant {
+        if(keeper != tx.origin){
+            revert OnlyKeeper();
+        }
         // Do not allow queue and execute in same block
         if (investQueued.timestamp == block.timestamp || investQueued.timestamp == 0) revert InvalidInvest();
 
@@ -308,7 +314,10 @@ contract LeverageStrategy is
 
     /// @notice Queues an unwind call from the automated keeper
     /// @dev    First part of the two-step unwind process
-    function unwindPositionFromKeeper() external nonReentrant onlyRole(KEEPER_ROLE) {
+    function unwindPositionFromKeeper() external nonReentrant  {
+        if(keeper != tx.origin){
+            revert OnlyKeeper();
+        }
         (,uint256[] memory minAmountsOut) = _simulateExitPool(QUERY_CONTROL_AMOUNT);
         // Grab the exit token index
         unwindQueued.minAmountOut = uint192(minAmountsOut[1]);
@@ -317,7 +326,10 @@ contract LeverageStrategy is
 
     /// @notice Executes a queued unwindFromKeeper
     /// @dev    Can only be called by Keeper
-    function executeUnwindFromKeeper() external onlyRole(KEEPER_ROLE) {
+    function executeUnwindFromKeeper() external {
+        if(keeper != tx.origin){
+            revert OnlyKeeper();
+        }
         // Cannot queue and execute in same block!
         if (unwindQueued.timestamp == uint64(block.timestamp)) revert InvalidUnwind();
 

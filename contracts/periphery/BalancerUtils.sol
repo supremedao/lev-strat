@@ -30,18 +30,12 @@ abstract contract BalancerUtils is Constants {
     // Finxed USDC Control Amount
     uint256 public constant USDC_CONTROL_AMOUNT = 1000e6;
 
-    // Pool tokens
-    IERC20 public immutable token0;
-    IERC20 public immutable token1;
-
     // pool of D2D/USDC
     bytes32 public immutable POOL_ID;
 
     constructor(bytes32 _poolId) {
         POOL_ID = _poolId;
         (IERC20[] memory tokens,,) = BAL_VAULT.getPoolTokens(POOL_ID);
-        token0 = tokens[0];
-        token1 = tokens[1];
     }
 
     /// @notice Join balancer pool

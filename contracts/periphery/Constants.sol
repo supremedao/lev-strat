@@ -83,5 +83,8 @@ abstract contract Constants {
 
     /// @dev Raised when the amount of investments > maxInvestments amount
     error InvestmentsOverflow();
+
+    /// @dev Raised when the someone exept keeper calls method
+    error OnlyKeeper();
 }
 
