@@ -26,6 +26,8 @@ abstract contract LeverageStrategyStorage {
     /// @notice Role identifier for the controller role, responsible for high-level protocol management
     bytes32 public constant CONTROLLER_ROLE = keccak256("CONTROLLER_ROLE");
 
+    /// @notice Role identifier for the caller role, responsible for high-level protocol management
+    bytes32 public constant CALLER_ROLE = keccak256("CALLER_ROLE");
 
 
     /// @notice Fixed percentage (scaled by 10^12) used in unwinding positions, default set to 30%

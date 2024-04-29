@@ -62,11 +62,13 @@ contract LeverageStrategy is
     ///         It should be called immediately after contract deployment.
     /// @param  _N A numeric parameter used in the contract's logic (its specific role should be described)
     /// @param  _controller The address to be granted the CONTROLLER_ROLE (DAO)
-    /// @param  _keeper The address (poweragent) to be granted the KEEPER_ROLE
+    /// @param  _keeper The address (agent) to be granted the KEEPER_ROLE
+    /// @param  _caller The address that calls poweragent execution
     function initialize(
         uint256 _N,
         address _controller,
-        address _keeper
+        address _keeper,
+        address _caller
     
     )
         external
@@ -80,6 +82,22 @@ contract LeverageStrategy is
         _grantRole(CONTROLLER_ROLE, _controller);
         //grant the keeper role to the given address (poweragent address)
         _grantRole(KEEPER_ROLE, _keeper);
+        //grant the caller role to the given address (it creates jobs in poweragent)
+        _grantRole(CALLER_ROLE, _caller);
+    }
+
+
+
+     /// @notice Checks that the jov is called by caller address
+     /// @dev Only PowerAgent job created by caller can execute function
+     /// @param _wallet The address
+    modifier onlyCallerJob() {
+        bytes32 jobKey = _getJobKey();
+        (address jobOwner, , , , , ) = IPPAgentV2JobOwner(AgentContract).getJob(
+            jobKey
+        );
+        if (hasRole(CALLER_ROLE, jobOwner)) revert InvalidJobOwner();
+        _;
     }
 
 
@@ -92,6 +110,12 @@ contract LeverageStrategy is
         fee = _fee;
     }
 
+    /// @notice Upgrades the address for the poweragent caller of the contract
+    /// @param  _caller the new caller's address
+    function setCaller(address _oldCaller, address _caller) external onlyRole(CONTROLLER_ROLE){
+        revokeRole(CALLER_ROLE, _oldCaller);
+        grantRole(CALLER_ROLE, _caller);
+    }
 
     /// @notice Sets the maximal amount of funds that can be deposited into LeverageStrategy
     /// @param  _maxInvestment the new limit for the deposits
@@ -247,7 +271,7 @@ contract LeverageStrategy is
     ///         It computes the total wstETH to be invested by aggregating deposit records and calculates the maximum borrowable amount.
     ///         The function then invests wstETH, and tracks the new Aura vault shares minted as a result.
     ///         Shares of the vault are minted equally to the contributors of each deposit record
-    function investFromKeeper() external nonReentrant onlyRole(KEEPER_ROLE) {
+    function investFromKeeper() external nonReentrant onlyRole(KEEPER_ROLE) onlyCallerJob(){
         // Queue an invest from Keeper Call
         investQueued.timestamp = uint64(block.timestamp);
         // We store a simulated amount out as a control value
@@ -258,7 +282,7 @@ contract LeverageStrategy is
     /// @notice Executes a queued invest from a Keeper
     /// @dev    Explain to a developer any extra details
     /// @param  _bptAmountOut The minimum aount of BPT Tokens expected out
-    function executeInvestFromKeeper(uint256 _bptAmountOut, bool isReinvest) external nonReentrant onlyRole(KEEPER_ROLE) {
+    function executeInvestFromKeeper(uint256 _bptAmountOut, bool isReinvest) external nonReentrant onlyRole(KEEPER_ROLE) onlyCallerJob(){
         // Do not allow queue and execute in same block
         if (investQueued.timestamp == block.timestamp || investQueued.timestamp == 0) revert InvalidInvest();
 
@@ -308,7 +332,7 @@ contract LeverageStrategy is
 
     /// @notice Queues an unwind call from the automated keeper
     /// @dev    First part of the two-step unwind process
-    function unwindPositionFromKeeper() external nonReentrant onlyRole(KEEPER_ROLE) {
+    function unwindPositionFromKeeper() external nonReentrant onlyRole(KEEPER_ROLE) onlyCallerJob(){
         (,uint256[] memory minAmountsOut) = _simulateExitPool(QUERY_CONTROL_AMOUNT);
         // Grab the exit token index
         unwindQueued.minAmountOut = uint192(minAmountsOut[1]);
@@ -317,7 +341,7 @@ contract LeverageStrategy is
 
     /// @notice Executes a queued unwindFromKeeper
     /// @dev    Can only be called by Keeper
-    function executeUnwindFromKeeper() external onlyRole(KEEPER_ROLE) {
+    function executeUnwindFromKeeper() external onlyRole(KEEPER_ROLE) onlyCallerJob(){
         // Cannot queue and execute in same block!
         if (unwindQueued.timestamp == uint64(block.timestamp)) revert InvalidUnwind();
 
@@ -414,6 +438,15 @@ contract LeverageStrategy is
     }
 
     //================================================INTERNAL FUNCTIONS===============================================//
+
+    /// @notice job key is received from the incomming transaction
+    /// @dev    This call is needed to get the PowerAgent job owner's address
+    ///         implemented according to https://github.com/Partituraio/PPAgentSafeModule/blob/dev/contracts/PPSafeAgent.sol
+    function _getJobKey() private pure returns (bytes32 jobKey) {
+        assembly {
+            jobKey := calldataload(sub(calldatasize(), 32))
+        }
+    }
 
     /// @notice reverts everytime to ensure no one can use redeem and withdraw functions
     /// @dev    The normal `_withdraw` does not allow user to specify slippage protection
