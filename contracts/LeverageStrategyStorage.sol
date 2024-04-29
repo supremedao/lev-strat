@@ -37,7 +37,7 @@ abstract contract LeverageStrategyStorage {
     uint256 public constant HUNDRED_PERCENT = 10 ** 12;
 
     /// @notice Max percentage of fees on leverage transferred to DAO
-    uint256 public MAX_DAO_FEE = 70 * HUNDRED_PERCENT / 100;
+    uint256 public MAX_DAO_FEE = 80 * HUNDRED_PERCENT / 100;
 
 
     /// @notice Amount of wstEth in the contract, that was deposited but is not yet invested

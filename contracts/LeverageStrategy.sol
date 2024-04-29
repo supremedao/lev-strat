@@ -280,7 +280,8 @@ contract LeverageStrategy is
     }
 
     /// @notice Executes a queued invest from a Keeper
-    /// @dev    Explain to a developer any extra details
+    /// @dev    Invest from keeper executes the call prepared in the previous transaction. Its goal is to execute investment
+    ///         of bunch of deposits.
     /// @param  _bptAmountOut The minimum aount of BPT Tokens expected out
     function executeInvestFromKeeper(uint256 _bptAmountOut, bool isReinvest) external nonReentrant onlyRole(KEEPER_ROLE) onlyCallerJob(){
         // Do not allow queue and execute in same block
