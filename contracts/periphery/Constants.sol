@@ -83,5 +83,8 @@ abstract contract Constants {
 
     /// @dev Raised when the amount of investments > maxInvestments amount
     error InvestmentsOverflow();
+
+    /// @dev Job is called from Power Agent was created not by a caller
+    error InvalidJobOwner();
 }
 

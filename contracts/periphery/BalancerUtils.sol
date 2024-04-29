@@ -27,8 +27,8 @@ abstract contract BalancerUtils is Constants {
 
     // Fixed control amount for BPT
     uint256 public constant QUERY_CONTROL_AMOUNT = 10 ether;
-    // Finxed USDC Control Amount
-    uint256 public constant USDC_CONTROL_AMOUNT = 1000e6;
+    // Fixed USDC Control Amount
+    uint256 public constant USDC_CONTROL_AMOUNT = 10e6;
 
     // Pool tokens
     IERC20 public immutable token0;
