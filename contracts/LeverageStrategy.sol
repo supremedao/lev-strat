@@ -63,12 +63,12 @@ contract LeverageStrategy is
     /// @param  _N A numeric parameter used in the contract's logic (its specific role should be described)
     /// @param  _controller The address to be granted the CONTROLLER_ROLE (DAO)
     /// @param  _keeper The address (agent) to be granted the KEEPER_ROLE
-    /// @param  _caller The address that calls poweragent execution
+    /// @param  _jobOwner The address that calls poweragent execution
     function initialize(
         uint256 _N,
         address _controller,
         address _keeper,
-        address _caller
+        address _jobOwner
     
     )
         external
@@ -82,21 +82,20 @@ contract LeverageStrategy is
         _grantRole(CONTROLLER_ROLE, _controller);
         //grant the keeper role to the given address (poweragent address)
         _grantRole(KEEPER_ROLE, _keeper);
-        //grant the caller role to the given address (it creates jobs in poweragent)
-        _grantRole(CALLER_ROLE, _caller);
+        //grant the job owner role to the given address (it creates jobs in poweragent)
+        _grantRole(JOB_OWNER_ROLE, _jobOwner);
     }
 
 
 
-     /// @notice Checks that the jov is called by caller address
-     /// @dev Only PowerAgent job created by caller can execute function
-     /// @param _wallet The address
-    modifier onlyCallerJob() {
+     /// @notice Checks that the jov is called by job owner address
+     /// @dev Only PowerAgent job created by job owner can execute function
+    modifier onlyOwnerJob() {
         bytes32 jobKey = _getJobKey();
-        (address jobOwner, , , , , ) = IPPAgentV2JobOwner(AgentContract).getJob(
+        (address jobOwner, , , , , ) = AgentContract.getJob(
             jobKey
         );
-        if (hasRole(CALLER_ROLE, jobOwner)) revert InvalidJobOwner();
+        if (!hasRole(JOB_OWNER_ROLE, jobOwner)) revert InvalidJobOwner();
         _;
     }
 
@@ -110,11 +109,11 @@ contract LeverageStrategy is
         fee = _fee;
     }
 
-    /// @notice Upgrades the address for the poweragent caller of the contract
-    /// @param  _caller the new caller's address
-    function setCaller(address _oldCaller, address _caller) external onlyRole(CONTROLLER_ROLE){
-        revokeRole(CALLER_ROLE, _oldCaller);
-        grantRole(CALLER_ROLE, _caller);
+    /// @notice Upgrades the address for the poweragent job owner of the contract
+    /// @param  _jobOwner the new caller's address
+    function setJobOwner(address _oldJobOwner, address _jobOwner) external onlyRole(CONTROLLER_ROLE){
+        revokeRole(JOB_OWNER_ROLE, _oldJobOwner);
+        grantRole(JOB_OWNER_ROLE, _jobOwner);
     }
 
     /// @notice Sets the maximal amount of funds that can be deposited into LeverageStrategy
@@ -271,7 +270,7 @@ contract LeverageStrategy is
     ///         It computes the total wstETH to be invested by aggregating deposit records and calculates the maximum borrowable amount.
     ///         The function then invests wstETH, and tracks the new Aura vault shares minted as a result.
     ///         Shares of the vault are minted equally to the contributors of each deposit record
-    function investFromKeeper() external nonReentrant onlyRole(KEEPER_ROLE) onlyCallerJob(){
+    function investFromKeeper() external nonReentrant onlyRole(KEEPER_ROLE) onlyOwnerJob(){
         // Queue an invest from Keeper Call
         investQueued.timestamp = uint64(block.timestamp);
         // We store a simulated amount out as a control value
@@ -283,7 +282,7 @@ contract LeverageStrategy is
     /// @dev    Invest from keeper executes the call prepared in the previous transaction. Its goal is to execute investment
     ///         of bunch of deposits.
     /// @param  _bptAmountOut The minimum aount of BPT Tokens expected out
-    function executeInvestFromKeeper(uint256 _bptAmountOut, bool isReinvest) external nonReentrant onlyRole(KEEPER_ROLE) onlyCallerJob(){
+    function executeInvestFromKeeper(uint256 _bptAmountOut, bool isReinvest) external nonReentrant onlyRole(KEEPER_ROLE) onlyOwnerJob(){
         // Do not allow queue and execute in same block
         if (investQueued.timestamp == block.timestamp || investQueued.timestamp == 0) revert InvalidInvest();
 
@@ -333,7 +332,7 @@ contract LeverageStrategy is
 
     /// @notice Queues an unwind call from the automated keeper
     /// @dev    First part of the two-step unwind process
-    function unwindPositionFromKeeper() external nonReentrant onlyRole(KEEPER_ROLE) onlyCallerJob(){
+    function unwindPositionFromKeeper() external nonReentrant onlyRole(KEEPER_ROLE) onlyOwnerJob(){
         (,uint256[] memory minAmountsOut) = _simulateExitPool(QUERY_CONTROL_AMOUNT);
         // Grab the exit token index
         unwindQueued.minAmountOut = uint192(minAmountsOut[1]);
@@ -342,7 +341,7 @@ contract LeverageStrategy is
 
     /// @notice Executes a queued unwindFromKeeper
     /// @dev    Can only be called by Keeper
-    function executeUnwindFromKeeper() external onlyRole(KEEPER_ROLE) onlyCallerJob(){
+    function executeUnwindFromKeeper() external onlyRole(KEEPER_ROLE) onlyOwnerJob(){
         // Cannot queue and execute in same block!
         if (unwindQueued.timestamp == uint64(block.timestamp)) revert InvalidUnwind();
 

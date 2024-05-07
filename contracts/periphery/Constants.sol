@@ -12,6 +12,7 @@ ____/ // /_/ /__  /_/ /  /   /  __/  / / / / /  __/  /_/ /_  ___ / /_/ /
 pragma solidity 0.8.20;
 
 import "../interfaces/IcrvUSD.sol";
+import {IPPAgentV2JobOwner} from "../interfaces/IPPAgentV2JobOwner.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /// @title Token Addresses, Interfaces and Errors
@@ -42,6 +43,9 @@ abstract contract Constants {
 
     /// @notice The crvUSD token interface.
     IcrvUSD public constant crvUSD = IcrvUSD(0xf939E0A03FB07F59A73314E73794Be0E57ac1b4E);
+
+    // @notice The PowerAgent contract.
+    IPPAgentV2JobOwner public constant AgentContract = IPPAgentV2JobOwner(0xc9ce4CdA5897707546F3904C0FfCC6e429bC4546);
 
     /// @dev Raised when an unknown executer attempts an action.
     error UnknownExecuter();
