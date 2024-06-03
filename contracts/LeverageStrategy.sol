@@ -214,7 +214,6 @@ contract LeverageStrategy is
         if (currentDeposits + assets > maxInvestment) {
             revert InvestmentsOverflow();
         }
-        currentDeposits += assets;
 
         uint256 _debtAmount = crvUSDController.max_borrowable(assets, N) * healthBuffer / HUNDRED_PERCENT;
         // calculate shares
@@ -608,6 +607,8 @@ contract LeverageStrategy is
         uint256 _debtAmount,
         uint256 _bptAmountOut
     ) internal {
+
+        currentDeposits += _wstETHAmount;
         // Opens a position on crvUSD if no loan already
         // Note this address is an owner of a crvUSD CDP
         // in the usual case we already have a CDP
@@ -703,7 +704,6 @@ contract LeverageStrategy is
         if (currentDeposits + assets > maxInvestment) {
             revert InvestmentsOverflow();
         }
-        currentDeposits += assets;
 
         deposited += assets;
         if (assets == 0) {
