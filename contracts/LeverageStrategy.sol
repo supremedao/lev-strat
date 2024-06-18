@@ -84,6 +84,8 @@ contract LeverageStrategy is
         _grantRole(KEEPER_ROLE, _keeper);
         //grant the job owner role to the given address (it creates jobs in poweragent)
         _grantRole(JOB_OWNER_ROLE, _jobOwner);
+        //remove admin to lock double initialization
+        _revokeRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
 
 
