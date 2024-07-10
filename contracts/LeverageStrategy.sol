@@ -388,7 +388,7 @@ contract LeverageStrategy is
     }
 
     /// @notice Swaps BAL and AURA rewards for WstETH, specifying minimum amounts and deadline
-    /// @dev    This function is non-reentrant and can only be called by an account with the CONTROLLER_ROLE
+    /// @dev    This function is non-reentrant and can only be called by an account with the KEEPER_ROLE
     ///         It internally calls separate functions to handle the swapping of BAL to WETH and AURA to WETH.
     ///         Afterwards it calls a function to swap WETH to WstEth.
     ///         The swaps are executed with specified minimum return amounts and a deadline to ensure slippage protection and timely execution.
@@ -403,7 +403,7 @@ contract LeverageStrategy is
         uint256 minWethAmountBal,
         uint256 minWethAmountAura,
         uint256 deadline
-    ) external nonReentrant onlyRole(CONTROLLER_ROLE) {
+    ) external nonReentrant onlyRole(KEEPER_ROLE) onlyOwnerJob() {
         // Preparing fee transfer to the DAO
         uint256 balFees = balAmount * fee / HUNDRED_PERCENT;
         uint256 auraFees = auraAmount * fee / HUNDRED_PERCENT;
@@ -592,7 +592,7 @@ contract LeverageStrategy is
     ///         It overrides a base class implementation and is meant to be customizable in derived contracts.
     /// @return The IERC20 token which is to be staked, represented here by the D2D_USDC_BPT token
     function _tokenToStake() internal view override returns (IERC20) {
-        return D2D_USDC_BPT;
+        return COIL_USDC_BPT;
     }
 
     /// @notice Handles the internal investment process using wstETH, debt amount, and targeted BPT amount
@@ -622,7 +622,7 @@ contract LeverageStrategy is
         }
         _exchangeCRVUSDtoUSDC(_debtAmount);
         // Provide liquidity to the D2D/USDC Pool on Balancer
-        _joinPool(USDC.balanceOf(address(this)), D2D.balanceOf(address(this)), _bptAmountOut);
+        _joinPool(USDC.balanceOf(address(this)), COIL.balanceOf(address(this)), _bptAmountOut);
         // Stake LP tokens on Aura Finance
         _depositAllAura();
     }
