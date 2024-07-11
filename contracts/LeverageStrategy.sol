@@ -48,7 +48,7 @@ contract LeverageStrategy is
     /// @param _poolId The unique identifier of the Balancer pool used in the strategy
     constructor(bytes32 _poolId)
         BalancerUtils(_poolId)
-        ERC20("Supreme Aura D2D-USDC vault", "sAura-D2D-USD")
+        ERC20("Supreme Aura COIL-USDC vault", "sAura-COIL-USD")
         ERC4626(IERC20(address(AURA_VAULT)))
     {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
