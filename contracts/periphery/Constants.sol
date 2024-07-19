@@ -35,11 +35,11 @@ abstract contract Constants {
     /// @notice The ERC20 interface for USDC token.
     IERC20 public constant USDC = IERC20(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
 
-    /// @notice The ERC20 interface for COIL token.
-    IERC20 public constant COIL = IERC20(0x823E1B82cE1Dc147Bbdb25a203f046aFab1CE918);
+    /// @notice The ERC20 interface for D2D token.
+    IERC20 public constant D2D = IERC20(0x43D4A3cd90ddD2F8f4f693170C9c8098163502ad);
 
-    /// @notice The ERC20 interface for COIL/USDC Balancer Pool Token (BPT).
-    IERC20 public constant COIL_USDC_BPT = IERC20(0x42FBD9F666AaCC0026ca1B88C94259519e03dd67);
+    /// @notice The ERC20 interface for D2D/USDC Balancer Pool Token (BPT).
+    IERC20 public constant D2D_USDC_BPT = IERC20(0x27C9f71cC31464B906E0006d4FcBC8900F48f15f);
 
     /// @notice The crvUSD token interface.
     IcrvUSD public constant crvUSD = IcrvUSD(0xf939E0A03FB07F59A73314E73794Be0E57ac1b4E);

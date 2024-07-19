@@ -59,10 +59,10 @@ abstract contract LeverageStrategyStorage {
     address public controller;
 
     /// @notice Percentage buffer to use, default 5%
-    uint256 public healthBuffer = 5e10;
+    uint256 public healthBuffer = 85e10;
 
     /// @notice Percentage of funds, transferred to DAO
-    uint256 public fee = 15 * HUNDRED_PERCENT / 100;
+    uint256 public fee = 60 * HUNDRED_PERCENT / 100;
 
     /// @dev Struct to keep track of each deposit.
     struct DepositRecord {

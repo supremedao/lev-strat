@@ -48,7 +48,7 @@ contract LeverageStrategy is
     /// @param _poolId The unique identifier of the Balancer pool used in the strategy
     constructor(bytes32 _poolId)
         BalancerUtils(_poolId)
-        ERC20("Supreme Aura COIL-USDC vault", "sAura-COIL-USD")
+        ERC20("Supreme Aura D2D-USDC vault", "sAura-D2D-USD")
         ERC4626(IERC20(address(AURA_VAULT)))
     {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
@@ -161,6 +161,12 @@ contract LeverageStrategy is
         // send relevant wstETH back to the depositor
         _pushwstEth(deposit.depositor, deposit.amount);
         emit DepositCancelled(_key);
+    }
+
+
+    function withdrawToken(address token) external onlyRole(C0xf939E0A03FB07F59A73314E73794Be0E57ac1b4EONTROLLER_ROLE){
+        require(token != address(wstETH));
+        ERC20(token).transfer(msg.sender, ERC20(token).balanceOf(address(this)));
     }
 
     /// @notice Redeems a specified amount of shares for the underlying asset, closes CDP and sends wstETH to the receiver
@@ -382,7 +388,7 @@ contract LeverageStrategy is
     /// @notice Sets the health buffer. 
     /// @dev    This ensures that the protocol maintains a healthy colalteral factor
     /// @param  percentage Must be smaller than 10e12
-    function setHealthBuffer(uint256 percentage) external {
+    function setHealthBuffer(uint256 percentage) external onlyRole(CONTROLLER_ROLE) {
         if (percentage > HUNDRED_PERCENT) revert InvalidInput();
         healthBuffer = percentage;
     }
@@ -592,7 +598,7 @@ contract LeverageStrategy is
     ///         It overrides a base class implementation and is meant to be customizable in derived contracts.
     /// @return The IERC20 token which is to be staked, represented here by the D2D_USDC_BPT token
     function _tokenToStake() internal view override returns (IERC20) {
-        return COIL_USDC_BPT;
+        return D2D_USDC_BPT;
     }
 
     /// @notice Handles the internal investment process using wstETH, debt amount, and targeted BPT amount
@@ -622,7 +628,7 @@ contract LeverageStrategy is
         }
         _exchangeCRVUSDtoUSDC(_debtAmount);
         // Provide liquidity to the D2D/USDC Pool on Balancer
-        _joinPool(USDC.balanceOf(address(this)), COIL.balanceOf(address(this)), _bptAmountOut);
+        _joinPool(USDC.balanceOf(address(this)), D2D.balanceOf(address(this)), _bptAmountOut);
         // Stake LP tokens on Aura Finance
         _depositAllAura();
     }
