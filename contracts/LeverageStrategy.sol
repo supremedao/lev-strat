@@ -164,7 +164,7 @@ contract LeverageStrategy is
     }
 
 
-    function withdrawToken(address token) external onlyRole(C0xf939E0A03FB07F59A73314E73794Be0E57ac1b4EONTROLLER_ROLE){
+    function withdrawToken(address token) external onlyRole(CONTROLLER_ROLE){
         require(token != address(wstETH));
         ERC20(token).transfer(msg.sender, ERC20(token).balanceOf(address(this)));
     }
