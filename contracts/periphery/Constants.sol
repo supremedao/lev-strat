@@ -79,7 +79,7 @@ abstract contract Constants {
     // Cannot queue and execuite in same block
     error InvalidInvest();
 
-    /// @dev Raised when the percentage is larger than 100%
+    /// @dev Raised when the percentage is larger than 100% or token address is invalid
     error InvalidInput();
 
     /// @dev Raised when the fee percentage is larger than 70%
@@ -90,5 +90,6 @@ abstract contract Constants {
 
     /// @dev Job is called from Power Agent was created not by a caller
     error InvalidJobOwner();
+
 }
 

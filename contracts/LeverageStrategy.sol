@@ -118,6 +118,14 @@ contract LeverageStrategy is
         grantRole(JOB_OWNER_ROLE, _jobOwner);
     }
 
+
+    /// @notice Upgrades the address for the controller of the contract
+    /// @param  _newController the new controller's address
+    function setController(address _oldController, address _newController) external onlyRole(CONTROLLER_ROLE){
+        revokeRole(CONTROLLER_ROLE, _oldController);
+        grantRole(CONTROLLER_ROLE, _newController);
+    }
+
     /// @notice Sets the maximal amount of funds that can be deposited into LeverageStrategy
     /// @param  _maxInvestment the new limit for the deposits
     function setMaxInvestment(uint256 _maxInvestment) public onlyRole(CONTROLLER_ROLE){
@@ -163,9 +171,15 @@ contract LeverageStrategy is
         emit DepositCancelled(_key);
     }
 
+    function changeController(address _controller) external onlyRole(CONTROLLER_ROLE){
+
+    }
+
 
     function withdrawToken(address token) external onlyRole(CONTROLLER_ROLE){
-        require(token != address(wstETH));
+        if(token != address(wstETH)) {
+            revert InvalidInput();
+        }
         ERC20(token).transfer(msg.sender, ERC20(token).balanceOf(address(this)));
     }
 
@@ -385,7 +399,7 @@ contract LeverageStrategy is
         }
     }
 
-    /// @notice Sets the health buffer. 
+    /// @notice Sets the health buffer.
     /// @dev    This ensures that the protocol maintains a healthy colalteral factor
     /// @param  percentage Must be smaller than 10e12
     function setHealthBuffer(uint256 percentage) external onlyRole(CONTROLLER_ROLE) {
