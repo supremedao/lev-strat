@@ -171,11 +171,6 @@ contract LeverageStrategy is
         emit DepositCancelled(_key);
     }
 
-    function changeController(address _controller) external onlyRole(CONTROLLER_ROLE){
-
-    }
-
-
     function withdrawToken(address token) external onlyRole(CONTROLLER_ROLE){
         if(token != address(wstETH)) {
             revert InvalidInput();
