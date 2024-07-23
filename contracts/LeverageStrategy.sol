@@ -398,7 +398,7 @@ contract LeverageStrategy is
         uint256 minWethAmountBal,
         uint256 minWethAmountAura,
         uint256 deadline
-    ) external nonReentrant onlyRole(CONTROLLER_ROLE) {
+    ) external nonReentrant onlyRole(KEEPER_ROLE) {
         uint256 balAmount = IERC20(BAL).balanceOf(address(this));
         uint256 auraAmount = IERC20(AURA).balanceOf(address(this));
 
