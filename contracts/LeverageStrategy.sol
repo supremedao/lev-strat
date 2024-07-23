@@ -418,7 +418,7 @@ contract LeverageStrategy is
 
         // // swaps WETH to wstETH
         // uint256 wstEthBefore = wstETH.balanceOf(address(this));
-        _swapRewardToWstEth(IERC20(AURA).balanceOf(address(this)), deadline);
+        _swapRewardToWstEth(IERC20(WETH).balanceOf(address(this)), deadline);
     }
 
     /// @notice Allows the controller to adjust the percentage to unwind at a time
