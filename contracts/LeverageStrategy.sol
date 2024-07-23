@@ -391,42 +391,34 @@ contract LeverageStrategy is
     ///         It internally calls separate functions to handle the swapping of BAL to WETH and AURA to WETH.
     ///         Afterwards it calls a function to swap WETH to WstEth.
     ///         The swaps are executed with specified minimum return amounts and a deadline to ensure slippage protection and timely execution.
-    /// @param  balAmount The amount of BAL tokens to be swapped for WstETH
-    /// @param  auraAmount The amount of AURA tokens to be swapped for WETH
     /// @param  minWethAmountBal The minimum amount of WETH expected from swapping BALCONTROLLER
     /// @param  minWethAmountAura The minimum amount of WETH expected from swapping AURA
     /// @param  deadline The latest timestamp by which the swap must be completed
-    function swapReward(
-        uint256 balAmount,
-        uint256 auraAmount,
+    function swapRewardFromKeeper(
         uint256 minWethAmountBal,
         uint256 minWethAmountAura,
         uint256 deadline
-    ) external nonReentrant onlyRole(CONTROLLER_ROLE) {
-        // Preparing fee transfer to the DAO
+    ) external nonReentrant onlyRole(KEEPER_ROLE) {
+        uint256 balAmount = IERC20(BAL).balanceOf(address(this));
+        uint256 auraAmount = IERC20(AURA).balanceOf(address(this));
+
+        // // Preparing fee transfer to the DAO
         uint256 balFees = balAmount * fee / HUNDRED_PERCENT;
         uint256 auraFees = auraAmount * fee / HUNDRED_PERCENT;
-        // And reward transfer to reinvest(it will be possible to withdraw it for the investors)
+        // // And reward transfer to reinvest(it will be possible to withdraw it for the investors)
         uint256 balReward = balAmount - balFees;
         uint256 auraReward = auraAmount - auraFees;
 
-        // Transfers of the fees to the DAO
+        // // Transfers of the fees to the DAO
         IERC20(BAL).transfer(controller, balFees);
         IERC20(AURA).transfer(controller, balFees);
-        // swaps tokens to WETH
+        // // swaps tokens to WETH
         _swapRewardBal(balReward, minWethAmountBal, deadline);
         _swapRewardAura(auraReward, minWethAmountAura, deadline);
 
-        // swaps WETH to wstETH
-        uint256 wstEthBefore = wstETH.balanceOf(address(this));
-        _swapRewardToWstEth(minWethAmountBal + minWethAmountAura, deadline);
-
-        // transfers fee to DAO and reinvests remaining fees
-        uint256 wstEthAmount = wstETH.balanceOf(address(this)) - wstEthBefore;
-
-        (uint256 amountOut, ) = _simulateJoinPool(USDC_CONTROL_AMOUNT);
-        uint256 maxBorrowable = crvUSDController.max_borrowable(wstEthAmount * healthBuffer / HUNDRED_PERCENT, N);
-        _invest(wstEthAmount, maxBorrowable, amountOut);
+        // // swaps WETH to wstETH
+        // uint256 wstEthBefore = wstETH.balanceOf(address(this));
+        _swapRewardToWstEth(IERC20(WETH).balanceOf(address(this)), deadline);
     }
 
     /// @notice Allows the controller to adjust the percentage to unwind at a time
