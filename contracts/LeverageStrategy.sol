@@ -400,7 +400,7 @@ contract LeverageStrategy is
         uint256 deadline
     ) external nonReentrant onlyRole(CONTROLLER_ROLE) {
         uint256 balAmount = IERC20(BAL).balanceOf(address(this));
-        uint256 auraAmount = IERC20(BAL).balanceOf(address(this));
+        uint256 auraAmount = IERC20(AURA).balanceOf(address(this));
 
         // // Preparing fee transfer to the DAO
         uint256 balFees = balAmount * fee / HUNDRED_PERCENT;
