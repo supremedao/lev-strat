@@ -27,7 +27,7 @@ abstract contract Constants {
     address public constant AURA = 0xC0c293ce456fF0ED870ADd98a0828Dd4d2903DBF;
 
     /// @notice The address of the WETH token.
-    address public constant WETH = 0xdFCeA9088c8A88A76FF74892C1457C17dfeef9C1;
+    address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
 
     /// @notice The ERC20 interface for wstETH token.
     IERC20 public constant wstETH = IERC20(0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0);

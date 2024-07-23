@@ -395,9 +395,9 @@ contract LeverageStrategy is
     /// @param  minWethAmountAura The minimum amount of WETH expected from swapping AURA
     /// @param  deadline The latest timestamp by which the swap must be completed
     function swapRewardFromKeeper(
-        // uint256 minWethAmountBal,
-        // uint256 minWethAmountAura,
-        // uint256 deadline
+        uint256 minWethAmountBal,
+        uint256 minWethAmountAura,
+        uint256 deadline
     ) external nonReentrant onlyRole(CONTROLLER_ROLE) {
         uint256 balAmount = IERC20(BAL).balanceOf(address(this));
         uint256 auraAmount = IERC20(BAL).balanceOf(address(this));
