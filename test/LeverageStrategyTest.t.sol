@@ -136,6 +136,55 @@ contract LeverageStrategyTest is BaseLeverageStrategyTest {
         assertNotEq(vsBobAft, vsAft);
     }
 
+    function testSwapReward() public {
+        address BAL = 0xba100000625a3754423978a60c9317c58a424e3D;
+        address AURA = 0xC0c293ce456fF0ED870ADd98a0828Dd4d2903DBF;
+
+        // Wsteth gets deposited into vault
+        deal(address(wstETH), alice, wstEthToAcc);
+        deal(address(wstETH), bob, wstEthToAcc);
+
+        levStrat.initialize(investN, controller, powerPool, powerPool);
+
+        uint256 vsbefore = levStrat.balanceOf(alice);
+        assertEq(vsbefore, 0);
+        uint256 vsBobbefore = levStrat.balanceOf(bob);
+        assertEq(vsBobbefore, 0);
+
+        // Make vault msg.sender
+        vm.startPrank(alice);
+        wstETH.approve(address(levStrat), wstInvestAmount);
+        levStrat.depositAndInvest(wstInvestAmount, alice, bptExpected);
+        vm.stopPrank();
+
+        vm.startPrank(bob);
+        wstETH.approve(address(levStrat), wstInvestAmount);
+        levStrat.depositAndInvest(wstInvestAmount, bob, bptExpected);
+        vm.stopPrank();
+
+        uint256 aft = AuraLPVault.balanceOf(address(levStrat));
+        uint256 shares = levStrat.totalSupply();
+        uint256 vsAft = levStrat.balanceOf(alice);
+        uint256 vsBobAft = levStrat.balanceOf(bob);
+        console2.log("bal aft", aft);
+        assertGt(aft, 0);
+        assertLe(shares, aft);
+        assertGt(vsAft, vsbefore);
+        assertGt(vsBobAft, vsBobbefore);
+        assertNotEq(vsBobAft, vsAft);
+
+        // We deal the strat some tokens
+        deal(address(BAL), address(levStrat), 1000 ether);
+        deal(address(AURA), address(levStrat), 1000 ether);
+
+        vm.startPrank(powerPool);
+        levStrat.swapRewardFromKeeper(1, 1, block.timestamp + 1);
+
+        // uint256 wstethBalanceAfter = wstETH.balanceOf(address(levStrat));
+        //require(wstethBalanceAfter == someUintthatyoucalc);
+    }
+
+
     function testInvestIfCDPAlreadyExists() public subtest {
         uint256 before = AuraLPVault.balanceOf(address(levStrat));
         console2.log("bal b4", before);
