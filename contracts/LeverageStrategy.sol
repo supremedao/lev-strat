@@ -402,22 +402,30 @@ contract LeverageStrategy is
         uint256 balAmount = IERC20(BAL).balanceOf(address(this));
         uint256 auraAmount = IERC20(AURA).balanceOf(address(this));
 
-        // // Preparing fee transfer to the DAO
+        // Preparing fee transfer to the DAO
         uint256 balFees = balAmount * fee / HUNDRED_PERCENT;
         uint256 auraFees = auraAmount * fee / HUNDRED_PERCENT;
-        // // And reward transfer to reinvest(it will be possible to withdraw it for the investors)
+        // And reward transfer to reinvest(it will be possible to withdraw it for the investors)
         uint256 balReward = balAmount - balFees;
         uint256 auraReward = auraAmount - auraFees;
 
-        // // Transfers of the fees to the DAO
+        // Transfers of the fees to the DAO
         IERC20(BAL).transfer(controller, balFees);
         IERC20(AURA).transfer(controller, balFees);
-        // // swaps tokens to WETH
+        // swaps tokens to WETH
         _swapRewardBal(balReward, minWethAmountBal, deadline);
         _swapRewardAura(auraReward, minWethAmountAura, deadline);
 
-        // // swaps WETH to wstETH
+        uint256 wstEthBefore = wstETH.balanceOf(address(this));
+
+        // swaps WETH to wstETH
         _swapRewardToWstEth(IERC20(WETH).balanceOf(address(this)), deadline);
+
+        uint256 wstEthAmount = wstETH.balanceOf(address(this)) - wstEthBefore;
+
+        (uint256 amountOut, ) = _simulateJoinPool(USDC_CONTROL_AMOUNT);
+        uint256 maxBorrowable = crvUSDController.max_borrowable(wstEthAmount * healthBuffer / HUNDRED_PERCENT, N);
+        _invest(wstEthAmount, maxBorrowable, amountOut);        
     }
 
     /// @notice Allows the controller to adjust the percentage to unwind at a time
